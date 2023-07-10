@@ -61,6 +61,7 @@ find_package(catkin REQUIRED
  add_service_files(
    FILES
     Transcription.srv
+    Indicate.srv
  )
 
 ## Generate actions in the 'action' folder
@@ -73,6 +74,7 @@ find_package(catkin REQUIRED
 ## Generate added messages and services with any dependencies listed here
  generate_messages(
    DEPENDENCIES
+   geometry_msgs
    std_msgs  # Or other packages containing msgs
  )
 

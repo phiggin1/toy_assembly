@@ -5,8 +5,8 @@ import json
 import numpy as np
 import io
 from std_msgs.msg import String
+#from audio_common_msgs.msg import AudioData
 from scipy.io.wavfile import write
-from toy_assembly.srv import Transcription
 
 def is_silent(snd_data, threshold):
     "Returns 'True' if below the 'silent' threshold"
@@ -17,18 +17,30 @@ class AudioSpeechToText:
     def __init__(self):
         rospy.init_node('AudioSpeechToText', anonymous=True)
 
-        self.silent_wait = 10
-        self.max_duration = 5
-        self.threshold = 0.1
-        self.rate = 16000
+        self.debug = rospy.get_param("~debug", True) 
 
-        self.num_silent = 0
-        self.snd_started = False
-        self.audio_clip = []
+        #Number of audio messages that are below threshold 
+        #   to determine if person stopped talking
+        self.silent_wait = rospy.get_param("~silent_wait", 10)
+
+        #Maximum audio clip length (seconds)
+        self.max_duration = rospy.get_param("~max_duration", 5)
+
+        #Threshold to detect when there is sound 
+        # normalized ([0,1.0])
+        self.threshold = rospy.get_param("~", 0.1)
+
+        #Audio sample rate (hz)
+        self.rate = rospy.get_param("~rate", 16000)
 
         #Virtual robot in RIVR or phyical robot
         #   determines which topics to subscribe too
         self.is_rivr = rospy.get_param("~rivr", True)
+
+        #counter for number of silent audio messages
+        self.num_silent = 0
+        self.snd_started = False
+        self.audio_clip = []
 
         #print('waiting for service')
         #rospy.wait_for_service('get_transciption')
@@ -40,7 +52,7 @@ class AudioSpeechToText:
             self.audio_subscriber = rospy.Subscriber("/test", String, self.virtual_audio_cb)
         else:
             rospy.loginfo("physical robot")
-            self.audio_subscriber = rospy.Subscriber("/test", String, self.physical_audio_cb)
+            #self.audio_subscriber = rospy.Subscriber("/test", AudioData, self.physical_audio_cb)
 
         rospy.spin()
     
@@ -49,7 +61,7 @@ class AudioSpeechToText:
         self.process_audio(data)
     
     def physical_audio_cb(self, msg):
-        #mp3 bytesdata data to normalized np float array
+        #mp3 bytesdata data to normalized float array
 
 
 
@@ -75,9 +87,9 @@ class AudioSpeechToText:
             self.get_transcription(self.audio_clip)
         
         '''
-        add in some code for potential recording visualization aides
+        add in some code for potential audio recording visualization aides
         if snd_started and not silent -> ?green activly lisenting
-        elif snd_started and num_silent > 0 -> ?yellow thinks speaker is finished but unsure
+        elif snd_started and num_silent > 0(some number less than silent_wait greater than zero) -> ?yellow thinks speaker is finished but unsure
         else -> ?red waiting for someone to talk
         '''
 
@@ -85,21 +97,21 @@ class AudioSpeechToText:
         #clip is len(audio_clip)/rate seconds long
         if len(self.audio_clip)>(self.rate*self.max_duration) and self.snd_started:
             print("max clip length")
-            #self.get_transcription(self.audio_clip)
+            self.get_transcription(self.audio_clip)
 
     def get_transcription(self, audio):
-            #get audio into correct format
+            #get audio into correct format (binary wav file)
             data = np.asarray(audio)
             bytes_wav = bytes()
             byte_io = io.BytesIO(bytes_wav)
             write(byte_io, self.rate, data)
             wav_data = byte_io.read()
 
-            #call transcription service here
+            #get the transcription here
             print(data[0])
+            print(wav_data[0])
 
-
-
+            #publish full audio message (wavbytes and text)
 
             self.snd_started = False
             self.num_silent = 0
