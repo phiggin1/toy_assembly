@@ -7,6 +7,8 @@ from geometry_msgs.msg import PointStamped
 rospy.init_node('toy_assembly_main')
 
 
+
+
 #points (x,y,z)
 points = [
     [0.3, 0.0, 0.2 ],
