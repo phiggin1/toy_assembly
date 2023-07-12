@@ -4,8 +4,9 @@ import rospy
 import json
 import numpy as np
 import io
+import pydub
 from std_msgs.msg import String
-#from audio_common_msgs.msg import AudioData
+from audio_common_msgs.msg import AudioData
 from scipy.io.wavfile import write
 
 def is_silent(snd_data, threshold):
@@ -31,11 +32,13 @@ class AudioSpeechToText:
         self.threshold = rospy.get_param("~", 0.1)
 
         #Audio sample rate (hz)
-        self.rate = rospy.get_param("~rate", 16000)
+        self.sample_rate = rospy.get_param("~sample_rate", 16000)
 
-        #Virtual robot in RIVR or phyical robot
-        #   determines which topics to subscribe too
-        self.is_rivr = rospy.get_param("~rivr", True)
+        #ROS audio message data format 
+        self.channels = rospy.get_param("~channels", 1)
+        self.sample_format = rospy.get_param("~sample_format", "S16LE")
+        self.bitrate = rospy.get_param("~bitrate", 128)
+        self.coding_format = rospy.get_param("~coding_format", "mp3")
 
         #counter for number of silent audio messages
         self.num_silent = 0
@@ -47,31 +50,22 @@ class AudioSpeechToText:
         #print('got service')
         #self.serv = rospy.ServiceProxy('get_transciption', Transcription)
 
-        if self.is_rivr:
-            rospy.loginfo("virtual robot")
-            self.audio_subscriber = rospy.Subscriber("/test", String, self.virtual_audio_cb)
-        else:
-            rospy.loginfo("physical robot")
-            #self.audio_subscriber = rospy.Subscriber("/test", AudioData, self.physical_audio_cb)
+
+        self.audio_subscriber = rospy.Subscriber("/test", String, self.virtual_audio_cb)
+
 
         rospy.spin()
     
     def virtual_audio_cb(self, msg):
-        data = json.loads(msg.data)
-        self.process_audio(data)
+        float_array = json.loads(msg.data)
+        self.process_audio(float_array)
     
-    def physical_audio_cb(self, msg):
-        #mp3 bytesdata data to normalized float array
-
-
-
-        print(msg)
 
     def process_audio(self, data):
         silent = is_silent(data, self.threshold)
 
         if not silent:
-            rospy.loginfo("there be sound")
+            rospy.loginfo("there is sound")
 
         self.audio_clip.extend(data)
 
@@ -83,7 +77,7 @@ class AudioSpeechToText:
             self.audio_clip = []
 
         if self.snd_started and self.num_silent > self.silent_wait:
-            print("got audio clip")
+            rospy.loginfo("got audio clip")
             self.get_transcription(self.audio_clip)
         
         '''
@@ -95,8 +89,8 @@ class AudioSpeechToText:
 
         #if the audio clip is over max duration get the transcription
         #clip is len(audio_clip)/rate seconds long
-        if len(self.audio_clip)>(self.rate*self.max_duration) and self.snd_started:
-            print("max clip length")
+        if len(self.audio_clip)>(self.sample_rate*self.max_duration) and self.snd_started:
+            rospy.loginfo("max clip length")
             self.get_transcription(self.audio_clip)
 
     def get_transcription(self, audio):
@@ -104,7 +98,7 @@ class AudioSpeechToText:
             data = np.asarray(audio)
             bytes_wav = bytes()
             byte_io = io.BytesIO(bytes_wav)
-            write(byte_io, self.rate, data)
+            write(byte_io, self.sample_rate, data)
             wav_data = byte_io.read()
 
             #get the transcription here
