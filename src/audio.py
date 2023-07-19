@@ -4,9 +4,8 @@ import rospy
 import json
 import numpy as np
 import io
-import pydub
 from std_msgs.msg import String
-from audio_common_msgs.msg import AudioData
+from toy_assembly.srv import Transcription
 from scipy.io.wavfile import write
 
 def is_silent(snd_data, threshold):
@@ -34,25 +33,14 @@ class AudioSpeechToText:
         #Audio sample rate (hz)
         self.sample_rate = rospy.get_param("~sample_rate", 16000)
 
-        #ROS audio message data format 
-        self.channels = rospy.get_param("~channels", 1)
-        self.sample_format = rospy.get_param("~sample_format", "S16LE")
-        self.bitrate = rospy.get_param("~bitrate", 128)
-        self.coding_format = rospy.get_param("~coding_format", "mp3")
-
         #counter for number of silent audio messages
         self.num_silent = 0
         self.snd_started = False
         self.audio_clip = []
 
-        #print('waiting for service')
-        #rospy.wait_for_service('get_transciption')
-        #print('got service')
-        #self.serv = rospy.ServiceProxy('get_transciption', Transcription)
-
-
-        self.audio_subscriber = rospy.Subscriber("/test", String, self.virtual_audio_cb)
-
+        rospy.wait_for_service('get_transciption')        
+        self.serv = rospy.ServiceProxy('get_transciption', Transcription)
+        self.audio_subscriber = rospy.Subscriber("/audio", String, self.audio_cb)
 
         rospy.spin()
     
@@ -104,7 +92,8 @@ class AudioSpeechToText:
             #get the transcription here
             print(data[0])
             print(wav_data[0])
-
+            transcript = self.serv(wav_data)
+            print(transcript.transcription)
             #publish full audio message (wavbytes and text)
 
             self.snd_started = False

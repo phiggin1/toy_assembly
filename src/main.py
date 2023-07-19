@@ -7,12 +7,15 @@ from toy_assembly.srv import Indicate
 rospy.init_node('toy_assembly_main')
 
 #get images of all the possible bodies
-    #point cloud detect bodies (zone)
+    #from pointcloud detect the toy bodies (general zone is known)
         #get locations of all possible bodies
-    #focus on each body
-    #SAM use center point of pointclout in image space as 'label'
-        #get mask -> get rgb image -> get clip embdding
-    #create list of dictionary {"image":"np array", "position":"PointStamped  of grasp target"}
+            #try to get orientation
+            #get plane from pointclounds
+    #for each body
+        #focus on each body
+        #SAM use positon (from pointcloud) in image space as label
+            #get mask -> get rgb image -> get clip embdding
+    #create list of dictionary {"image":"np array", "position":"PoseStamped  of initial grasp target"}
 
 #while not correct_selection
     #get the users description of the body they want
@@ -22,6 +25,11 @@ rospy.init_node('toy_assembly_main')
         #if not remove selection 
     #else
         #correct_selection
+
+#pickup body
+    #use intial grasp target
+    #then servo in for final grab
+        #use moveit grasps instead?
 
 #manage the insertion process
 
@@ -41,7 +49,7 @@ for p in points:
     point.point.x = p[0]
     point.point.y = p[1]
     point.point.z = p[2]
-    
+
     print(point)
     resp = serv(point)
     print(resp)

@@ -1,21 +1,47 @@
-import roslibpy
 
-#rework to use zmq
+import zmq
+import sys
+import time
+#import whisper
 
-def handler(request, response):
-    print('Setting speed to {}'.format(request['data'][0]))
 
-    response['transcription'] = "response"
+class Transcribe:
+    def __init__(self):
+        sever_address = "iral-pinky.cs.umbc.edu"
+        sever_port  = "8888"
 
-    return True
 
-client = roslibpy.Ros(host='localhost', port=7777)
+        #self.whisper_model = whisper.load_model("base")   
 
-print(client.is_connected)
+        context = zmq.Context()
+        self.socket = context.socket(zmq.PAIR)
+        self.socket.connect("tcp://"+sever_address+":"+sever_port)
+        self.tmp_audio_filename = '/tmp/audio.mp3'
 
-service = roslibpy.Service(client, '/get_transciption', 'toy_assembly/Transcription')
-service.advertise(handler)
-print('Service advertised.')
+    def run(self):
+        while True:
+            msg = self.socket.recv()
+            self.recv_msg(msg)
+        
 
-client.run_forever()
-client.terminate()
+    def recv_msg(self, msg):
+        #save to /tmp/audio.mp3
+        '''
+        binary_file = open(self.tmp_audio_filename, "wb")
+        binary_file.write(msg)
+        binary_file.close()
+
+        #get transcription from whisper
+        result = self.whisper_model.transcribe(self.tmp_audio_filename) 
+
+        print(result["text"])
+        self.socket.send(result["text"])
+        '''
+
+        self.socket.send_string("transcript")
+
+
+if __name__ == '__main__':
+    t = Transcribe()
+    t.run()
+
