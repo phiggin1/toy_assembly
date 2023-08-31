@@ -1,7 +1,7 @@
 import numpy as np
 import cv2
 import matplotlib.pyplot as plt
-
+import os
 
 def display_img(img):
     # show image
@@ -9,7 +9,7 @@ def display_img(img):
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-
+image_dir  = 'test_images'
 
 
 angle_threshold = 0.2
@@ -17,27 +17,55 @@ pixel_distance_threshold = 15
 eps  = 3.5 #works well with real images
 
 
+eps  = 2.5 #works well with sim images
+
+
 #target_x = 460
 #target_y = 375
-#image_path = 'test.jpg'
-#image_path = 'real_test_image.jpg'
+#image_path = 'test_imgaes/test.jpg'
+#image_path = 'test_imgaes/real_test_image.jpg'
 
 
-target_x = 900
+#target_x = 900
+#target_y = 375
+#image_path = 'real_body_test.jpg'
+
+'''
+target_x = 700
 target_y = 375
-image_path = 'real_body_test.jpg'
+image_path = 'image.png
+'''
 
 
-img = cv2.imread(image_path)
+'''
+target_x = 500
+target_y = 300
+image_path = 'image2.png
+'''
+
+
+target_x = 340
+target_y = 140
+image_path = 'right_frame0000.jpg'
+
+target_x = 340
+target_y = 160
+image_path = 'left_frame0000.jpg'
+
+
+print('------------')
+print(os.path.join(image_dir, image_path))
+print('------------')
+
+img = cv2.imread(os.path.join(image_dir, image_path))
 print(img.shape)
-#display_img(img)
-desired_image_height = 960
-desired_image_width = 1440
-old_image_height, old_image_width, channels = img.shape
-bottom_padding = desired_image_height-old_image_height
-right_padding = desired_image_width-old_image_width
-img = cv2.copyMakeBorder(img,0,bottom_padding,0,right_padding,cv2.BORDER_CONSTANT,value=[0,0,0])
-print(img.shape)
+
+
+disp_img = img.copy()
+cv2.circle(disp_img, (target_x, target_y), radius=3, color=(0, 0, 255), thickness=-1)
+display_img(disp_img)
+
+
 
 
 from segment_anything import SamPredictor, sam_model_registry
@@ -63,58 +91,67 @@ for (mask_count,mask) in enumerate(masks):
 
     #if there is more than one contour the segmentation did something wierd 
     # so skip the mask
-    if len(contours)>1:
-         continue
+    #if len(contours)>1:
+    #     continue
     
     for (countour_count,contour) in enumerate(contours):
         contour_img = img.copy()
+        
         #display target on image
-        cv2.circle(contour_img, (target_x, target_y), radius=3, color=(0, 0, 255), thickness=-1)
+        cv2.circle(contour_img, (target_x, target_y), radius=3, color=(255, 255, 255), thickness=-1)
 
         print("contour: "+str(countour_count+1)+" of "+str(len(contours)))
+        
         #display the contours overlayed on copy of origional image
         cv2.drawContours(contour_img, contours, -1, (0,255,0), 1)
 
-        #  eps = 1.0
+
         contour2 = cv2.approxPolyDP(contour, eps, closed=True)
         print("   orig contour len: "+str(len(contour)))
         print("reduced contour len: "+str(len(contour2)))
         contour=contour2
+
+        #draw simlified contounr over image
+        cv2.drawContours(contour_img, [contour2], -1, (255,255,255), 1)
 
         right_angles = []
         slots = []
         num_points = len(contour)
         print("num points: "+str(num_points))
 
-        for i in range(num_points-3):
-            cv2.circle(contour_img, (contour[i][0][0], contour[i][0][1]), radius=2, color=(0, 0, 255), thickness=-1)
+        for i in range(num_points):
+            #get the next 4 points (wrapping around the end of the list back to the beginning)
+            p0 = contour[i%num_points]
+            p1 = contour[(i+1)%num_points]
+            p2 = contour[(i+2)%num_points]
+            p3 = contour[(i+3)%num_points]
+
+            #draw the point on the image
+            cv2.circle(contour_img, (p0[0][0], p0[0][1]), radius=2, color=(0, 0, 255), thickness=-1)
+
             #for the next four points get the 3 vectors between them (0 to 1, 1 to 2, 2 to 3) 
-            v1 = contour[i+1]-contour[i]
-            v2 = contour[i+2]-contour[i+1]
-            v3 = contour[i+3]-contour[i+2]
+            v1 = p1-p0
+            v2 = p2-p1
+            v3 = p3-p2
 
             #calculate the angle between each sequential pair of vectors
             cos_theta1 = np.dot(v1[0],v2[0])/(np.linalg.norm(v1[0])*np.linalg.norm(v2[0]))
             cos_theta2 = np.dot(v2[0],v3[0])/(np.linalg.norm(v2[0])*np.linalg.norm(v3[0]))
 
-            #check for 4 sequential points that are at ~90deg apart
-            #and not too close together
+            #check for 4 sequential points that are at ~90deg apart 
             if abs(cos_theta1) < angle_threshold and abs(cos_theta2) < angle_threshold:
+                    # and not too close together
                     if np.linalg.norm(v1[0]) > pixel_distance_threshold and np.linalg.norm(v2[0]) > pixel_distance_threshold and np.linalg.norm(v3[0]) > pixel_distance_threshold:
-                        right_angles.append(contour[i])
-                        right_angles.append(contour[i+1])
-                        right_angles.append(contour[i+2])
-                        right_angles.append(contour[i+3])
-                        slots.append( (contour[i], contour[i+1], contour[i+2], contour[i+3]) )
+                        right_angles.append(p0)
+                        right_angles.append(p1)
+                        right_angles.append(p2)
+                        right_angles.append(p3)
+                        slots.append( (p0,p1,p2,p3) )
 
-        #print(len(right_angles))
-        #for i in range(len(right_angles)):
-        #    print(i, right_angles[i][0])
         print("num slots: "+str(len(slots)))
         print(slots)
-        #                                                 B       G   R
-        cv2.drawContours(contour_img, right_angles,  -1, (255,    0,  0), 8)
+        
+        #draw the points making up the slots on the image
+        cv2.drawContours(contour_img, right_angles,  -1, (255, 0, 0), 8)
         print("final")
         display_img(contour_img)
-    
-    
