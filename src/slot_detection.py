@@ -96,7 +96,7 @@ for (mask_count,mask) in enumerate(masks):
     
     for (countour_count,contour) in enumerate(contours):
         contour_img = img.copy()
-        
+
         #display target on image
         cv2.circle(contour_img, (target_x, target_y), radius=3, color=(255, 255, 255), thickness=-1)
 
@@ -118,6 +118,10 @@ for (mask_count,mask) in enumerate(masks):
         slots = []
         num_points = len(contour)
         print("num points: "+str(num_points))
+
+        if num_points < 4:
+             print("contour is too small")
+             continue
 
         for i in range(num_points):
             #get the next 4 points (wrapping around the end of the list back to the beginning)
