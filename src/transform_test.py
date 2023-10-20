@@ -8,7 +8,7 @@ import numpy as np
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, Point
 
-CAMERA = "/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link/camera_standin"
+LEFT_CAMERA = "/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link/camera_standin"
 OBJECT = "/horse_body (2)"
 
 def Unity2Ros(vector3):
@@ -49,9 +49,8 @@ class TestTracker:
             print('-----')
             '''
             
-        object_to_camera = np.matmul(transform_to_world[OBJECT], np.linalg.inv(transform_to_world[CAMERA]))
+        object_to_camera = np.matmul(transform_to_world[OBJECT], np.linalg.inv(transform_to_world[LEFT_CAMERA]))
         
-
         point = np.zeros( (4,1) )
         point[3,0]=1
 
