@@ -1,0 +1,7 @@
+<launch>
+  <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_left" >
+    <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_left.yaml" />
+    <remap from="/joint_states" to="/my_gen3_left/joint_states"/>
+  </node>
+  <node name="test_tracking" pkg="to_assembly" type="transform_test.py" output="screen" />
+</launch>
