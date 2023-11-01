@@ -8,7 +8,8 @@ import numpy as np
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, Point
 
-LEFT_CAMERA = "/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link/camera_standin"
+CAMERA = "/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link/camera_standin"
+#CAMERA = "/Player/NoSteamVRFallbackObjects/FallbackObjects/camera"
 OBJECT = "/horse_body (2)"
 
 def Unity2Ros(vector3):
@@ -18,8 +19,14 @@ def Unity2Ros(vector3):
 class TestTracker:
     def __init__(self):    
             rospy.init_node('transform')
-            self.sub = rospy.Subscriber("/scene/tranform", String, self.transform_cb)
-            self.pub = rospy.Publisher("/target_point", PointStamped, queue_size=10)
+
+            self.camera_name = rospy.get_param("camera_name", CAMERA)
+            self.target_name = rospy.get_param("target_name", OBJECT)
+            self.scene_transform_topic = rospy.get_param("transform_topic", "/scene/transform")
+            self.target_point_topic = rospy.get_param("target_topic", "/pt")
+
+            self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
+            self.pub = rospy.Publisher(self.target_point_topic, PointStamped, queue_size=10)
             rospy.spin()
 
     def transform_cb(self, str_msg):
@@ -41,15 +48,15 @@ class TestTracker:
             m = tf.transformations.compose_matrix(None, None, (roll, pitch, yaw), (p_x,p_y,p_z), None)
             transform_to_world[name]=m
 
-            '''
+            
             print(name)
             print(p_x,p_y,p_z)
-            print(roll,pitch,yaw)
-            print(m)
+            #print(roll,pitch,yaw)
+            #print(m)
             print('-----')
-            '''
             
-        object_to_camera = np.matmul(transform_to_world[OBJECT], np.linalg.inv(transform_to_world[LEFT_CAMERA]))
+            
+        object_to_camera = np.matmul(transform_to_world[self.target_name], np.linalg.inv(transform_to_world[self.camera_name]))
         
         point = np.zeros( (4,1) )
         point[3,0]=1
@@ -63,13 +70,13 @@ class TestTracker:
         p = PointStamped()
         p.header.frame_id = "camera_link"
         p.point.x = x
-        p.point.y = -y
+        p.point.y = y
         p.point.z = z
-        '''
+        
         print(p.point)
         print("=====")
-        '''
-        self.pub.publish(p)
+        
+        #self.pub.publish(p)
         
 if __name__ == '__main__':
     track = TestTracker()
