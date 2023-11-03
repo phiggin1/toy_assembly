@@ -76,7 +76,7 @@ class TestTracker:
         print(p.point)
         print("=====")
         
-        #self.pub.publish(p)
+        self.pub.publish(p)
         
 if __name__ == '__main__':
     track = TestTracker()
