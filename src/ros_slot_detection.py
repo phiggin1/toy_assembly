@@ -10,6 +10,10 @@ from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PointStamped, Point
 from segment_anything import SamPredictor, sam_model_registry
 
+
+import torch
+import torchvision
+
 blue = (255, 0, 0)
 green = (0,255,0)
 red = (0,0,255)
@@ -31,19 +35,19 @@ def distance(a,b):
 class SlotTracking:
     def __init__(self):
         rospy.init_node('SlotTracking', anonymous=True)
+                
 
         self.cam_info_topic = rospy.get_param("cam_info_topic", "/unity/camera/rgb/camera_info")
+        self.rgb_image_topic = rospy.get_param("image_topic", "/unity/camera/rgb/image_raw")
+        self.depth_image_topic = rospy.get_param("image_topic", "/unity/camera/rgb/image_raw")
+        self.location_topic = rospy.get_param("location_topic", "/target_point")
+
         self.contour_downsample_amount = rospy.get_param("contour_downsample_amount",0.0025)
         self.slot_width = rospy.get_param("slot_width",3*0.25*24) #slot width in inches (.25in) to mm
         self.slot_height = self.slot_width#0.25*24 #slot height in inches (.25in) to mm
-
         self.min_area_percentage = rospy.get_param("min_area_percentage", 0.005)
         self.max_area_percentage = rospy.get_param("min_area_percentage", 0.35)
         self.max_num_contours = rospy.get_param("max_num_contours", 12)
-
-        self.image_topic = rospy.get_param("image_topic", "/unity/camera/rgb/image_raw")
-        self.location_topic = rospy.get_param("location_topic", "/target_point")
-
 
         self.cam_info = rospy.wait_for_message(self.cam_info_topic, CameraInfo)
         self.cam_model = PinholeCameraModel()
@@ -56,19 +60,37 @@ class SlotTracking:
         rospy.loginfo(f"min area:{self.min_area}\tmax area:{self.max_area}")
         rospy.loginfo(f"slot_width:{self.slot_width}\tslot_height:{self.slot_height}")
 
-        self.image_sub = rospy.wait_for_message(self.image_topic, Image) #rospy.Subscriber(self.image_topic, Image, self.image_cb)
+        self.image_sub = rospy.wait_for_message(self.rgb_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
         self.location_sub = rospy.wait_for_message(self.location_topic, PointStamped) #rospy.Subscriber(self.location_topic, PointStamped, self.location_cb)
         
         d = math.sqrt(self.location_sub.point.x**2 + self.location_sub.point.y**2 + self.location_sub.point.z**2)
         p = (self.location_sub.point.x, self.location_sub.point.y, self.location_sub.point.z)
         u, v = self.cam_model.project3dToPixel( p )
 
-
         self.cvbridge = CvBridge()
         cv_image = self.cvbridge.imgmsg_to_cv2(self.image_sub, "bgr8")     
 
         rospy.loginfo('init node')
+
+        '''
+        sam_checkpoint = "sam_vit_h_4b8939.pth"
+        model_type = "vit_h"
+
+        device = "cuda"
+
+        sam = sam_model_registry[model_type](checkpoint=sam_checkpoint)
+        sam.to(device=device)
+
+        predictor = SamPredictor(sam)
+        '''
+        print("PyTorch version:", torch.__version__)
+        print("Torchvision version:", torchvision.__version__)
+        print("CUDA is available:", torch.cuda.is_available())
+
         self.sam = sam_model_registry["default"](checkpoint="/home/phiggin1/segment-anything/models/sam_vit_h_4b8939.pth")
+        if torch.cuda.is_available():
+            self.sam.to(device="cuda")
+
         self.predictor = SamPredictor(self.sam)
         rospy.loginfo('sam model loaded')
 
@@ -112,108 +134,111 @@ class SlotTracking:
             imgray = np.asarray(mask*255, dtype=np.uint8)
             #display_img(imgray)
             
-            #get the contours
-            contours, hierarchy = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
-            
-            print(f"mask: {mask_count+1} of {len(masks)}\tnum contours: {len(contours)}")
+            print(f"mask: {mask_count+1} of {len(masks)}")
+            self.process_mask(imgray, target_x, target_y, slot_width_pixels, slot_height_pixels)
 
-            if len(contours) > self.max_num_contours:
+            
+    def process_mask(self, imgray, target_x, target_y, slot_width_pixels, slot_height_pixels):
+        #get the contours
+        contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
+
+        if len(contours) > self.max_num_contours:
+            return None
+        
+        for (countour_count,contour) in enumerate(contours):
+            contour_img = imgray.copy()
+            contour_img = cv2.cvtColor(contour_img,cv2.COLOR_GRAY2RGB)
+
+            #display target on image
+            cv2.circle(contour_img, (target_x, target_y), radius=3, color=red, thickness=-1)
+
+            #display the contours overlayed on copy of origional image
+            cv2.drawContours(contour_img, contours, -1, green, 1)
+            
+            perimeter = cv2.arcLength(contour,True)
+            eps = perimeter*self.contour_downsample_amount
+            contour2 = cv2.approxPolyDP(contour, eps, closed=True)
+            num_points = len(contour2)
+            area = cv2.contourArea(contour) 
+            if num_points <= 4 or area < self.min_area or area > self.max_area:
+                #print("\tcontour: "+str(countour_count+1)+" of "+str(len(contours))+" too small")
                 continue
-            for (countour_count,contour) in enumerate(contours):
-                contour_img = imgray.copy()
-                contour_img = cv2.cvtColor(contour_img,cv2.COLOR_GRAY2RGB)
+            print("\tcontour: "+str(countour_count+1)+" of "+str(len(contours)))
+            print("\tcontour area:: "+str(cv2.contourArea(contour)))
+            print("\t\t   orig contour len: "+str(len(contour)))
+            print("\t\treduced contour len: "+str(len(contour2)))
+            contour=contour2
 
-                #display target on image
-                cv2.circle(contour_img, (target_x, target_y), radius=3, color=red, thickness=-1)
+            #draw simlified contour over image
+            cv2.drawContours(contour_img, [contour], -1, blue, 2)
 
-                #display the contours overlayed on copy of origional image
-                cv2.drawContours(contour_img, contours, -1, green, 1)
+            hull = cv2.convexHull(contour, returnPoints = False)
+            defects = cv2.convexityDefects(contour, hull)
+
+            print('----------------')
+            for k in range(defects.shape[0]):
+                display_image = contour_img.copy()
+                #s - start of convex defect
+                #e - end of convex defect
+                #f - point between start and end that is furtherest from convex hull
+                #d - distance of farthest point to hull
+                s,e,_,_ = defects[k,0]
+                print(f'Defect:{k}\n\tstart:{s}{contour[s][0]}\n\t  end:{e}{contour[e][0]}')
+
+                start = tuple(contour[s][0])
+                end = tuple(contour[e][0])
                 
-                perimeter = cv2.arcLength(contour,True)
-                eps = perimeter*self.contour_downsample_amount
-                contour2 = cv2.approxPolyDP(contour, eps, closed=True)
-                num_points = len(contour2)
-                area = cv2.contourArea(contour) 
-                if num_points <= 4 or area < self.min_area or area > self.max_area:
-                    #print("\tcontour: "+str(countour_count+1)+" of "+str(len(contours))+" too small")
-                    continue
-                print("\tcontour: "+str(countour_count+1)+" of "+str(len(contours)))
-                print("\tcontour area:: "+str(cv2.contourArea(contour)))
-                print("\t\t   orig contour len: "+str(len(contour)))
-                print("\t\treduced contour len: "+str(len(contour2)))
-                contour=contour2
+                cv2.line(display_image,start,end,purple,1)
+                #display_img(display_image)   
 
-                #draw simlified contour over image
-                cv2.drawContours(contour_img, [contour], -1, blue, 2)
+                #setup indexes
+                if e > s:
+                    indxs = list(range(s,e+1))
+                else:
+                    max_indx = contour.shape[0]
+                    indxs = list(range(s,max_indx))+list(range(0,e+1))
 
-                hull = cv2.convexHull(contour, returnPoints = False)
-                defects = cv2.convexityDefects(contour, hull)
+                #print(indxs)
+                for array_indx, i in enumerate(indxs): #range(s,e+1):
+                    cv2.circle(display_image,tuple(contour[i][0]),3,red,-1)
+                    next_contour_indx = array_indx+1
+                    last_contour_indx = len(indxs)
+                    #for j in range(i+1, e+1):
+                    for j in indxs[next_contour_indx:last_contour_indx]:
+                        prev = i#(i-1)%len(contour)
+                        next = j#(i+1)%len(contour)
+                        #distance between start and end of part of defect should be close together (close to slot width)
+                        d = distance(tuple(contour[next][0]),tuple(contour[prev][0]))
+                        slot_top = tuple(contour[next][0])
+                        #print(prev,next,d)
+                        if d < slot_width_pixels:
+                            #check if next and prev have any points between them
+                            if ((prev+1)%contour.shape[0]) != next:
+                                middle = []
+                                for indx in indxs[next_contour_indx:last_contour_indx-1]:     
+                                    #print(indx)
+                                    middle.append(contour[indx])
 
-                print('----------------')
-                for k in range(defects.shape[0]):
-                    display_image = contour_img.copy()
-                    #s - start of convex defect
-                    #e - end of convex defect
-                    #f - point between start and end
-                    #       that is furtherest from convex hull
-                    #d - distance of farthest point to hull
-                    s,e,f,d = defects[k,0]
-                    print(f'Defect:{k}\n\tstart:{s}{contour[s][0]}\n\t  end:{e}{contour[e][0]}')
-
-                    start = tuple(contour[s][0])
-                    end = tuple(contour[e][0])
-                    
-                    cv2.line(display_image,start,end,purple,1)
-                    #display_img(display_image)   
-
-                    #setup indexes
-                    if e > s:
-                        indxs = list(range(s,e+1))
-                    else:
-                        max_indx = contour.shape[0]
-                        indxs = list(range(s,max_indx))+list(range(0,e+1))
-
-                    #print(indxs)
-                    for array_indx, i in enumerate(indxs): #range(s,e+1):
-                        cv2.circle(display_image,tuple(contour[i][0]),3,red,-1)
-                        next_contour_indx = array_indx+1
-                        last_contour_indx = len(indxs)
-                        #for j in range(i+1, e+1):
-                        for j in indxs[next_contour_indx:last_contour_indx]:
-                            prev = i#(i-1)%len(contour)
-                            next = j#(i+1)%len(contour)
-                            #distance between start and end of part of defect should be close together (close to slot width)
-                            d = distance(tuple(contour[next][0]),tuple(contour[prev][0]))
-                            slot_top = tuple(contour[next][0])
-                            #print(prev,next,d)
-                            if d < slot_width_pixels:
-                                #check if next and prev have any points between them
-                                if ((prev+1)%contour.shape[0]) != next:
-                                    middle = []
-                                    for indx in indxs[next_contour_indx:last_contour_indx-1]:     
-                                        #print(indx)
-                                        middle.append(contour[indx])
-
-                                    middle = np.asarray(middle)
-                                    middle = np.reshape(middle, (middle.shape[0],middle.shape[-1]))
-                                    
-                                    dev = np.std(middle, axis=0)
-                                    mean = np.mean(middle, axis=0)
-                                    #deviation should be low
-                                    #and the base of the slot should be far enough awasy from edge of slot
-                                    if  distance(slot_top, mean) > slot_height_pixels:
-                                        cv2.circle(display_image,tuple((int(mean[0]),int(mean[1]))),7,purple,-1)
-                                        print(prev,next)
-                                        print(contour[prev][0], contour[next][0])
-                                        #print("middle\n",middle)
-                                        print(d)
-                                        print("mean:",mean)
-                                        print(" dev:",dev)
-                                        print(tuple((int(mean[0]),int(mean[1]))))
-                                        print('---------------')
-                            
-                                        #display_img(display_image)   
-                                        print('----------------')
-            
+                                middle = np.asarray(middle)
+                                middle = np.reshape(middle, (middle.shape[0],middle.shape[-1]))
+                                
+                                dev = np.std(middle, axis=0)
+                                mean = np.mean(middle, axis=0)
+                                #deviation should be low
+                                #and the base of the slot should be far enough awasy from edge of slot
+                                if  distance(slot_top, mean) > slot_height_pixels:
+                                    cv2.circle(display_image,tuple((int(mean[0]),int(mean[1]))),7,purple,-1)
+                                    print(prev,next)
+                                    print(contour[prev][0], contour[next][0])
+                                    #print("middle\n",middle)
+                                    print(d)
+                                    print("mean:",mean)
+                                    print(" dev:",dev)
+                                    print(tuple((int(mean[0]),int(mean[1]))))
+                                    print('---------------')
+                        
+                                    #display_img(display_image)   
+                                    print('----------------')
+                                        
 if __name__ == '__main__':
     track = SlotTracking()
