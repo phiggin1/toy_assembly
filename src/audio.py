@@ -24,7 +24,7 @@ class AudioSpeechToText:
         self.silent_wait = rospy.get_param("~silent_wait", 10)
 
         #Maximum audio clip length (seconds)
-        self.max_duration = rospy.get_param("~max_duration", 5)
+        self.max_duration = rospy.get_param("~max_duration", 25)
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
