@@ -28,10 +28,16 @@ class AudioSpeechToText:
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
-        self.threshold = rospy.get_param("~", 0.1)
+        self.threshold = rospy.get_param("~threshold", 0.1)
 
         #Audio sample rate (hz)
         self.sample_rate = rospy.get_param("~sample_rate", 16000)
+
+        rospy.loginfo("debug: %r"%self.debug)
+        rospy.loginfo("silent_wait: %i"%self.silent_wait )
+        rospy.loginfo("max_duration: %i"%self.max_duration )
+        rospy.loginfo("threshold: %f"%self.threshold )
+        rospy.loginfo("sample_rate: %i"%self.sample_rate )
 
         #counter for number of silent audio messages
         self.num_silent = 0
@@ -83,6 +89,7 @@ class AudioSpeechToText:
             self.get_transcription(self.audio_clip)
 
     def get_transcription(self, audio):
+            rospy.loginfo('get_transcription')
             #get audio into correct format (binary wav file)
             data = np.asarray(audio)
             bytes_wav = bytes()

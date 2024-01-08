@@ -14,7 +14,7 @@ class Transcribe:
 
         self.whisper_model = whisper.load_model("small", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
 
-        #context = zmq.Context()
+        context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.connect("tcp://"+sever_address+":"+sever_port)
         print(f"Connected to {sever_address}:{sever_port}")
@@ -29,7 +29,6 @@ class Transcribe:
 
     def recv_msg(self, msg):
         #save to /tmp/audio.mp3
-        
         binary_file = open(self.tmp_audio_filename, "wb")
         binary_file.write(msg)
         binary_file.close()

@@ -17,9 +17,12 @@ class TranscribeClient:
         rospy.spin()
 
     def transribe(self, request):
+        rospy.loginfo('transribe req recv')
+        rospy.loginfo('sending to ada')
         self.socket.send(request.data)
         transcription = self.socket.recv_string()
-        #transcription = "test"
+        rospy.loginfo('recv from ada')
+        transcription = "test"
         return transcription
 
 

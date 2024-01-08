@@ -1,0 +1,11 @@
+<launch>
+
+  <node name="transcription_service" pkg="toy_assembly" type="transcription_service.py" output="screen" />
+
+  <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
+    <param name="threshold"  value="0.0510" />
+    <param name="max_duration"  value="25" />
+  </node>
+  
+
+</launch>
