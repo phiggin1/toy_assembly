@@ -45,6 +45,7 @@ class AudioSpeechToText:
         rospy.spin()
     
     def audio_cb(self, msg):
+        rospy.loginfo("msg recv")
         float_array = json.loads(msg.data)
         self.process_audio(float_array)
     

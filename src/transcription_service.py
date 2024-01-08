@@ -19,7 +19,7 @@ class TranscribeClient:
     def transribe(self, request):
         self.socket.send(request.data)
         transcription = self.socket.recv_string()
-
+        #transcription = "test"
         return transcription
 
 

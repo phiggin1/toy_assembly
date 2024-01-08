@@ -1,8 +1,8 @@
 
-#import zmq
+import zmq
 import sys
 import time
-#import whisper
+import whisper
 import argparse
 
 class Transcribe:
