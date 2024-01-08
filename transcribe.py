@@ -37,7 +37,7 @@ class Transcribe:
         result = self.whisper_model.transcribe(self.tmp_audio_filename) 
 
         print(result["text"])
-        self.socket.send(result["text"])
+        self.socket.send_string(result["text"])
         
 
         #self.socket.send_string("transcript")
