@@ -12,7 +12,7 @@ class Transcribe:
 
         print(f"Connecting to {sever_address}:{sever_port}")
 
-        self.whisper_model = whisper.load_model("base")   
+        self.whisper_model = whisper.load_model("small", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
 
         #context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
