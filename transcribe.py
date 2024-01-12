@@ -10,10 +10,9 @@ class Transcribe:
         sever_address = hostname
         sever_port  = port
 
-        print(f"Connecting to {sever_address}:{sever_port}")
-
         self.whisper_model = whisper.load_model("small", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
-
+        
+        print(f"Connecting to {sever_address}:{sever_port}")
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.connect("tcp://"+sever_address+":"+sever_port)
@@ -24,10 +23,12 @@ class Transcribe:
     def run(self):
         while True:
             msg = self.socket.recv()
-            self.recv_msg(msg)
-            print('recv_msg')
+            text = self.recv_msg(msg)
+            self.socket.send_string(text)
 
     def recv_msg(self, msg):
+        print('recv_msg')
+
         #save to /tmp/audio.mp3
         binary_file = open(self.tmp_audio_filename, "wb")
         binary_file.write(msg)
@@ -37,10 +38,8 @@ class Transcribe:
         result = self.whisper_model.transcribe(self.tmp_audio_filename) 
 
         print(result["text"])
-        self.socket.send_string(result["text"])
-        
 
-        #self.socket.send_string("transcript")
+        return result["text"]
 
 
 if __name__ == '__main__':

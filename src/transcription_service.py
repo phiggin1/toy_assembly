@@ -8,21 +8,31 @@ class TranscribeClient:
     def __init__(self):
         rospy.init_node('transcription_service')
 
-        sever_port  = "8888"
+
+        #hostname
+        hostname = rospy.get_param("~hostname", "8888")
+
+        #node id
+        node_id = rospy.get_param("~node_id", "g03")
+
+        #listening port
+        server_port = rospy.get_param("~port", "8888")
+
+        client = context.socket(zmq.REQ)
+        client.connect(SERVER_ENDPOINT)
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
-        self.socket.bind("tcp://*:%s" % sever_port)
+        self.socket.connect("tcp://*:%s.%s:%s" % (node_id,hostname,server_port))
 
         self.serv = rospy.Service('get_transciption', Transcription, self.transribe)
         rospy.spin()
 
     def transribe(self, request):
         rospy.loginfo('transribe req recv')
-        rospy.loginfo('sending to ada')
         self.socket.send(request.data)
         transcription = self.socket.recv_string()
         rospy.loginfo('recv from ada')
-        transcription = "test"
+
         return transcription
 
 
