@@ -1,0 +1,8 @@
+<launch>
+
+  <node name="mask_service" pkg="toy_assembly" type="mask_service.py" output="screen" />
+
+  <node name="test_tracking" pkg="toy_assembly" type="transform_test.py" output="screen" />
+
+
+</launch>

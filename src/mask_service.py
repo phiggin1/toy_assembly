@@ -68,8 +68,8 @@ class SlotTracking:
 
         self.rgb_image_sub = rospy.wait_for_message(self.rgb_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
         rospy.loginfo("Got RGB image")
-        self.depth_image_sub = rospy.wait_for_message(self.depth_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
-        rospy.loginfo("Got Depth image")
+        #self.depth_image_sub = rospy.wait_for_message(self.depth_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
+        #rospy.loginfo("Got Depth image")
         self.location_sub = rospy.wait_for_message(self.location_topic, PointStamped) #rospy.Subscriber(self.location_topic, PointStamped, self.location_cb)
         rospy.loginfo("Got location")
             
@@ -88,8 +88,8 @@ class SlotTracking:
 
         self.cvbridge = CvBridge()
         cv_image = self.cvbridge.imgmsg_to_cv2(self.rgb_image_sub, "bgr8")     
-        cv_depth = np.asarray(self.cvbridge.imgmsg_to_cv2(self.depth_image_sub, desired_encoding="passthrough"))
-
+        #cv_depth = np.asarray(self.cvbridge.imgmsg_to_cv2(self.depth_image_sub, desired_encoding="passthrough"))
+        cv_depth = None
         
         """
         print("PyTorch version:", torch.__version__)
