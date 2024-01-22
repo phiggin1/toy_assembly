@@ -32,3 +32,5 @@ whisper_model = whisper.load_model("small", download_root=whisper_model_path)
 
 sam = sam_model_registry["default"](checkpoint=sam_model_path)
 sam.to(device="cuda")
+
+print("loaded all models")
