@@ -78,9 +78,9 @@ masks, scores, logits = predictor.predict(
 )
 print(scores.shape)
 print(logits.shape)
-print('sam model end')]
+print('sam model end')
 
-print('clip model start')]
+print('clip model start')
 clip_image = clip_preprocess(Image.open("CLIP.png")).unsqueeze(0).to(device)
 text = clip.tokenize(["a diagram", "a dog", "a cat"]).to(device)
 with torch.no_grad():
@@ -94,4 +94,4 @@ with torch.no_grad():
 
 print("Label probs:", probs)  
 print("[[0.9927937  0.00421068 0.00299572]]")
-print('clip model end')]
+print('clip model end')
