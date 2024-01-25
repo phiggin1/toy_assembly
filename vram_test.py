@@ -2,7 +2,7 @@
 print("import torch torchvision cv2 PIL")
 import torch
 import torchvision
-import cv2
+#import cv2
 from PIL import Image
 import numpy as np
 
@@ -64,8 +64,8 @@ print(result.text)
 print("whisper model end")
 
 
-sam_image = cv2.imread('CLIP.png')
-sam_image = cv2.cvtColor(sam_image, cv2.COLOR_BGR2RGB)
+sam_image = Image.open("CLIP.png")#cv2.imread('CLIP.png')
+#sam_image = #cv2.cvtColor(sam_image, cv2.COLOR_BGR2RGB)
 
 print('sam model start')
 input_point = np.array([[0, 0]])
