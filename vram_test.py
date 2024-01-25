@@ -57,14 +57,17 @@ print(f"Detected language: {max(probs, key=probs.get)}")
 
 # decode the audio
 options = whisper.DecodingOptions()
-result = whisper.decode(model, mel, options)
+result = whisper.decode(whisper_model, mel, options)
 
 # print the recognized text
 print(result.text)
 print("whisper model end")
 
 
-sam_image = Image.open("CLIP.png")#cv2.imread('CLIP.png')
+sam_image = Image.open("CLIP.png").convert("RGB")
+sam_image = np.array(sam_image)
+
+#cv2.imread('CLIP.png')
 #sam_image = #cv2.cvtColor(sam_image, cv2.COLOR_BGR2RGB)
 
 print('sam model start')
