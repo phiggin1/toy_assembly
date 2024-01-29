@@ -24,22 +24,22 @@ class AdaEndPoint:
         print("device:",self.device)
 
         sever_address = hostname
-        sever_port  = port
+        server_port  = port
 
         self.whisper_model = whisper.load_model("small", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
         if torch.cuda.is_available():
             self.sam.to(self.device)
-        self.predictor = SamPredictor(sam)
+        self.predictor = SamPredictor(self.sam)
 
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
 
-        print(f"Connecting to {sever_address}:{sever_port}")
+        print(f"Connecting to {sever_address}:{server_port}")
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
-        self.socket.connect("tcp://"+sever_address+":"+sever_port)
-        print(f"Connected to {sever_address}:{sever_port}")
+        self.socket.connect("tcp://"+sever_address+":"+server_port)
+        print(f"Connected to {sever_address}:{server_port}")
 
         self.tmp_audio_filename = '/tmp/audio.mp3'
 
@@ -129,7 +129,6 @@ class AdaEndPoint:
         print('clip model end')
     
         response = {"type":"clip",
-                    "logits_per_image":logits_per_image,
                     "probs":probs
         }
 
