@@ -12,6 +12,7 @@ find_package(catkin REQUIRED
    rospy
    std_msgs
    geometry_msgs
+   sensor_msgs
    message_generation
 )
 
@@ -60,7 +61,9 @@ find_package(catkin REQUIRED
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
-    Transcription.srv
+    Whisper.srv
+    SAM.srv
+    CLIP.srv
     Indicate.srv
  )
 
@@ -75,6 +78,7 @@ find_package(catkin REQUIRED
  generate_messages(
    DEPENDENCIES
    geometry_msgs
+   sensor_msgs
    std_msgs  # Or other packages containing msgs
  )
 

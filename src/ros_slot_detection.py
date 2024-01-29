@@ -8,9 +8,11 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PointStamped, Point
-from segment_anything import SamPredictor, sam_model_registry
-import torch
-import torchvision
+from toy_assembly.srv import SAM
+
+#from segment_anything import SamPredictor, sam_model_registry
+#import torch
+#import torchvision
 
 blue = (255, 0, 0)
 green = (0,255,0)
@@ -61,11 +63,14 @@ class SlotTracking:
 
         self.rgb_image_sub = rospy.wait_for_message(self.rgb_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
         rospy.loginfo("Got RGB image")
-        self.depth_image_sub = rospy.wait_for_message(self.depth_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
-        rospy.loginfo("Got Depth image")
-        self.location_sub = rospy.wait_for_message(self.location_topic, PointStamped) #rospy.Subscriber(self.location_topic, PointStamped, self.location_cb)
-        rospy.loginfo("Got location")
+        #self.depth_image_sub = rospy.wait_for_message(self.depth_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
+        #rospy.loginfo("Got Depth image")
+        #self.location_sub = rospy.wait_for_message(self.location_topic, PointStamped) #rospy.Subscriber(self.location_topic, PointStamped, self.location_cb)
+        #rospy.loginfo("Got location")
             
+
+        self.serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
+
         '''
         self.rgb_image_sub = message_filters.Subscriber(self.rgb_image_topic, Image)
         self.depth_image_sub = message_filters.Subscriber(self.depth_image_topic, Image)
@@ -73,15 +78,20 @@ class SlotTracking:
         self.ts.registerCallback(callback)
         '''
 
-        d = math.sqrt(self.location_sub.point.x**2 + self.location_sub.point.y**2 + self.location_sub.point.z**2)
-        p = (self.location_sub.point.x, self.location_sub.point.y, self.location_sub.point.z)
-        u, v = self.cam_model.project3dToPixel( p )
+        #d = math.sqrt(self.location_sub.point.x**2 + self.location_sub.point.y**2 + self.location_sub.point.z**2)
+        #p = (self.location_sub.point.x, self.location_sub.point.y, self.location_sub.point.z)
+        #u, v = self.cam_model.project3dToPixel( p )
+
+        d = 0.1
+        u = 200
+        v = 200
 
         self.cvbridge = CvBridge()
         cv_image = self.cvbridge.imgmsg_to_cv2(self.rgb_image_sub, "bgr8")     
-        cv_depth = np.asarray(self.cvbridge.imgmsg_to_cv2(self.depth_image_sub, desired_encoding="passthrough"))
-
+        #cv_depth = np.asarray(self.cvbridge.imgmsg_to_cv2(self.depth_image_sub, desired_encoding="passthrough"))
+        cv_depth = None
         
+        '''
         print("PyTorch version:", torch.__version__)
         print("Torchvision version:", torchvision.__version__)
         print("CUDA is available:", torch.cuda.is_available())
@@ -92,6 +102,7 @@ class SlotTracking:
 
         self.predictor = SamPredictor(self.sam)
         rospy.loginfo('sam model loaded')
+        '''
         
         self.process_image(u,v,d, cv_image, cv_depth)
 
@@ -116,10 +127,13 @@ class SlotTracking:
         target_x = int(u)
         target_y = int(v)
 
+        
+        masks = self.serv(self.cvbridge.cv2_to_imgmsg(img, "bgr8"), target_x, target_y)
+
+        '''
         input_point = np.array([[target_x, target_y]])
         input_label = np.array([1])
 
-        
         rospy.loginfo('model start')
         self.predictor.set_image(img)
         masks, scores, logits = self.predictor.predict(
@@ -130,6 +144,7 @@ class SlotTracking:
         #rospy.loginfo(scores.shape)
         #rospy.loginfo(logits.shape)
         rospy.loginfo('model end')
+        '''
 
         for (mask_count,mask) in enumerate(masks):
             imgray = np.asarray(mask*255, dtype=np.uint8)

@@ -8,6 +8,7 @@ from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PointStamped, Point
+import zmq
 #from segment_anything import SamPredictor, sam_model_registry
 #import torch
 #import torchvision
@@ -34,6 +35,13 @@ class SlotTracking:
     def __init__(self):
         rospy.init_node('SlotTracking', anonymous=True)
                 
+        #listening port 
+        server_port = rospy.get_param("~port", "8888")
+        context = zmq.Context()
+        self.socket = context.socket(zmq.PAIR)
+        self.socket.bind("tcp://*:%s" % server_port)
+        rospy.loginfo("listening on port:%s" % server_port)
+
         self.cam_info_topic =    rospy.get_param("cam_info_topic",  "/unity/camera/rgb/camera_info")
         self.rgb_image_topic =   rospy.get_param("image_topic",     "/unity/camera/rgb/image_raw")
         self.depth_image_topic = rospy.get_param("image_topic",     "/unity/camera/depth/image_raw")
@@ -48,12 +56,7 @@ class SlotTracking:
 
         #self.model_path = rospy.get_param("model_path", "/home/phiggin1/segment-anything/models/sam_vit_h_4b8939.pth")
 
-        #listening port 
-        server_port = rospy.get_param("~port", "8888")
 
-        context = zmq.Context()
-        self.socket = context.socket(zmq.PAIR)
-        self.socket.bind("tcp://*:%s" % server_port)
 
         self.cam_info = rospy.wait_for_message(self.cam_info_topic, CameraInfo)
         self.cam_model = PinholeCameraModel()
@@ -90,20 +93,7 @@ class SlotTracking:
         cv_image = self.cvbridge.imgmsg_to_cv2(self.rgb_image_sub, "bgr8")     
         #cv_depth = np.asarray(self.cvbridge.imgmsg_to_cv2(self.depth_image_sub, desired_encoding="passthrough"))
         cv_depth = None
-        
-        """
-        print("PyTorch version:", torch.__version__)
-        print("Torchvision version:", torchvision.__version__)
-        print("CUDA is available:", torch.cuda.is_available())
-
-        self.sam = sam_model_registry["default"](checkpoint=self.model_path)
-        if torch.cuda.is_available():
-            self.sam.to(device="cuda")
-
-        self.predictor = SamPredictor(self.sam)
-        rospy.loginfo('sam model loaded')
-        """
-        
+               
         self.process_image(u,v,d, cv_image, cv_depth)
 
     def process_image(self, u, v, d, img, d_img):
@@ -127,8 +117,6 @@ class SlotTracking:
         target_x = int(u)
         target_y = int(v)
 
-        input_point = np.array([[target_x, target_y]])
-        input_label = np.array([1])
 
 
         data = {
@@ -139,27 +127,16 @@ class SlotTracking:
 
         self.socket.send_json(data)
         masks = self.socket.recv_json()
+        #masks = np.asarray(masks)
         
-        """
-        rospy.loginfo('model start')
-        self.predictor.set_image(img)
-        
-        masks, scores, logits = self.predictor.predict(
-            point_coords=input_point,
-            point_labels=input_label,
-            multimask_output=True,
-        )
-        #rospy.loginfo(scores.shape)
-        #rospy.loginfo(logits.shape)
-        rospy.loginfo('model end')
-        """
+
 
         for (mask_count,mask) in enumerate(masks):
             imgray = np.asarray(mask*255, dtype=np.uint8)
             #display_img(imgray)
             
             print(f"mask: {mask_count+1} of {len(masks)}")
-            depth_masked = cv2.bitwise_and(d_img, d_img, mask=mask.astype(np.uint8))
+            #depth_masked = cv2.bitwise_and(d_img, d_img, mask=mask.astype(np.uint8))
             #display_img(depth_masked)
             
             #get mm per pixel here
@@ -169,6 +146,7 @@ class SlotTracking:
             #filter outliers
             #get mean delta_d between points
             
+            """
             print(np.min(depth_masked))
             print(np.max(depth_masked))
             window = 5
@@ -183,6 +161,7 @@ class SlotTracking:
                         #print(depth_masked[x,y])
                         points.append((x,y,depth_masked[x,y]))
             print(points)
+            """
 
             self.process_mask(imgray, d_img, target_x, target_y, slot_width_pixels, slot_height_pixels)
         
@@ -191,6 +170,7 @@ class SlotTracking:
         #get the contours
         contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
         if len(contours) > self.max_num_contours:
+            rospy.loginfo("%i > self.max_num_contours (%i)"%(len(contours),self.max_num_contours))
             return None
         
         for (countour_count,contour) in enumerate(contours):

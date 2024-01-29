@@ -1,0 +1,5 @@
+sensor_msgs/Image image
+int32 target_x
+int32 target_y
+---
+sensor_msgs/Image[]  masks

@@ -8,8 +8,8 @@ import numpy as np
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, Point
 
-#CAMERA = "/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link/camera_standin"
-CAMERA = "/Player/NoSteamVRFallbackObjects/FallbackObjects/camera"
+CAMERA = "/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link/camera_standin"
+#CAMERA = "/Player/NoSteamVRFallbackObjects/FallbackObjects/camera"
 OBJECT = "/horse_body"
 
 def Unity2Ros(vector3):
@@ -49,11 +49,11 @@ class TestTracker:
             m = tf.transformations.compose_matrix(None, None, (roll, pitch, yaw), (p_x,p_y,p_z), None)
             transform_to_world[name]=m
 
-            rospy.loginfo(f"{name}")
-            rospy.loginfo(f"{p_x},{p_y},{p_z}")
+            #rospy.loginfo(f"{name}")
+            #rospy.loginfo(f"{p_x},{p_y},{p_z}")
             #rospy.loginfo(roll,pitch,yaw)
             #rospy.loginfo(f"\n{m}")
-            rospy.loginfo('-----')
+            #rospy.loginfo('-----')
             
             
         object_to_camera = np.matmul(transform_to_world[self.target_name], np.linalg.inv(transform_to_world[self.camera_name]))
@@ -93,8 +93,8 @@ class TestTracker:
         p.point.y = y
         p.point.z = z
         
-        rospy.loginfo(p.point)
-        rospy.loginfo("=====")
+        #rospy.loginfo(p.point)
+        #rospy.loginfo("=====")
         
         self.pub.publish(p)
         

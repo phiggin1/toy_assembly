@@ -3,6 +3,10 @@ from segment_anything import SamPredictor, sam_model_registry
 import torch
 import torchvision
 import json
+import zmq 
+import argparse 
+import numpy as np
+
 
 class GetMask:
     def __init__(self, hostname, port):
@@ -17,7 +21,7 @@ class GetMask:
         if torch.cuda.is_available():
             self.sam.to(device="cuda")
 
-        self.predictor = SamPredictor(sam)
+        self.predictor = SamPredictor(self.sam)
         print('sam model loaded')
     
         print(f"Connecting to {sever_address}:{sever_port}")
@@ -30,23 +34,23 @@ class GetMask:
     def run(self):
         while True:
             msg = self.socket.recv_json()
-            masks = self.recv_msg(msg)
             print('recv_msg')
-            self.socke.send(masks)
+            masks = self.recv_msg(msg)
+            self.socket.send_json(masks)
 
     def recv_msg(self, msg):
-        data = json.dump(msg)
-        target_x = data["input_point"][0]
-        target_y = data["input_point"][1]
-        
-        img = data["image"]
+        #data = msg#json.dump(msg)
+        target_x = msg["input_point"][0]
+        target_y = msg["input_point"][1]
+        img = np.asarray(msg["image"]).astype(np.uint8)
+
         
         input_point = np.array([[target_x, target_y]])
         input_label = np.array([1])
 
         print('model start')
         self.predictor.set_image(img)
-        masks, scores, logits = predictor.predict(
+        masks, scores, logits = self.predictor.predict(
             point_coords=input_point,
             point_labels=input_label,
             multimask_output=True,
@@ -55,7 +59,9 @@ class GetMask:
         #print(logits.shape)
         print('model end')
 
-        return masks
+        
+
+        return masks.tolist()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
