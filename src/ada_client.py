@@ -24,13 +24,32 @@ class AdaClient:
         self.socket = context.socket(zmq.PAIR)
         self.socket.connect("tcp://*:%s.%s:%s" % (node_id,hostname,server_port))
 
-        self.serv = rospy.Service('get_transciption', Transcription, self.transribe)
+        self.serv = rospy.Service('get_transciption', Whisper, self.Whisper)
+        self.serv = rospy.Service('get_clip_probabilities', CLIP, self.CLIP)
+        self.serv = rospy.Service('get_sam_segmentation', SAM, self.SAM)
+
         rospy.spin()
 
-    def transribe(self, request):
+    def Whisper(self, request):
         rospy.loginfo('transribe req recv')
-        self.socket.send(request.data)
-        transcription = self.socket.recv_string()
+        self.socket.send_json(request.data)
+        transcription = self.socket.recv_json()
+        rospy.loginfo('recv from ada')
+
+        return transcription
+    
+    def CLIP(self, request):
+        rospy.loginfo('transribe req recv')
+        self.socket.send_json(request.data)
+        transcription = self.socket.recv_json()
+        rospy.loginfo('recv from ada')
+
+        return transcription
+    
+    def SAM(self, request):
+        rospy.loginfo('transribe req recv')
+        self.socket.send_json(request.data)
+        transcription = self.socket.recv_json()
         rospy.loginfo('recv from ada')
 
         return transcription
