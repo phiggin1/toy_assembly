@@ -55,7 +55,9 @@ class AdaClient:
     def CLIP(self, request):
         rospy.loginfo('CLIP req recv')
 
-        images = request.images
+        images = []
+        for img in request.images:
+            images.append(self.cvbridge.imgmsg_to_cv2(img, "bgr8").tolist())
         text = request.text
 
         msg = {"type":"clip",

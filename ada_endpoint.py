@@ -61,8 +61,8 @@ class AdaEndPoint:
             self.socket.send_json(resp)
 
     def process_sam(self, data):
-        target_x = data["input_point"][0]
-        target_y = data["input_point"][1]
+        target_x = data["target_x"]
+        target_y = data["target_x"]
         
         img = data["image"]
         
