@@ -58,8 +58,6 @@ class AdaEndPoint:
             else:
                 resp = {}
 
-            print(resp.keys())
-
             self.socket.send_json(resp)
 
     def process_sam(self, data):
@@ -82,11 +80,10 @@ class AdaEndPoint:
 
         response = {"type":"sam",
                     "masks":masks.tolist(),
-                    "scores":scores
+                    "scores":scores.tolist()
 
         }
 
-        print(response.keys())
 
         return response
     

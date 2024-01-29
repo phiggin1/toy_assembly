@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import zmq
-import json
+import numpy as np
 import rospy
 from cv_bridge import CvBridge
 from toy_assembly.srv import Whisper, CLIP, SAM
@@ -95,7 +95,7 @@ class AdaClient:
 
         print(resp)
 
-        #masks = resp["masks"]
+        masks = np.asarray(resp["masks"], dtype=np.bool)
 
         return masks
 
