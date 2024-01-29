@@ -45,10 +45,9 @@ class AdaClient:
 
         #self.socket.send_json(msg)
         #resp = self.socket.recv_json()
-        #data = json.dump(resp)
 
         rospy.loginfo('recv from ada')
-        transcription = data["text"]
+        transcription = resp["text"]
 
         return transcription
     
@@ -69,9 +68,8 @@ class AdaClient:
 
         #self.socket.send_json(msg)
         #resp = self.socket.recv_json()
-        #data = json.dump(resp)
 
-        probs = data["probs"]
+        probs = resp["probs"]
         rospy.loginfo('recv from ada')
 
         return probs
@@ -92,11 +90,12 @@ class AdaClient:
         rospy.loginfo("sending to ada")
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
-        data = json.dump(resp)
 
         rospy.loginfo('recv from ada')
 
-        masks = data["masks"]
+        print(resp)
+
+        #masks = resp["masks"]
 
         return masks
 
