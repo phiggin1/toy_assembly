@@ -58,7 +58,7 @@ class AdaEndPoint:
             else:
                 resp = {}
 
-            print(resp)
+            print(resp.keys())
 
             self.socket.send_json(resp)
 
@@ -86,7 +86,7 @@ class AdaEndPoint:
 
         }
 
-        print(response)
+        print(response.keys())
 
         return response
     
