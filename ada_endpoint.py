@@ -51,10 +51,9 @@ class AdaEndPoint:
             msg_type = msg["type"]
             if msg_type == "sam":
                 resp = self.process_sam(msg)
-                print(resp.keys())
-            if msg_type == "clip":
+            elif msg_type == "clip":
                 resp = self.process_clip(msg)
-            if msg_type == "whisper":
+            elif msg_type == "whisper":
                 resp = self.process_whisper(msg)
             else:
                 resp = {}
