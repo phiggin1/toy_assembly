@@ -64,7 +64,7 @@ class AdaEndPoint:
         target_x = data["target_x"]
         target_y = data["target_x"]
         
-        img = data["image"]
+        img = np.asarray(data["image"])
         
         input_point = np.array([[target_x, target_y]])
         input_label = np.array([1])
@@ -111,7 +111,10 @@ class AdaEndPoint:
     def process_clip(self, data):
 
         print('clip model start')
-        images = data["images"]
+        #images = data["images"]
+        images = []
+        for img in data["images"]:
+            images.append(np.asarray(img))
         text = data["text"]
     
         #org clip_image = self.clip_preprocess(images).unsqueeze(0).to(self.device)
