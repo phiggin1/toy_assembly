@@ -48,14 +48,13 @@ class AdaEndPoint:
             msg = self.socket.recv_json()
             print('recv_msg')
 
-            data = json.dump(msg)
-            msg_type = data["type"]
+            msg_type = msg["type"]
             if msg_type == "sam":
-                resp = self.process_sam(data)
+                resp = self.process_sam(msg)
             if msg_type == "clip":
-                resp = self.process_clip(data)
+                resp = self.process_clip(msg)
             if msg_type == "whisper":
-                resp = self.process_whisper(data)
+                resp = self.process_whisper(msg)
             else:
                 resp = {}
 

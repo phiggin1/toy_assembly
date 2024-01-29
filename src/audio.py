@@ -5,7 +5,7 @@ import json
 import numpy as np
 import io
 from std_msgs.msg import String
-from toy_assembly.srv import Transcription
+from toy_assembly.srv import Whisper
 from scipy.io.wavfile import write
 
 def is_silent(snd_data, threshold):
@@ -28,7 +28,7 @@ class AudioSpeechToText:
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
-        self.threshold = rospy.get_param("~threshold", 0.1)
+        self.threshold = rospy.get_param("~threshold", 0.001)
 
         #Audio sample rate (hz)
         self.sample_rate = rospy.get_param("~sample_rate", 16000)
@@ -45,7 +45,7 @@ class AudioSpeechToText:
         self.audio_clip = []
 
         rospy.wait_for_service('get_transciption')        
-        self.serv = rospy.ServiceProxy('get_transciption', Transcription)
+        self.serv = rospy.ServiceProxy('get_transciption', Whisper)
         self.audio_subscriber = rospy.Subscriber("/audio", String, self.audio_cb)
 
         rospy.spin()

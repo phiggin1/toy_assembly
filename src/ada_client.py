@@ -82,13 +82,12 @@ class AdaClient:
         target_y = request.target_y
         
         msg = {"type":"sam",
-               "image":image,
+               "image":image.tolist(),
                "target_x":target_x,
                "target_y":target_y
         }
 
-        print(msg)
-
+        rospy.loginfo("sending to ada")
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
         data = json.dump(resp)
