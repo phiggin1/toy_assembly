@@ -21,19 +21,19 @@ class AdaEndPoint:
         print("clip_model_path:", clip_model_path)
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
-        print("device:"self.device)
+        print("device:",self.device)
 
         sever_address = hostname
         sever_port  = port
 
         self.whisper_model = whisper.load_model("small", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
-        self.sam = sam_model_registry["default"](checkpoint=model_path)
+        self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
         if torch.cuda.is_available():
             self.sam.to(self.device)
         self.predictor = SamPredictor(sam)
 
-        self.clip_model, self.clip_preprocess = clip.load("ViT-B/32", device=self.device)
+        self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
 
         print(f"Connecting to {sever_address}:{sever_port}")
         context = zmq.Context()
@@ -59,7 +59,7 @@ class AdaEndPoint:
             else:
                 resp = {}
 
-            self.socke.send_json(resp)
+            self.socket.send_json(resp)
 
     def process_sam(self, data):
         target_x = data["input_point"][0]
@@ -122,8 +122,6 @@ class AdaEndPoint:
         with torch.no_grad():
             #image_features = self.clip_model.encode_image(clip_image)
             #text_features = self.clip_model.encode_text(text)
-            
-
             logits_per_image, logits_per_text = self.clip_model(clip_image, clip_text)
             probs = logits_per_image.softmax(dim=-1).cpu().numpy()
 
@@ -133,8 +131,8 @@ class AdaEndPoint:
         response = {"type":"clip",
                     "logits_per_image":logits_per_image,
                     "probs":probs
-
         }
+
         return response
     
 if __name__ == '__main__':

@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 
 import zmq
+import json
 import rospy
-from toy_assembly.srv import Transcription
+from toy_assembly.srv import Whisper
+from toy_assembly.srv import CLIP
+from toy_assembly.srv import SAM
 
 class AdaClient:
     def __init__(self):
@@ -31,28 +34,64 @@ class AdaClient:
         rospy.spin()
 
     def Whisper(self, request):
-        rospy.loginfo('transribe req recv')
-        self.socket.send_json(request.data)
-        transcription = self.socket.recv_json()
+        rospy.loginfo('Whisper req recv')
+
+        audio_data = request.data
+
+        msg = {"type":"whisper",
+               "data":audio_data
+        }
+
+        self.socket.send_json(msg)
+        resp = self.socket.recv_json()
+
         rospy.loginfo('recv from ada')
+        data = json.dump(resp)
+        transcription = data["text"]
 
         return transcription
     
     def CLIP(self, request):
-        rospy.loginfo('transribe req recv')
-        self.socket.send_json(request.data)
-        transcription = self.socket.recv_json()
+        rospy.loginfo('CLIP req recv')
+
+        images = request.images
+        text = request.text
+
+        msg = {"type":"clip",
+               "images":images,
+               "text":text
+        }
+
+
+        self.socket.send_json(msg)
+        resp = self.socket.recv_json()
+        data = json.dump(resp)
         rospy.loginfo('recv from ada')
 
-        return transcription
+        return True
     
     def SAM(self, request):
-        rospy.loginfo('transribe req recv')
-        self.socket.send_json(request.data)
-        transcription = self.socket.recv_json()
+        rospy.loginfo('SAM req recv')
+
+        image = request.image
+        target_x = request.target_x
+        target_y = request.target_y
+        
+        msg = {"type":"sam",
+               "image":image,
+               "target_x":target_x,
+               "target_y":target_y
+        }
+
+        self.socket.send_json(msg)
+        resp = self.socket.recv_json()
+        data = json.dump(resp)
+
         rospy.loginfo('recv from ada')
 
-        return transcription
+        masks = data["masks"]
+
+        return masks
 
 
 if __name__ == '__main__':
