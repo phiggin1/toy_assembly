@@ -9,10 +9,8 @@ from sensor_msgs.msg import Image, CameraInfo
 from image_geometry import PinholeCameraModel
 from geometry_msgs.msg import PointStamped, Point
 from toy_assembly.srv import SAM
+from toy_assembly.srv import DetectSlot, DetectSlotResponse
 
-#from segment_anything import SamPredictor, sam_model_registry
-#import torch
-#import torchvision
 
 blue = (255, 0, 0)
 green = (0,255,0)
@@ -36,20 +34,11 @@ class SlotTracking:
     def __init__(self):
         rospy.init_node('SlotTracking', anonymous=True)
                 
+        '''
         self.cam_info_topic =    rospy.get_param("cam_info_topic",  "/unity/camera/rgb/camera_info")
-        self.rgb_image_topic =   rospy.get_param("image_topic",     "/unity/camera/rgb/image_raw")
-        self.depth_image_topic = rospy.get_param("image_topic",     "/unity/camera/depth/image_raw")
+        self.rgb_image_topic =   rospy.get_param("rgb_image_topic",     "/unity/camera/rgb/image_raw")
+        self.depth_image_topic = rospy.get_param("depth_image_topic",     "/unity/camera/depth/image_raw")
         self.location_topic =    rospy.get_param("location_topic",  "/pt")
-
-        self.contour_downsample_amount = rospy.get_param("contour_downsample_amount",0.0025)
-        self.slot_width = rospy.get_param("slot_width",3*0.25*24) #slot width in inches (.25in) to mm
-        self.slot_height = self.slot_width#0.25*24 #slot height in inches (.25in) to mm
-        self.min_area_percentage = rospy.get_param("min_area_percentage", 0.005)
-        self.max_area_percentage = rospy.get_param("min_area_percentage", 0.35)
-        self.max_num_contours = rospy.get_param("max_num_contours", 12)
-
-        self.model_path = rospy.get_param("model_path", "/home/phiggin1/segment-anything/models/sam_vit_h_4b8939.pth")
-
         self.cam_info = rospy.wait_for_message(self.cam_info_topic, CameraInfo)
         self.cam_model = PinholeCameraModel()
         self.cam_model.fromCameraInfo(self.cam_info)
@@ -60,52 +49,135 @@ class SlotTracking:
 
         rospy.loginfo(f"slot width:{self.slot_width}mm\tslot height:{self.slot_height}mm")
         rospy.loginfo(f"min area:{self.min_area}\tmax area:{self.max_area}")
+        '''
+        self.contour_downsample_amount = rospy.get_param("contour_downsample_amount",0.0025)
+        self.slot_width = rospy.get_param("slot_width",3*0.25*24) #slot width in inches (.25in) to mm
+        self.slot_height = self.slot_width#0.25*24 #slot height in inches (.25in) to mm
+        self.min_area_percentage = rospy.get_param("min_area_percentage", 0.005)
+        self.max_area_percentage = rospy.get_param("min_area_percentage", 0.35)
+        self.max_num_contours = rospy.get_param("max_num_contours", 12)
 
-        self.rgb_image_sub = rospy.wait_for_message(self.rgb_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
-        rospy.loginfo("Got RGB image")
+        rospy.loginfo(f"slot width:{self.slot_width}mm\tslot height:{self.slot_height}mm")
+        rospy.loginfo(f"min_area_percentage:{self.min_area_percentage}\tmax_area_percentage:{self.max_area_percentage}")
+        rospy.loginfo(f"max_num_contours:{self.max_num_contours}")
+
+        self.cvbridge = CvBridge()
+
+        self.detect_slot_serv = rospy.Service('get_slot_location', DetectSlot, self.detect_slot)
+        self.segment_serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
+
+
+        #self.rgb_image_sub = rospy.wait_for_message(self.rgb_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
+        #rospy.loginfo("Got RGB image")
         #self.depth_image_sub = rospy.wait_for_message(self.depth_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
         #rospy.loginfo("Got Depth image")
         #self.location_sub = rospy.wait_for_message(self.location_topic, PointStamped) #rospy.Subscriber(self.location_topic, PointStamped, self.location_cb)
         #rospy.loginfo("Got location")
             
 
-        self.serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
 
         '''
         self.rgb_image_sub = message_filters.Subscriber(self.rgb_image_topic, Image)
         self.depth_image_sub = message_filters.Subscriber(self.depth_image_topic, Image)
-        self.ts = message_filters.TimeSynchronizer([self.rgb_image_sub, self.depth_image-sub], 10)
-        self.ts.registerCallback(callback)
+        self.location_sub = message_filters.Subscriber(self.location_topic, PointStamped) 
+        self.ts = message_filters.TimeSynchronizer([self.rgb_image_sub, self.depth_image_sub, self.location_sub], 10)
+        self.ts.registerCallback(self.images_callback)
         '''
+        
 
         #d = math.sqrt(self.location_sub.point.x**2 + self.location_sub.point.y**2 + self.location_sub.point.z**2)
         #p = (self.location_sub.point.x, self.location_sub.point.y, self.location_sub.point.z)
         #u, v = self.cam_model.project3dToPixel( p )
 
-        d = 0.1
-        u = 200
-        v = 200
+        #d = 0.1
+        #u = 200
+        #v = 200
 
-        self.cvbridge = CvBridge()
-        cv_image = self.cvbridge.imgmsg_to_cv2(self.rgb_image_sub, "bgr8")     
+        #cv_image = self.cvbridge.imgmsg_to_cv2(self.rgb_image_sub, "bgr8")     
         #cv_depth = np.asarray(self.cvbridge.imgmsg_to_cv2(self.depth_image_sub, desired_encoding="passthrough"))
-        cv_depth = None
+        #cv_depth = None
         
-        '''
-        print("PyTorch version:", torch.__version__)
-        print("Torchvision version:", torchvision.__version__)
-        print("CUDA is available:", torch.cuda.is_available())
 
-        self.sam = sam_model_registry["default"](checkpoint=self.model_path)
-        if torch.cuda.is_available():
-            self.sam.to(device="cuda")
-
-        self.predictor = SamPredictor(self.sam)
-        rospy.loginfo('sam model loaded')
-        '''
         
-        self.process_image(u,v,d, cv_image, cv_depth)
+        #org self.process_image(u,v,d, cv_image, cv_depth)
+        #self.process_image(u,v,d, self.rgb_image_sub, cv_depth)
 
+    def detect_slot(self, req):
+        rgb_image = req.rgb_image
+        depth_image = req.depth_image
+        cam_info = req.cam_info
+        location = req.location
+        cam_model = PinholeCameraModel()
+        cam_model.fromCameraInfo(cam_info)
+
+        area = cam_info.width*cam_info.height
+        min_area = int(self.min_area_percentage*area)
+        max_area = int(self.max_area_percentage*area)
+
+        rospy.loginfo(f"min area:{min_area}\tmax area:{max_area}")
+
+        d = math.sqrt(location.point.x**2 + location.point.y**2 + location.point.z**2)
+        p = (location.point.x, location.point.y, location.point.z)
+        u, v = cam_model.project3dToPixel( p )
+
+        d_mm = d*1000
+        # FOV = 2*arctan(x/2f) 
+        x = cam_info.width
+        f = cam_model.fx()
+
+        print(d)
+        print(x,f)
+        half_hfov = math.atan(x/(2*f))/2.0
+        print(half_hfov)
+        image_half_res_in_mm = d_mm * math.tan(half_hfov)
+        pixel_per_mm = x/(image_half_res_in_mm*2)
+        slot_width_pixels = self.slot_width*pixel_per_mm
+        slot_height_pixels = self.slot_height*pixel_per_mm
+
+        rospy.loginfo(f"pixel per mm: {pixel_per_mm}")
+        rospy.loginfo(f"slot_width_pixels: {slot_width_pixels}\tslot_height_pixels: {slot_height_pixels}")
+        target_x = int(u)
+        target_y = int(v)
+
+        
+        #org masks = self.serv(self.cvbridge.cv2_to_imgmsg(img, "bgr8"), target_x, target_y)
+        masks = self.segment_serv(rgb_image, target_x, target_y)
+        for (mask_count,mask) in enumerate(masks):
+            imgray = np.asarray(mask*255, dtype=np.uint8)
+            #display_img(imgray)
+            
+            print(f"mask: {mask_count+1} of {len(masks)}")
+            #depth_masked = cv2.bitwise_and(d_img, d_img, mask=mask.astype(np.uint8))
+            #display_img(depth_masked)
+            
+            #get mm per pixel here
+            
+            #get points around target_x,targey_y +-5
+            #get positions of points 
+            #filter outliers
+            #get mean delta_d between points
+            
+            '''
+            print(np.min(depth_masked))
+            print(np.max(depth_masked))
+            window = 5
+            min_x = target_x - window
+            min_y = target_y - window
+            max_x = target_x + window
+            max_y = target_y + window
+            points = []
+            for x in range(min_x,max_x):
+                for y in range(min_y,max_y):
+                    if depth_masked[x,y] > 0.0:
+                        #print(depth_masked[x,y])
+                        points.append((x,y,depth_masked[x,y]))
+            print(points)
+            self.process_mask(imgray, d_img, target_x, target_y, slot_width_pixels, slot_height_pixels)
+            '''
+            self.process_mask(imgray,  target_x, target_y, slot_width_pixels, slot_height_pixels)
+
+
+    '''
     def process_image(self, u, v, d, img, d_img):
         rospy.loginfo('process start')
         d_mm = d*1000
@@ -128,24 +200,43 @@ class SlotTracking:
         target_y = int(v)
 
         
-        masks = self.serv(self.cvbridge.cv2_to_imgmsg(img, "bgr8"), target_x, target_y)
+        #org masks = self.serv(self.cvbridge.cv2_to_imgmsg(img, "bgr8"), target_x, target_y)
+        masks = self.serv(img, target_x, target_y)
 
-        '''
-        input_point = np.array([[target_x, target_y]])
-        input_label = np.array([1])
 
-        rospy.loginfo('model start')
-        self.predictor.set_image(img)
-        masks, scores, logits = self.predictor.predict(
-            point_coords=input_point,
-            point_labels=input_label,
-            multimask_output=True,
-        )
-        #rospy.loginfo(scores.shape)
-        #rospy.loginfo(logits.shape)
-        rospy.loginfo('model end')
-        '''
+        for (mask_count,mask) in enumerate(masks):
+            imgray = np.asarray(mask*255, dtype=np.uint8)
+            #display_img(imgray)
+            
+            print(f"mask: {mask_count+1} of {len(masks)}")
+            #depth_masked = cv2.bitwise_and(d_img, d_img, mask=mask.astype(np.uint8))
+            #display_img(depth_masked)
+            
+            #get mm per pixel here
+            
+            #get points around target_x,targey_y +-5
+            #get positions of points 
+            #get mean delta_d between points
+            
+            print(np.min(depth_masked))
+            print(np.max(depth_masked))
+            window = 5
+            min_x = target_x - window
+            min_y = target_y - window
+            max_x = target_x + window
+            max_y = target_y + window
+            points = []
+            for x in range(min_x,max_x):
+                for y in range(min_y,max_y):
+                    if depth_masked[x,y] > 0.0:
+                        #print(depth_masked[x,y])
+                        points.append((x,y,depth_masked[x,y]))
+            #print(points)
 
+            self.process_mask(imgray, d_img, target_x, target_y, slot_width_pixels, slot_height_pixels)
+
+
+        
         for (mask_count,mask) in enumerate(masks):
             imgray = np.asarray(mask*255, dtype=np.uint8)
             #display_img(imgray)
@@ -174,12 +265,14 @@ class SlotTracking:
                     if depth_masked[x,y] > 0.0:
                         #print(depth_masked[x,y])
                         points.append((x,y,depth_masked[x,y]))
-            print(points)
+            #print(points)
 
             self.process_mask(imgray, d_img, target_x, target_y, slot_width_pixels, slot_height_pixels)
+    '''    
         
 
-    def process_mask(self, imgray, d_img, target_x, target_y, slot_width_pixels, slot_height_pixels):
+    #def process_mask(self, imgray, d_img, target_x, target_y, slot_width_pixels, slot_height_pixels):
+    def process_mask(self, imgray, target_x, target_y, slot_width_pixels, slot_height_pixels):
         #get the contours
         contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
         if len(contours) > self.max_num_contours:
@@ -247,9 +340,9 @@ class SlotTracking:
                     max_indx = contour.shape[0]
                     indxs = list(range(s,max_indx))+list(range(0,e+1))
 
-                rospy.loginfo(indxs)
-                rospy.loginfo(contour[indxs])
-                rospy.loginfo(len(indxs))
+                #rospy.loginfo(indxs)
+                #rospy.loginfo(contour[indxs])
+                #rospy.loginfo(len(indxs))
                 for i in indxs: #range(s,e+1):
                     cv2.circle(display_image,tuple(contour[i][0]),3,red,-1)
                 #display_img(display_image)   

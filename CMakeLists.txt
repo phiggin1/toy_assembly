@@ -64,6 +64,7 @@ find_package(catkin REQUIRED
     Whisper.srv
     SAM.srv
     CLIP.srv
+    DetectSlot.srv
     Indicate.srv
  )
 

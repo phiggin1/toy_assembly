@@ -91,10 +91,11 @@ class AdaEndPoint:
         print('recv_msg')
 
         #get bytes from json
+        audio_bytes = data["data"]
 
         #save to /tmp/audio.mp3
         binary_file = open(self.tmp_audio_filename, "wb")
-        binary_file.write(msg)
+        binary_file.write(audio_bytes)
         binary_file.close()
 
         #get transcription from whisper
@@ -114,8 +115,12 @@ class AdaEndPoint:
         images = []
         for img in data["images"]:
             images.append(np.asarray(img, dtype=np.uint8))
-        text = data["text"]
+        text = []
+        for t in data["text"]:
+            text.append(t)
     
+        print(text)
+
         #org clip_image = self.clip_preprocess(images).unsqueeze(0).to(self.device)
         clip_image = self.clip_preprocess(images).to(self.device)
         clip_text = clip.tokenize(text).to(self.device)

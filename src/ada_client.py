@@ -5,6 +5,7 @@ import numpy as np
 import rospy
 from cv_bridge import CvBridge
 from toy_assembly.srv import Whisper, CLIP, SAM
+from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse
 
 class AdaClient:
     def __init__(self):
@@ -43,13 +44,15 @@ class AdaClient:
                "data":audio_data
         }
 
-        #self.socket.send_json(msg)
-        #resp = self.socket.recv_json()
+        self.socket.send_json(msg)
+        resp = self.socket.recv_json()
 
         rospy.loginfo('recv from ada')
         transcription = resp["text"]
 
-        return transcription
+        response = WhisperResponse()
+        response.transcription = transcription
+        return response
     
     def CLIP(self, request):
         rospy.loginfo('CLIP req recv')
@@ -66,12 +69,14 @@ class AdaClient:
 
 
 
-        #self.socket.send_json(msg)
-        #resp = self.socket.recv_json()
+        self.socket.send_json(msg)
+        resp = self.socket.recv_json()
 
         probs = resp["probs"]
         rospy.loginfo('recv from ada')
 
+        response = CLIPResponse()
+        response.probs = probs
         return probs
     
     def SAM(self, request):
@@ -93,11 +98,13 @@ class AdaClient:
 
         rospy.loginfo('recv from ada')
 
-        print(resp)
+        masks = []
+        for mask in resp["masks"]:
+            masks.append(self.cvbridge.cv2_to_imgmsg(np.asarray(mask, dtype=np.uint8)))
 
-        masks = np.asarray(resp["masks"], dtype=np.bool)
-
-        return masks
+        response = SAMResponse()
+        response.masks = masks
+        return response
 
 
 if __name__ == '__main__':
