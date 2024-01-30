@@ -29,8 +29,7 @@ class AdaEndPoint:
         self.whisper_model = whisper.load_model("small", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
-        if torch.cuda.is_available():
-            self.sam.to(self.device)
+        self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
 
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
@@ -81,9 +80,7 @@ class AdaEndPoint:
         response = {"type":"sam",
                     "masks":masks.tolist(),
                     "scores":scores.tolist()
-
         }
-
 
         return response
     

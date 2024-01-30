@@ -29,6 +29,12 @@ class AudioSpeechToText:
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
         self.threshold = rospy.get_param("~threshold", 0.001)
+        if self.threshold < 0.0:
+            rospy.loginfo("threshold should be normalized ([0,1.0])")
+            self.threshold = 0.0
+        elif self.threshold > 1.0:
+            rospy.loginfo("threshold should be normalized ([0,1.0])")
+            self.threshold = 1.0
 
         #Audio sample rate (hz)
         self.sample_rate = rospy.get_param("~sample_rate", 16000)

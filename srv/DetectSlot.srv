@@ -1,8 +1,6 @@
 sensor_msgs/Image rgb_image
 sensor_msgs/Image depth_image
-sensor_msgs/Image cam_info
+sensor_msgs/CameraInfo cam_info
 geometry_msgs/PointStamped location
 ---
-int32 u
-int32 v
-geometry_msgs/PointStamped slot_location
+geometry_msgs/PointStamped[] slot_locations
