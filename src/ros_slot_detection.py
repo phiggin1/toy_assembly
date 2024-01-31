@@ -67,27 +67,7 @@ class SlotTracking:
         self.segment_serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
 
         rospy.spin()
-        #self.rgb_image_sub = rospy.wait_for_message(self.rgb_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
-        #rospy.loginfo("Got RGB image")
-        #self.depth_image_sub = rospy.wait_for_message(self.depth_image_topic, Image) #rospy.Subscriber(self.rgb_image_topic, Image, self.image_cb)
-        #rospy.loginfo("Got Depth image")
-        #self.location_sub = rospy.wait_for_message(self.location_topic, PointStamped) #rospy.Subscriber(self.location_topic, PointStamped, self.location_cb)
-        #rospy.loginfo("Got location")
-            
 
-
-        '''
-        self.rgb_image_sub = message_filters.Subscriber(self.rgb_image_topic, Image)
-        self.depth_image_sub = message_filters.Subscriber(self.depth_image_topic, Image)
-        self.location_sub = message_filters.Subscriber(self.location_topic, PointStamped) 
-        self.ts = message_filters.TimeSynchronizer([self.rgb_image_sub, self.depth_image_sub, self.location_sub], 10)
-        self.ts.registerCallback(self.images_callback)
-        '''
-        
-
-        #d = math.sqrt(self.location_sub.point.x**2 + self.location_sub.point.y**2 + self.location_sub.point.z**2)
-        #p = (self.location_sub.point.x, self.location_sub.point.y, self.location_sub.point.z)
-        #u, v = self.cam_model.project3dToPixel( p )
 
         #d = 0.1
         #u = 200
@@ -136,22 +116,21 @@ class SlotTracking:
         x = cam_info.width
         f = cam_model.fx()
 
-        print(f"d:{d}")
-        print(f"x:{x}, f:{f}")
         half_hfov = math.atan(x/(2*f))/2.0
-        print(f"half_hfov:{half_hfov}")
         image_half_res_in_mm = d_mm * math.tan(half_hfov)
-        print(f"image_half_res_in_mm{image_half_res_in_mm}")
         pixel_per_mm = x/(image_half_res_in_mm*2)
         slot_width_pixels = self.slot_width*pixel_per_mm
         slot_height_pixels = self.slot_height*pixel_per_mm
-
-        rospy.loginfo(f"pixel per mm: {pixel_per_mm}")
-        rospy.loginfo(f"slot_width_pixels: {slot_width_pixels}\tslot_height_pixels: {slot_height_pixels}")
         target_x = int(u)
         target_y = int(v)
 
-        
+        rospy.loginfo(f"d:{d}")
+        rospy.loginfo(f"x:{x}, f:{f}")
+        rospy.loginfo(f"half_hfov:{half_hfov}")
+        rospy.loginfo(f"image_half_res_in_mm{image_half_res_in_mm}")
+        rospy.loginfo(f"pixel per mm: {pixel_per_mm}")
+        rospy.loginfo(f"slot_width_pixels: {slot_width_pixels}")
+        rospy.loginfo(f"slot_height_pixels: {slot_height_pixels}")
         rospy.loginfo(f"u:{u}, v:{v}")
         rospy.loginfo(f"target_x:{target_x}, target_y:{target_y}")
 
@@ -164,7 +143,7 @@ class SlotTracking:
             mask = self.cvbridge.imgmsg_to_cv2(mask)
             imgray = np.asarray(mask*255, dtype=np.uint8)
             display_img(imgray)
-            print(f"mask: {mask_count+1} of {len(masks)}")
+            rospy.loginfo(f"mask: {mask_count+1} of {len(masks)}")
             
             '''
             depth_masked = cv2.bitwise_and(d_img, d_img, mask=mask.astype(np.uint8))
@@ -177,8 +156,8 @@ class SlotTracking:
             #filter outliers
             #get mean delta_d between points
             
-            print(np.min(depth_masked))
-            print(np.max(depth_masked))
+            rospy.loginfo(np.min(depth_masked))
+            rospy.loginfo(np.max(depth_masked))
             window = 5
             min_x = target_x - window
             min_y = target_y - window
@@ -188,9 +167,9 @@ class SlotTracking:
             for x in range(min_x,max_x):
                 for y in range(min_y,max_y):
                     if depth_masked[x,y] > 0.0:
-                        #print(depth_masked[x,y])
+                        #rospy.loginfo(depth_masked[x,y])
                         points.append((x,y,depth_masked[x,y]))
-            print(points)
+            rospy.loginfo(points)
             self.process_mask(imgray, d_img, target_x, target_y, slot_width_pixels, slot_height_pixels)
             '''
             
@@ -231,13 +210,13 @@ class SlotTracking:
             rospy.loginfo(f"contour: {countour_count+1} of {len(contours)}")
             '''
             result = cv2.pointPolygonTest(contour, (target_x,target_y), False)
-            print(result)
+            rospy.loginfo(result)
             if result == 0:
-                print("on countour")
+                rospy.loginfo("on countour")
             elif result > 0:
-                print("in countour")
+                rospy.loginfo("in countour")
             elif result < 0:
-                print("outside countour")
+                rospy.loginfo("outside countour")
             '''
             contour_img = imgray.copy()
             contour_img = cv2.cvtColor(contour_img,cv2.COLOR_GRAY2RGB)
@@ -254,7 +233,7 @@ class SlotTracking:
             num_points = len(contour2)
             area = cv2.contourArea(contour) 
             if num_points <= 4 or area < self.min_area or area > self.max_area:
-                print("\tcontour: "+str(countour_count+1)+" of "+str(len(contours))+" too small")
+                rospy.loginfo("\tcontour: "+str(countour_count+1)+" of "+str(len(contours))+" too small")
                 continue
             rospy.loginfo(f"\tcontour: {countour_count+1} of {len(contours)}")
             rospy.loginfo(f"\tcontour area:: {cv2.contourArea(contour)}")
@@ -276,7 +255,7 @@ class SlotTracking:
                 #f - point between start and end that is furtherest from convex hull
                 #d - distance of farthest point to hull
                 s,e,_,_ = defects[k,0]
-                print(f'Defect:{k}\n\tstart:{s}{contour[s][0]}\n\t  end:{e}{contour[e][0]}')
+                rospy.loginfo(f'Defect:{k}\n\tstart:{s}{contour[s][0]}\n\t  end:{e}{contour[e][0]}')
                 
                 start = tuple(contour[s][0])
                 end = tuple(contour[e][0])
@@ -299,8 +278,8 @@ class SlotTracking:
 
                 for i in range(len(indxs)):
                     for j in range(i+2,len(indxs)):
-                        #print(f"i:{i}, contour index:{indxs[i]} point:{contour[indxs[i]]}")
-                        #print(f"j:{j}, contour index:{indxs[j]} point:{contour[indxs[j]]}")
+                        #rospy.loginfo(f"i:{i}, contour index:{indxs[i]} point:{contour[indxs[i]]}")
+                        #rospy.loginfo(f"j:{j}, contour index:{indxs[j]} point:{contour[indxs[j]]}")
                         prev = indxs[i]
                         next = indxs[j]
                         d = distance(tuple(contour[next][0]),tuple(contour[prev][0]))
@@ -340,11 +319,11 @@ class SlotTracking:
                                     #cv2.circle(display_image,tuple(slot_end),4,green,-1)
                                     #cv2.circle(display_image,tuple(slot_top),4,green,-1)
                                     #cv2.circle(display_image,tuple((int(mean[0]),int(mean[1]))),7,purple,-1)
-                                    #print(prev,next)
-                                    #print(contour[prev][0], contour[next][0])
-                                    #print("middle\n",middle)
-                                    #print("mean:",mean)
-                                    #print(" dev:",dev)
+                                    #rospy.loginfo(prev,next)
+                                    #rospy.loginfo(contour[prev][0], contour[next][0])
+                                    #rospy.loginfo("middle\n",middle)
+                                    #rospy.loginfo("mean:",mean)
+                                    #rospy.loginfo(" dev:",dev)
                                     #rospy.loginfo('----------------')
                                     rospy.loginfo(tuple((int(mean[0]),int(mean[1]))))
                                     slot.append(tuple((int(mean[0]),int(mean[1]))))
@@ -357,7 +336,7 @@ class SlotTracking:
                     slots.append(s)
                 display_img(display_image)
 
-        print(f"slots:{slots}")
+        rospy.loginfo(f"slots:{slots}")
 
         return slots
        

@@ -51,8 +51,9 @@ class AudioSpeechToText:
         self.audio_clip = []
 
         rospy.wait_for_service('get_transciption')        
-        self.serv = rospy.ServiceProxy('get_transciption', Whisper)
+        self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
         self.audio_subscriber = rospy.Subscriber("/audio", String, self.audio_cb)
+        self.transript_publisher = rospy.Publisher("/transcript", String)
 
         rospy.spin()
     
@@ -106,9 +107,10 @@ class AudioSpeechToText:
             #get the transcription here
             print(data[0])
             print(wav_data[0])
-            transcript = self.serv(wav_data)
+            transcript = self.whisper_serv(wav_data)
             print(transcript.transcription)
             #publish full audio message (wavbytes and text)
+            self.transript_publisher.publish(transcript.transcription)
 
             self.snd_started = False
             self.num_silent = 0

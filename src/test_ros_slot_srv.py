@@ -2,9 +2,8 @@
 
 import rospy
 from sensor_msgs.msg import Image, CameraInfo
-from image_geometry import PinholeCameraModel
-from geometry_msgs.msg import PointStamped, Point
-from toy_assembly.srv import DetectSlot, DetectSlotResponse, DetectSlotRequest
+from geometry_msgs.msg import PointStamped
+from toy_assembly.srv import DetectSlot, DetectSlotRequest
 
 rospy.init_node('test_slot', anonymous=True)
 
