@@ -6,6 +6,7 @@ import cv2
 from cv_bridge import CvBridge
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
+from image_geometry import PinholeCameraModel
 import sensor_msgs.point_cloud2 as pc2
 from obj_segmentation.msg import SegmentedClustersArray
 from toy_assembly.srv import SAM

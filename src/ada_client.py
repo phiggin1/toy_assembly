@@ -3,6 +3,7 @@
 import zmq
 import numpy as np
 import rospy
+import json
 from cv_bridge import CvBridge
 from toy_assembly.srv import Whisper, CLIP, SAM
 from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse
@@ -40,8 +41,14 @@ class AdaClient:
 
         audio_data = request.data
 
+        print(audio_data[0:12])
+        print(type(audio_data))
+        audio_json = str(audio_data)
+        print(audio_json[0:12])
+        print(type(audio_json))
+
         msg = {"type":"whisper",
-               "data":audio_data
+               "data":audio_json
         }
 
         self.socket.send_json(msg)

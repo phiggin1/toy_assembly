@@ -88,7 +88,7 @@ class AdaEndPoint:
         print('recv_msg')
 
         #get bytes from json
-        audio_bytes = data["data"]
+        audio_bytes = bytes(data["data"])
 
         #save to /tmp/audio.mp3
         binary_file = open(self.tmp_audio_filename, "wb")

@@ -6,7 +6,7 @@ import numpy as np
 import io
 from std_msgs.msg import String
 from toy_assembly.srv import Whisper
-from scipy.io.wavfile import write
+from scipy.io.wavfile import write as wavfile_writer
 
 def is_silent(snd_data, threshold):
     "Returns 'True' if below the 'silent' threshold"
@@ -21,10 +21,10 @@ class AudioSpeechToText:
 
         #Number of audio messages that are below threshold 
         #   to determine if person stopped talking
-        self.silent_wait = rospy.get_param("~silent_wait", 10)
+        self.silent_wait = rospy.get_param("~silent_wait", 1)
 
         #Maximum audio clip length (seconds)
-        self.max_duration = rospy.get_param("~max_duration", 25)
+        self.max_duration = rospy.get_param("~max_duration", 1)
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
@@ -53,7 +53,7 @@ class AudioSpeechToText:
         rospy.wait_for_service('get_transciption')        
         self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
         self.audio_subscriber = rospy.Subscriber("/audio", String, self.audio_cb)
-        self.transript_publisher = rospy.Publisher("/transcript", String)
+        self.transript_publisher = rospy.Publisher("/transcript", String, queue_size=10)
 
         rospy.spin()
     
@@ -101,7 +101,7 @@ class AudioSpeechToText:
             data = np.asarray(audio)
             bytes_wav = bytes()
             byte_io = io.BytesIO(bytes_wav)
-            write(byte_io, self.sample_rate, data)
+            wavfile_writer(byte_io, self.sample_rate, data)
             wav_data = byte_io.read()
 
             #get the transcription here
