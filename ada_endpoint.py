@@ -9,6 +9,7 @@ import numpy as np
 import json
 import zmq
 import argparse
+import PIL
 
 class AdaEndPoint:
     def __init__(self, hostname, port, sam_model_path, whisper_model_path, clip_model_path):
@@ -112,7 +113,7 @@ class AdaEndPoint:
         #images = data["images"]
         images = []
         for img in data["images"]:
-            images.append(np.asarray(img, dtype=np.uint8))
+            images.append( PIL.Image.fromarray(np.asarray(img, dtype=np.uint8)))
         text = []
         for t in data["text"]:
             text.append(t)

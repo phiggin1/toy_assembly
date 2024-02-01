@@ -87,6 +87,7 @@ cvbridge = CvBridge()
 clip_serv = rospy.ServiceProxy('get_clip_probabilities', CLIP)
 segment_serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
 
+max_num_contours = 12
 
 rgb_image_topic =  "/unity/camera/rgb/image_raw"
 cam_info_topic =   "/unity/camera/rgb/camera_info"
@@ -109,31 +110,36 @@ cam_model.fromCameraInfo(cam_info)
 clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
-transcript = rospy.wait_for_message(transcript_topic, String)
+transcript = "red horse"#rospy.wait_for_message(transcript_topic, String)
 rospy.loginfo("Got transcript")
 
 images = []
 positions = []
 
-for i, pc in enumerate(clusters):
+for i, pc in enumerate(clusters.clusters):
     print(f"obj {i}")
     p = get_centroid(pc)
 
     u, v = cam_model.project3dToPixel( p )
+
+    print(p)
+    print(u,v)
+
     target_x = int(u)
     target_y = int(v)
-    masks  = segment_serv(rgb_image, target_x, target_y)
+    resp  = segment_serv(rgb_image, target_x, target_y)
     rgb_cv = cvbridge.imgmsg_to_cv2(rgb_image)
     image = np.empty_like(rgb_cv)
 
-    for mask in masks:
+    for mask in resp.masks:
         #get image
-        imgray = np.asarray(mask*255, dtype=np.uint8)
-        display_img(imgray)
+        mask_cv = cvbridge.imgmsg_to_cv2(mask)
+        imgray = np.asarray(mask_cv*255, dtype=np.uint8)
+        #display_img(imgray)
 
         contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
-        if len(contours) > self.max_num_contours:
-            rospy.loginfo(f"{len(contours)}>{self.max_num_contours}")
+        if len(contours) > max_num_contours:
+            rospy.loginfo(f"{len(contours)}>{max_num_contours}")
             continue
 
         contour_img = imgray.copy()
@@ -144,11 +150,14 @@ for i, pc in enumerate(clusters):
 
         #display the contours overlayed on copy of origional image
         cv2.drawContours(contour_img, contours, -1, green, 1)
-        cv2.bitwise_and(rgb_cv, image, mask=mask.astype(np.uint8))
+        cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask.astype(np.uint8))
 
-    images.append(image)
+    #display_img(rgb_cv)
+    images.append(cvbridge.cv2_to_imgmsg(rgb_cv, "bgr8"))
     positions.append(p)
 
+print(type(images))
+print(images[0].encoding)
 
 clip_probs = clip_serv(images, [transcript])
 
