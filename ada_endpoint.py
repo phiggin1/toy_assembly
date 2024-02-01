@@ -113,7 +113,8 @@ class AdaEndPoint:
         #images = data["images"]
         images = []
         for img in data["images"]:
-            images.append( PIL.Image.fromarray(np.asarray(img, dtype=np.uint8)))
+            #images.append(preprocess(image))
+            images.append( self.clip_preprocess( PIL.Image.fromarray(np.asarray(img, dtype=np.uint8))) )
         text = []
         for t in data["text"]:
             text.append(t)
@@ -121,7 +122,7 @@ class AdaEndPoint:
         print(text)
 
         #org clip_image = self.clip_preprocess(images).unsqueeze(0).to(self.device)
-        clip_image = self.clip_preprocess(images).to(self.device)
+        clip_image = images.to(self.device)
         clip_text = clip.tokenize(text).to(self.device)
     
         with torch.no_grad():
