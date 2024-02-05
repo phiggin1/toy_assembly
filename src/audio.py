@@ -24,14 +24,14 @@ class AudioSpeechToText:
 
         #Number of audio messages that are below threshold 
         #   to determine if person stopped talking
-        self.silent_wait = rospy.get_param("~silent_wait", 1)
+        self.silent_wait = rospy.get_param("~silent_wait", 5)
 
         #Maximum audio clip length (seconds)
-        self.max_duration = rospy.get_param("~max_duration", 1)
+        self.max_duration = rospy.get_param("~max_duration", 5)
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
-        self.threshold = rospy.get_param("~threshold", 0.001)
+        self.threshold = rospy.get_param("~threshold", 0.005)
         if self.threshold < 0.0:
             rospy.loginfo("threshold should be normalized ([0,1.0])")
             self.threshold = 0.0
@@ -61,13 +61,13 @@ class AudioSpeechToText:
         rospy.spin()
     
     def audio_cb(self, msg):
-        rospy.loginfo("msg recv")
         float_array = json.loads(msg.data)
+        rospy.loginfo(f"msg recv, max volumn:{max(float_array)}")
         self.process_audio(float_array)
     
     def process_audio(self, data):
-        silent = is_silent(data, self.threshold)
 
+        silent = is_silent(data, self.threshold)
         if not silent:
             rospy.loginfo("there is sound")
 

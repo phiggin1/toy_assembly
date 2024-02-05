@@ -32,11 +32,8 @@ class AdaClient:
 
     def Whisper(self, request):
         rospy.loginfo('Whisper req recv')
-        rospy.loginfo(type(request))
-        rospy.loginfo(type(request.data))
 
         audio_json = str(request.data.data)
-        print(type(audio_json))
 
 
         msg = {"type":"whisper",
@@ -48,6 +45,7 @@ class AdaClient:
 
         rospy.loginfo('Whisper recv from ada')
         transcription = resp["text"]
+        rospy.loginfo(f"transcription:{transcription}")
 
         response = WhisperResponse()
         response.transcription = transcription
@@ -72,7 +70,6 @@ class AdaClient:
         probs = np.asarray(resp["probs"])
         rospy.loginfo('CLIP recv from ada')
         rospy.loginfo(probs)
-        print(type(probs))
 
         response = CLIPResponse()
         resp_probs = Float32MultiArray()

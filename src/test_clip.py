@@ -112,12 +112,12 @@ cam_model.fromCameraInfo(cam_info)
 clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
-'''
-transcript = rospy.wait_for_message(transcript_topic, String) 
-#transcript = ["red horse"]
+
+#transcript = rospy.wait_for_message(transcript_topic, String) 
+transcript = ["red horse", "blue horse"]
 rospy.loginfo("Got transcript") 
 rospy.loginfo(transcript) 
-'''
+
 
 images = []
 positions = []
@@ -125,15 +125,16 @@ positions = []
 for i, pc in enumerate(clusters.clusters):
     print(f"obj {i}")
     p = get_centroid(pc)
+    positions.append(p)
 
     u, v = cam_model.project3dToPixel( p )
-
     print(p)
     print(u,v)
 
     target_x = int(u)
     target_y = int(v)
     resp  = segment_serv(rgb_image, target_x, target_y)
+    #scores = resp.scores
     rgb_cv = cvbridge.imgmsg_to_cv2(rgb_image)
 
     #display target on image
@@ -141,10 +142,9 @@ for i, pc in enumerate(clusters.clusters):
     cv2.circle(disp_img, (target_x, target_y), radius=5, color=purple, thickness=-1)
     display_img(disp_img)
 
-    for mask in resp.masks:
+    for j, mask in enumerate(resp.masks):
+        rospy.loginfo(f"mask {j} of {len(resp.masks)}")
         #get image
-        print(type(mask)) 
-        mask_publisher.publish(mask) 
         mask_cv = cvbridge.imgmsg_to_cv2(mask)
 
         rospy.loginfo(f"shape:{mask_cv.shape}")
@@ -152,7 +152,9 @@ for i, pc in enumerate(clusters.clusters):
         rospy.loginfo(f"max:{np.max(mask_cv)}")
 
         imgray = np.asarray(mask_cv, dtype=np.uint8)
-        display_img(imgray)
+        #display_img(imgray)
+
+         
 
         contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
         if len(contours) > max_num_contours:
@@ -170,18 +172,22 @@ for i, pc in enumerate(clusters.clusters):
         masked_image = cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask_cv.astype(np.uint8))
         display_img(masked_image)
 
-    images.append(cvbridge.cv2_to_imgmsg(rgb_cv, "bgr8"))
-    positions.append(p)
+        images.append(cvbridge.cv2_to_imgmsg(masked_image, "bgr8"))
+        break
 
-'''
-print(type(images))
-print(images[0].encoding)
-print(type(transcript))
+    
+
+
+rospy.loginfo(f"#images:{len(images)}")
+rospy.loginfo(f"#transcripts:{len([transcript])}")
 
 clip_probs = clip_serv(images, transcript)
 dims = tuple(map(lambda x: x.size, clip_probs.probs.layout.dim))
 probs = np.array(clip_probs.probs.data, dtype=np.float32).reshape(dims).astype(dtype=np.float32)
 
+
 rospy.loginfo(probs)
-'''
+rospy.loginfo(transcript)
+rospy.loginfo(positions)
+
 
