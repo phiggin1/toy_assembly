@@ -65,7 +65,6 @@ class AudioSpeechToText:
         float_array = json.loads(msg.data)
         self.process_audio(float_array)
     
-
     def process_audio(self, data):
         silent = is_silent(data, self.threshold)
 
@@ -102,8 +101,6 @@ class AudioSpeechToText:
             rospy.loginfo('get_transcription')
             request  = WhisperRequest()
             request.data.data = json.dumps(audio)
-
-
 
             transcript = self.whisper_serv(request)
             print(transcript.transcription)
