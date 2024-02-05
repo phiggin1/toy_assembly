@@ -5,6 +5,7 @@ import clip
 import whisper
 from segment_anything import SamPredictor, sam_model_registry
 
+from scipy.io.wavfile import write as wavfile_writer
 import numpy as np
 import json
 import zmq
@@ -41,6 +42,7 @@ class AdaEndPoint:
         self.socket.connect("tcp://"+sever_address+":"+server_port)
         print(f"Connected to {sever_address}:{server_port}")
 
+        self.sample_rate = 16000
         self.tmp_audio_filename = '/tmp/audio.mp3'
 
     def run(self):
@@ -89,16 +91,8 @@ class AdaEndPoint:
         print('recv_msg')
 
         print(type(data["data"]))
-        print(data["data"][0:10])
-        print(data["data"][-10])
-        #get bytes from json
-        audio_bytes = bytearray(data["data"])
-        print(type(audio_bytes))
-
-        #save to /tmp/audio.mp3
-        binary_file = open(self.tmp_audio_filename, "wb")
-        binary_file.write(audio_bytes)
-        binary_file.close()
+        data = np.asarray(audio)
+        wavfile_writer(self.tmp_audio_filename, self.sample_rate, data)
 
         #get transcription from whisper
         result = self.whisper_model.transcribe(self.tmp_audio_filename) 
