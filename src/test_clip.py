@@ -111,7 +111,7 @@ clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
 #transcript = rospy.wait_for_message(transcript_topic, String) 
-transcript = ["red horse", "red horse"]
+transcript = ["red horse"]
 rospy.loginfo("Got transcript") 
 rospy.loginfo(transcript) 
 
@@ -168,7 +168,9 @@ print(type(images))
 print(images[0].encoding)
 print(type(transcript))
 
-clip_probs = clip_serv(images, [transcript])
+clip_probs = clip_serv(images, transcript)
+dims = tuple(map(lambda x: x.size, clip_probs.probs.layout.dim))
+probs = np.array(clip_probs.probs.data, dtype=np.float32).reshape(dims).astype(dtype=np.float32)
 
-rospy.loginfo(clip_probs)
+rospy.loginfo(probs)
 

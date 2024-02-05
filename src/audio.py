@@ -6,7 +6,11 @@ import numpy as np
 import io
 from std_msgs.msg import String
 from toy_assembly.srv import Whisper
+from toy_assembly.srv import WhisperRequest
 from scipy.io.wavfile import write as wavfile_writer
+from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import MultiArrayDimension
+
 
 def is_silent(snd_data, threshold):
     "Returns 'True' if below the 'silent' threshold"
@@ -97,8 +101,14 @@ class AudioSpeechToText:
 
     def get_transcription(self, audio):
             rospy.loginfo('get_transcription')
+            request  = WhisperRequest()
+            rospy.loginfo(request)
+
+
+            '''
             #get audio into correct format (binary wav file)
             data = np.asarray(audio)
+
             bytes_wav = bytes()
             byte_io = io.BytesIO(bytes_wav)
             wavfile_writer(byte_io, self.sample_rate, data)
@@ -107,7 +117,8 @@ class AudioSpeechToText:
             #get the transcription here
             print(data[0])
             print(wav_data[0])
-            transcript = self.whisper_serv(wav_data)
+            '''
+            transcript = self.whisper_serv(request)
             print(transcript.transcription)
             #publish full audio message (wavbytes and text)
             self.transript_publisher.publish(transcript.transcription)

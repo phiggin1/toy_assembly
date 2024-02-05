@@ -8,6 +8,7 @@ from cv_bridge import CvBridge
 from toy_assembly.srv import Whisper, CLIP, SAM
 from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse
 from std_msgs.msg import Float32MultiArray
+from std_msgs.msg import MultiArrayDimension
 
 class AdaClient:
     def __init__(self):
@@ -31,8 +32,11 @@ class AdaClient:
 
     def Whisper(self, request):
         rospy.loginfo('Whisper req recv')
+        rospy.loginfo(type(request))
+        rospy.loginfo(type(request.data))
 
         audio_json = str(request.data)
+
 
         msg = {"type":"whisper",
                "data":audio_json
@@ -64,21 +68,23 @@ class AdaClient:
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
 
-        probs = resp["probs"]
+        probs = np.asarray(resp["probs"])
         rospy.loginfo('CLIP recv from ada')
         rospy.loginfo(probs)
         print(type(probs))
 
         response = CLIPResponse()
         resp_probs = Float32MultiArray()
+        resp_probs.layout.dim = [MultiArrayDimension('dim%d' % i,  probs.shape[i], probs.shape[i] * probs.dtype.itemsize) for i in range(probs.ndim)]
+        resp_probs.data = probs.reshape([1, -1])[0].tolist()
 
-        rospy.loginfo("-----")
-        rospy.loginfo(response)
-        rospy.loginfo("-----")
-        rospy.loginfo(resp_probs)
+
 
 
         response.probs = resp_probs
+
+
+
         return response
     
     def SAM(self, request):
