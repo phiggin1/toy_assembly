@@ -95,6 +95,8 @@ class AdaClient:
         target_x = request.target_x
         target_y = request.target_y
         
+        print(image.shape)
+
         msg = {"type":"sam",
                "image":image.tolist(),
                "target_x":target_x,
@@ -108,7 +110,17 @@ class AdaClient:
 
         masks = []
         for mask in resp["masks"]:
-            masks.append(self.cvbridge.cv2_to_imgmsg(np.asarray(mask, dtype=np.uint8)))
+            print(type(mask))
+            print(len(mask))
+
+            m = np.asarray(mask*255, dtype=np.uint8)
+            print(type(m))
+            print(m.shape)
+            print(m.dtype)
+            print(np.min(m))
+            print(np.max(m))
+
+            masks.append(self.cvbridge.cv2_to_imgmsg(m))
 
         response = SAMResponse()
         response.masks = masks

@@ -99,6 +99,8 @@ rospy.loginfo(f"cam_info_topic:{cam_info_topic}")
 rospy.loginfo(f"cluster_topic:{cluster_topic}")
 rospy.loginfo(f"transcript_topic:{transcript_topic}")
             
+mask_publisher = rospy.Publisher("/masks", Image, queue_size=10)
+
 rgb_image = rospy.wait_for_message(rgb_image_topic, Image) 
 rospy.loginfo("Got RGB image")
 
@@ -110,10 +112,12 @@ cam_model.fromCameraInfo(cam_info)
 clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
-#transcript = rospy.wait_for_message(transcript_topic, String) 
-transcript = ["red horse"]
+'''
+transcript = rospy.wait_for_message(transcript_topic, String) 
+#transcript = ["red horse"]
 rospy.loginfo("Got transcript") 
 rospy.loginfo(transcript) 
+'''
 
 images = []
 positions = []
@@ -135,15 +139,17 @@ for i, pc in enumerate(clusters.clusters):
     #display target on image
     disp_img = rgb_cv.copy()
     cv2.circle(disp_img, (target_x, target_y), radius=5, color=purple, thickness=-1)
-    #display_img(disp_img)
+    display_img(disp_img)
 
     image = np.empty_like(rgb_cv)
 
     for mask in resp.masks:
         #get image
-        mask_cv = cvbridge.imgmsg_to_cv2(mask, )
+        print(type(mask)) 
+        mask_publisher.publish(mask) 
+        mask_cv = cvbridge.imgmsg_to_cv2(mask)
         imgray = np.asarray(mask_cv, dtype=np.uint8)
-        #display_img(imgray)
+        display_img(imgray)
 
         contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
         if len(contours) > max_num_contours:
@@ -164,6 +170,7 @@ for i, pc in enumerate(clusters.clusters):
     images.append(cvbridge.cv2_to_imgmsg(rgb_cv, "bgr8"))
     positions.append(p)
 
+'''
 print(type(images))
 print(images[0].encoding)
 print(type(transcript))
@@ -173,4 +180,5 @@ dims = tuple(map(lambda x: x.size, clip_probs.probs.layout.dim))
 probs = np.array(clip_probs.probs.data, dtype=np.float32).reshape(dims).astype(dtype=np.float32)
 
 rospy.loginfo(probs)
+'''
 

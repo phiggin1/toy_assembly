@@ -67,6 +67,8 @@ class AdaEndPoint:
         target_y = data["target_x"]
         
         img = np.asarray(data["image"], dtype=np.uint8)
+
+        print(img.shape)
         
         input_point = np.array([[target_x, target_y]])
         input_label = np.array([1])
