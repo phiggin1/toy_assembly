@@ -91,6 +91,7 @@ class AdaEndPoint:
         print('recv_msg')
 
         print(type(data["data"]))
+        audio = data["data"]
         data = np.asarray(audio)
         wavfile_writer(self.tmp_audio_filename, self.sample_rate, data)
 
