@@ -138,7 +138,7 @@ class AdaEndPoint:
         print('clip model end')
     
         response = {"type":"clip",
-                    "probs":[probs.tolist()]
+                    "probs":probs.tolist()
         }
 
         return response

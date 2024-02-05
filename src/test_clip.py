@@ -111,7 +111,7 @@ clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
 #transcript = rospy.wait_for_message(transcript_topic, String) 
-transcript = "red horse"
+transcript = ["red horse", "red horse"]
 rospy.loginfo("Got transcript") 
 rospy.loginfo(transcript) 
 
@@ -135,7 +135,7 @@ for i, pc in enumerate(clusters.clusters):
     #display target on image
     disp_img = rgb_cv.copy()
     cv2.circle(disp_img, (target_x, target_y), radius=5, color=purple, thickness=-1)
-    display_img(disp_img)
+    #display_img(disp_img)
 
     image = np.empty_like(rgb_cv)
 
@@ -153,13 +153,13 @@ for i, pc in enumerate(clusters.clusters):
         contour_img = imgray.copy()
         contour_img = cv2.cvtColor(contour_img,cv2.COLOR_GRAY2RGB)
         #display target on image
-        cv2.circle(contour_img, (target_x, target_y), radius=3, color=red, thickness=-1)
+        cv2.circle(contour_img, (target_x, target_y),  radius=3, color=red, thickness=-1)
         #display the contours overlayed on copy of origional image
         cv2.drawContours(contour_img, contours, -1, green, 1)
-        display_img(contour_img)
+        #display_img(contour_img)
 
         masked_image = cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask_cv.astype(np.uint8))
-        display_img(masked_image)
+        #display_img(masked_image)
 
     images.append(cvbridge.cv2_to_imgmsg(rgb_cv, "bgr8"))
     positions.append(p)

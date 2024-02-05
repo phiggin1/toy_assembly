@@ -41,7 +41,7 @@ class AdaClient:
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
 
-        rospy.loginfo('recv from ada')
+        rospy.loginfo('Whisper recv from ada')
         transcription = resp["text"]
 
         response = WhisperResponse()
@@ -65,14 +65,21 @@ class AdaClient:
         resp = self.socket.recv_json()
 
         probs = resp["probs"]
-        rospy.loginfo('recv from ada')
+        rospy.loginfo('CLIP recv from ada')
         rospy.loginfo(probs)
+        print(type(probs))
 
         response = CLIPResponse()
-        resp_pobs = Float32MultiArray()
-        print(type(probs))
-        response.probs = probs
-        return probs
+        resp_probs = Float32MultiArray()
+
+        rospy.loginfo("-----")
+        rospy.loginfo(response)
+        rospy.loginfo("-----")
+        rospy.loginfo(resp_probs)
+
+
+        response.probs = resp_probs
+        return response
     
     def SAM(self, request):
         rospy.loginfo('SAM req recv')
@@ -87,11 +94,10 @@ class AdaClient:
                "target_y":target_y
         }
 
-        rospy.loginfo("sending to ada")
+        rospy.loginfo("SAM sending to ada")
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
-
-        rospy.loginfo('recv from ada')
+        rospy.loginfo('SAM recv from ada')
 
         masks = []
         for mask in resp["masks"]:
