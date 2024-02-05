@@ -35,7 +35,7 @@ class AdaClient:
         rospy.loginfo(type(request))
         rospy.loginfo(type(request.data))
 
-        audio_json = str(request.data)
+        audio_json = str(request.data.data)
         print(type(audio_json))
 
 

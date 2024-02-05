@@ -94,8 +94,7 @@ class AdaEndPoint:
         data = data["data"]
         print(data[0:24])
 
-        audio = np.asarray(data)
-        print(audio)
+        audio = np.fromstring(data)
 
         print(type(audio))
         print(audio.shape)
