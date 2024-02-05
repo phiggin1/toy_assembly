@@ -7,6 +7,7 @@ import json
 from cv_bridge import CvBridge
 from toy_assembly.srv import Whisper, CLIP, SAM
 from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse
+from std_msgs.msg import Float32MultiArray
 
 class AdaClient:
     def __init__(self):
@@ -68,6 +69,8 @@ class AdaClient:
         rospy.loginfo(probs)
 
         response = CLIPResponse()
+        resp_pobs = Float32MultiArray()
+        print(type(probs))
         response.probs = probs
         return probs
     

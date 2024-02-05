@@ -90,7 +90,7 @@ class AdaEndPoint:
 
         print(type(data["data"]))
         print(data["data"][0:10])
-        print(data["data"][:-10])
+        print(data["data"][-10])
         #get bytes from json
         audio_bytes = bytearray(data["data"])
         print(type(audio_bytes))
@@ -138,7 +138,7 @@ class AdaEndPoint:
         print('clip model end')
     
         response = {"type":"clip",
-                    "probs":probs.tolist()
+                    "probs":[probs.tolist()]
         }
 
         return response
