@@ -106,12 +106,15 @@ class AdaClient:
         rospy.loginfo("SAM sending to ada")
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
-        rospy.loginfo('SAM recv from ada')
+        rospy.loginfo('SAM recv from ada') 
+
+        rospy.loginfo(resp["scores"])
 
         masks = []
         for mask in resp["masks"]:
             print(type(mask))
             print(len(mask))
+            print(len(mask[0]))
 
             m = np.asarray(mask*255, dtype=np.uint8)
             print(type(m))

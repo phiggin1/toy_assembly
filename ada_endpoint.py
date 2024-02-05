@@ -82,6 +82,8 @@ class AdaEndPoint:
         )
         print('sam end')
 
+        print(masks.shape)
+        
         response = {"type":"sam",
                     "masks":masks.tolist(),
                     "scores":scores.tolist()
