@@ -36,6 +36,7 @@ class AdaClient:
         rospy.loginfo(type(request.data))
 
         audio_json = str(request.data)
+        print(type(audio_json))
 
 
         msg = {"type":"whisper",

@@ -95,12 +95,12 @@ class AdaEndPoint:
         print(data[0:24])
 
         audio = np.asarray(data)
-        print(audio[0])
+        print(audio)
 
-        print(type(data))
-        print(data.shape)
-        print(data.dtype)
-        print(data[0])
+        print(type(audio))
+        print(audio.shape)
+        print(audio.dtype)
+        print(audio[0])
 
         wavfile_writer(self.tmp_audio_filename, self.sample_rate, data)
 

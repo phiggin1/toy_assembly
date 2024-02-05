@@ -7,7 +7,6 @@ import io
 from std_msgs.msg import String
 from toy_assembly.srv import Whisper
 from toy_assembly.srv import WhisperRequest
-from scipy.io.wavfile import write as wavfile_writer
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import MultiArrayDimension
 
@@ -102,22 +101,10 @@ class AudioSpeechToText:
     def get_transcription(self, audio):
             rospy.loginfo('get_transcription')
             request  = WhisperRequest()
-            rospy.loginfo(request)
+            request.data.data = json.dumps(audio)
 
 
-            '''
-            #get audio into correct format (binary wav file)
-            data = np.asarray(audio)
 
-            bytes_wav = bytes()
-            byte_io = io.BytesIO(bytes_wav)
-            wavfile_writer(byte_io, self.sample_rate, data)
-            wav_data = byte_io.read()
-
-            #get the transcription here
-            print(data[0])
-            print(wav_data[0])
-            '''
             transcript = self.whisper_serv(request)
             print(transcript.transcription)
             #publish full audio message (wavbytes and text)
