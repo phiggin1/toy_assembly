@@ -93,6 +93,9 @@ class AdaEndPoint:
         print(type(data["data"]))
         audio = data["data"]
         data = np.asarray(audio)
+        print(type(data))
+        print(data.shape)
+        print(data.dtype)
         wavfile_writer(self.tmp_audio_filename, self.sample_rate, data)
 
         #get transcription from whisper
