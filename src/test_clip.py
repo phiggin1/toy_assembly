@@ -141,13 +141,16 @@ for i, pc in enumerate(clusters.clusters):
     cv2.circle(disp_img, (target_x, target_y), radius=5, color=purple, thickness=-1)
     display_img(disp_img)
 
-    image = np.empty_like(rgb_cv)
-
     for mask in resp.masks:
         #get image
         print(type(mask)) 
         mask_publisher.publish(mask) 
         mask_cv = cvbridge.imgmsg_to_cv2(mask)
+
+        rospy.loginfo(f"shape:{mask_cv.shape}")
+        rospy.loginfo(f"min:{np.min(mask_cv)}")
+        rospy.loginfo(f"max:{np.max(mask_cv)}")
+
         imgray = np.asarray(mask_cv, dtype=np.uint8)
         display_img(imgray)
 
@@ -165,7 +168,7 @@ for i, pc in enumerate(clusters.clusters):
         #display_img(contour_img)
 
         masked_image = cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask_cv.astype(np.uint8))
-        #display_img(masked_image)
+        display_img(masked_image)
 
     images.append(cvbridge.cv2_to_imgmsg(rgb_cv, "bgr8"))
     positions.append(p)

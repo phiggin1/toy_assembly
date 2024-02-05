@@ -64,7 +64,7 @@ class AdaEndPoint:
 
     def process_sam(self, data):
         target_x = data["target_x"]
-        target_y = data["target_x"]
+        target_y = data["target_y"]
         
         img = np.asarray(data["image"], dtype=np.uint8)
 
@@ -83,7 +83,7 @@ class AdaEndPoint:
         print('sam end')
 
         print(masks.shape)
-        
+
         response = {"type":"sam",
                     "masks":masks.tolist(),
                     "scores":scores.tolist()
