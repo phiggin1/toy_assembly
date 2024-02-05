@@ -112,21 +112,24 @@ class AdaEndPoint:
 
         print('clip model start')
         #images = data["images"]
-        images = []
+        raw_images = []
         for img in data["images"]:
             #images.append(preprocess(image))
-            images.append( PIL.Image.fromarray(np.asarray(img, dtype=np.uint8)) )
-        text = []
+
+            raw_images.append( self.clip_preprocess(PIL.Image.fromarray(np.asarray(img, dtype=np.uint8))).unsqueeze(0) )
+        raw_text = []
         for t in data["text"]:
-            text.append(t)
+            raw_text.append(t)
     
-        print(text)
-        image_features = self.clip_model.encode_image(images)
-        text_features = self.clip_model.encode_text(text)
+        images = torch.cat(raw_images, 0).to(self.device)
+        text = clip.tokenize(raw_text).to(self.device)
+
+        #image_features = self.clip_model.encode_image(images)
+        #text_features = self.clip_model.encode_text(text)
 
     
         with torch.no_grad():
-            logits_per_image, _ = self.clip_model(image_features, text_features)
+            logits_per_image, _ = self.clip_model(images, text)
             probs = logits_per_image.softmax(dim=-1).cpu().numpy()
 
         print("Label probs:", probs)  

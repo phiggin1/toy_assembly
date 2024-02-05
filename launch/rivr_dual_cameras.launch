@@ -1,0 +1,22 @@
+<launch>
+    <node pkg="nodelet" type="nodelet" args="manager" name="record_player_manager" output="screen"/>
+
+    <node name="decompress_rgb_right" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/right/rgb raw out:=/unity/camera/right/rgb/image_raw" />
+    <!-- builds pointcloud from the color and depth images -->
+    <node pkg="nodelet" type="nodelet" name="cloudify_right" args="load depth_image_proc/point_cloud_xyzrgb record_player_manager ">
+        <remap from="depth_registered/image_rect" to="/unity/camera/right/depth/image_raw"/> 
+        <remap from="rgb/image_rect_color"  to="/unity/camera/right/rgb/image_raw"/> 
+        <remap from="rgb/camera_info" to="/unity/camera/right/rgb/camera_info"/>
+        <remap from="depth_registered/points" to="/unity/camera/right/depth/points"/> 
+    </node>
+  
+    <node name="decompress_rgb_left" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/left/rgb raw out:=/unity/camera/left/rgb/image_raw" />
+    <!-- builds pointcloud from the color and depth images -->
+    <node pkg="nodelet" type="nodelet" name="cloudify_left" args="load depth_image_proc/point_cloud_xyzrgb record_player_manager ">
+        <remap from="depth_registered/image_rect" to="/unity/camera/left/depth/image_raw"/> 
+        <remap from="rgb/image_rect_color"  to="/unity/camera/left/rgb/image_raw"/> 
+        <remap from="rgb/camera_info" to="/unity/camera/left/rgb/camera_info"/>
+        <remap from="depth_registered/points" to="/unity/camera/left/depth/points"/> 
+    </node>
+
+</launch>

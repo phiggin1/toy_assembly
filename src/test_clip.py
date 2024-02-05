@@ -89,8 +89,8 @@ segment_serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
 
 max_num_contours = 12
 
-rgb_image_topic =  "/unity/camera/rgb/image_raw"
-cam_info_topic =   "/unity/camera/rgb/camera_info"
+rgb_image_topic =  "/unity/camera/right/rgb/image_raw"
+cam_info_topic =   "/unity/camera/right/rgb/camera_info"
 cluster_topic =    "/object_clusters"
 transcript_topic = "/transcript"
 
@@ -110,8 +110,8 @@ cam_model.fromCameraInfo(cam_info)
 clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
-transcript = "red horse"#rospy.wait_for_message(transcript_topic, String)
-rospy.loginfo("Got transcript")
+transcript = rospy.wait_for_message(transcript_topic, String) #"red horse"
+rospy.loginfo("Got transcript") 
 
 images = []
 positions = []
@@ -131,7 +131,7 @@ for i, pc in enumerate(clusters.clusters):
     rgb_cv = cvbridge.imgmsg_to_cv2(rgb_image)
 
     #display target on image
-    disp_img = rgb.copy()
+    disp_img = rgb_cv.copy()
     cv2.circle(disp_img, (target_x, target_y), radius=5, color=purple, thickness=-1)
     display_img(disp_img)
 
