@@ -88,9 +88,11 @@ class AdaEndPoint:
     def process_whisper(self, data):
         print('recv_msg')
 
+        print(type(data["data"]))
+        print(data["data"][0:10])
+        print(data["data"][:-10])
         #get bytes from json
         audio_bytes = bytearray(data["data"])
-        print(type(data["data"]))
         print(type(audio_bytes))
 
         #save to /tmp/audio.mp3

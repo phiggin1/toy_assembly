@@ -65,6 +65,7 @@ class AdaClient:
 
         probs = resp["probs"]
         rospy.loginfo('recv from ada')
+        rospy.loginfo(probs)
 
         response = CLIPResponse()
         response.probs = probs

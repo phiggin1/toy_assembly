@@ -80,7 +80,8 @@ find_package(catkin REQUIRED
    DEPENDENCIES
    geometry_msgs
    sensor_msgs
-   std_msgs  # Or other packages containing msgs
+   std_msgs 
+    # Or other packages containing msgs
  )
 
 ################################################

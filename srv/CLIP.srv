@@ -1,4 +1,4 @@
 sensor_msgs/Image[] images
 string[] text
 ---
-std_msgs/Int32MultiArray[] probs
+std_msgs/Float32[] probs
