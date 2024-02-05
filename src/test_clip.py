@@ -110,8 +110,10 @@ cam_model.fromCameraInfo(cam_info)
 clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
-transcript = rospy.wait_for_message(transcript_topic, String) #"red horse"
+#transcript = rospy.wait_for_message(transcript_topic, String) 
+transcript = "red horse"
 rospy.loginfo("Got transcript") 
+rospy.loginfo(transcript) 
 
 images = []
 positions = []
