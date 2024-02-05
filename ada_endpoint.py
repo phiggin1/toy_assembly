@@ -89,8 +89,9 @@ class AdaEndPoint:
         print('recv_msg')
 
         #get bytes from json
-        audio_bytes = data["data"]
+        audio_bytes = bytearray(data["data"])
         print(type(data["data"]))
+        print(type(audio_bytes))
 
         #save to /tmp/audio.mp3
         binary_file = open(self.tmp_audio_filename, "wb")
@@ -114,21 +115,18 @@ class AdaEndPoint:
         images = []
         for img in data["images"]:
             #images.append(preprocess(image))
-            images.append( self.clip_preprocess( PIL.Image.fromarray(np.asarray(img, dtype=np.uint8))) )
+            images.append( PIL.Image.fromarray(np.asarray(img, dtype=np.uint8)) )
         text = []
         for t in data["text"]:
             text.append(t)
     
         print(text)
+        image_features = self.clip_model.encode_image(images)
+        text_features = self.clip_model.encode_text(text)
 
-        #org clip_image = self.clip_preprocess(images).unsqueeze(0).to(self.device)
-        clip_image = images.to(self.device)
-        clip_text = clip.tokenize(text).to(self.device)
     
         with torch.no_grad():
-            #image_features = self.clip_model.encode_image(clip_image)
-            #text_features = self.clip_model.encode_text(text)
-            logits_per_image, logits_per_text = self.clip_model(clip_image, clip_text)
+            logits_per_image, _ = self.clip_model(image_features, text_features)
             probs = logits_per_image.softmax(dim=-1).cpu().numpy()
 
         print("Label probs:", probs)  
@@ -143,7 +141,7 @@ class AdaEndPoint:
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--hostname", default="iral-pinky.cs.umbc.edu", required=False,
-                        help="hostname for ROS system running transcribe_server.py")
+                        help="hostname for ROS system running ada_client.py")
     parser.add_argument("--port", default="8888", required=False,
                         help="port transcribe_server.py is listening on.")
     parser.add_argument("--sam_model_path", default="/nfs/ada/cmat/users/phiggin1/sam_models/sam_vit_h_4b8939.pth", required=False,
@@ -160,5 +158,5 @@ if __name__ == '__main__':
     whisper_model_path = args.whisper_model_path
     clip_model_path = args.clip_model_path
 
-    mask = AdaEndPoint(hostname=hostname, port=port, sam_model_path=sam_model_path, whisper_model_path=whisper_model_path, clip_model_path=clip_model_path)
-    mask.run()
+    endpoint = AdaEndPoint(hostname=hostname, port=port, sam_model_path=sam_model_path, whisper_model_path=whisper_model_path, clip_model_path=clip_model_path)
+    endpoint.run()

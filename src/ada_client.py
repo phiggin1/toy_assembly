@@ -13,21 +13,13 @@ class AdaClient:
         rospy.init_node('transcription_service')
 
         self.cvbridge = CvBridge()
-
-        #hostname
-        #hostname = rospy.get_param("~hostname", "8888")
-
-        #node id
-        #node_id = rospy.get_param("~node_id", "g03")
-
-        #listening port
         
         server_port = rospy.get_param("~port", "8888")
 
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.bind("tcp://*:%s" % server_port)
-        print(f"Server listening on port:{server_port}")
+        rospy.loginfo(f"Server listening on port:{server_port}")
 
 
         self.whisper_serv = rospy.Service('get_transciption', Whisper, self.Whisper)
@@ -67,8 +59,6 @@ class AdaClient:
                "images":images,
                "text":text
         }
-
-
 
         self.socket.send_json(msg)
         resp = self.socket.recv_json()

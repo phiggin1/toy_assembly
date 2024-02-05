@@ -129,12 +129,18 @@ for i, pc in enumerate(clusters.clusters):
     target_y = int(v)
     resp  = segment_serv(rgb_image, target_x, target_y)
     rgb_cv = cvbridge.imgmsg_to_cv2(rgb_image)
+
+    #display target on image
+    disp_img = rgb.copy()
+    cv2.circle(disp_img, (target_x, target_y), radius=5, color=purple, thickness=-1)
+    display_img(disp_img)
+
     image = np.empty_like(rgb_cv)
 
     for mask in resp.masks:
         #get image
-        mask_cv = cvbridge.imgmsg_to_cv2(mask)
-        imgray = np.asarray(mask_cv*255, dtype=np.uint8)
+        mask_cv = cvbridge.imgmsg_to_cv2(mask, )
+        imgray = np.asarray(mask_cv, dtype=np.uint8)
         #display_img(imgray)
 
         contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
@@ -144,20 +150,21 @@ for i, pc in enumerate(clusters.clusters):
 
         contour_img = imgray.copy()
         contour_img = cv2.cvtColor(contour_img,cv2.COLOR_GRAY2RGB)
-
         #display target on image
         cv2.circle(contour_img, (target_x, target_y), radius=3, color=red, thickness=-1)
-
         #display the contours overlayed on copy of origional image
         cv2.drawContours(contour_img, contours, -1, green, 1)
-        cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask.astype(np.uint8))
+        display_img(contour_img)
 
-    #display_img(rgb_cv)
+        masked_image = cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask_cv.astype(np.uint8))
+        display_img(masked_image)
+
     images.append(cvbridge.cv2_to_imgmsg(rgb_cv, "bgr8"))
     positions.append(p)
 
 print(type(images))
 print(images[0].encoding)
+print(type(transcript))
 
 clip_probs = clip_serv(images, [transcript])
 
