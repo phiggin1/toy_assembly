@@ -131,7 +131,6 @@ class AdaEndPoint:
         #image_features = self.clip_model.encode_image(images)
         #text_features = self.clip_model.encode_text(text)
 
-    
         with torch.no_grad():
             logits_per_image, _ = self.clip_model(images, text)
             probs = logits_per_image.softmax(dim=-1).cpu().numpy()

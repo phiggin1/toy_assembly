@@ -62,14 +62,14 @@ class AudioSpeechToText:
     
     def audio_cb(self, msg):
         float_array = json.loads(msg.data)
-        rospy.loginfo(f"msg recv, max volumn:{max(float_array)}")
+        if self.debug: rospy.loginfo(f"msg recv, max volumn:{max(float_array)}")
         self.process_audio(float_array)
     
     def process_audio(self, data):
 
         silent = is_silent(data, self.threshold)
         if not silent:
-            rospy.loginfo("there is sound")
+            if self.debug: rospy.loginfo("there is sound")
 
         self.audio_clip.extend(data)
 
@@ -81,7 +81,7 @@ class AudioSpeechToText:
             self.audio_clip = []
 
         if self.snd_started and self.num_silent > self.silent_wait:
-            rospy.loginfo("got audio clip")
+            if self.debug: rospy.loginfo("got audio clip")
             self.get_transcription(self.audio_clip)
         
         '''
@@ -94,16 +94,15 @@ class AudioSpeechToText:
         #if the audio clip is over max duration get the transcription
         #clip is len(audio_clip)/rate seconds long
         if len(self.audio_clip)>(self.sample_rate*self.max_duration) and self.snd_started:
-            rospy.loginfo("max clip length")
+            if self.debug: rospy.loginfo("max clip length")
             self.get_transcription(self.audio_clip)
 
     def get_transcription(self, audio):
-            rospy.loginfo('get_transcription')
             request  = WhisperRequest()
             request.data.data = json.dumps(audio)
 
             transcript = self.whisper_serv(request)
-            print(transcript.transcription)
+            rospy.loginfo(f"get_transcription:{transcript.transcription}")
             #publish full audio message (wavbytes and text)
             self.transript_publisher.publish(transcript.transcription)
 

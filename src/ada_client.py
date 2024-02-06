@@ -12,10 +12,11 @@ from std_msgs.msg import MultiArrayDimension
 
 class AdaClient:
     def __init__(self):
-        rospy.init_node('transcription_service')
+        rospy.init_node('ada_services')
 
         self.cvbridge = CvBridge()
         
+        self.debug = rospy.get_param("~debug", True)
         server_port = rospy.get_param("~port", "8888")
 
         context = zmq.Context()
@@ -31,7 +32,7 @@ class AdaClient:
         rospy.spin()
 
     def Whisper(self, request):
-        rospy.loginfo('Whisper req recv')
+        if self.debug: rospy.loginfo('Whisper req recv')
 
         audio_json = str(request.data.data)
 
@@ -43,16 +44,16 @@ class AdaClient:
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
 
-        rospy.loginfo('Whisper recv from ada')
+        if self.debug: rospy.loginfo('Whisper recv from ada')
         transcription = resp["text"]
-        rospy.loginfo(f"transcription:{transcription}")
+        rospy.loginfo(f"Whsiper transcription:{transcription}")
 
         response = WhisperResponse()
         response.transcription = transcription
         return response
     
     def CLIP(self, request):
-        rospy.loginfo('CLIP req recv')
+        if self.debug: rospy.loginfo('CLIP req recv')
 
         images = []
         for img in request.images:
@@ -68,25 +69,19 @@ class AdaClient:
         resp = self.socket.recv_json()
 
         probs = np.asarray(resp["probs"])
-        rospy.loginfo('CLIP recv from ada')
-        rospy.loginfo(probs)
+        if self.debug: rospy.loginfo('CLIP recv from ada')
+        rospy.loginfo(f"CLIP probs:{probs}")
 
         response = CLIPResponse()
         resp_probs = Float32MultiArray()
         resp_probs.layout.dim = [MultiArrayDimension('dim%d' % i,  probs.shape[i], probs.shape[i] * probs.dtype.itemsize) for i in range(probs.ndim)]
         resp_probs.data = probs.reshape([1, -1])[0].tolist()
-
-
-
-
         response.probs = resp_probs
-
-
 
         return response
     
     def SAM(self, request):
-        rospy.loginfo('SAM req recv')
+        if self.debug: rospy.loginfo('SAM req recv')
 
         image = self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")     
         target_x = request.target_x
@@ -100,12 +95,12 @@ class AdaClient:
                "target_y":target_y
         }
 
-        rospy.loginfo("SAM sending to ada")
+        if self.debug: rospy.loginfo("SAM sending to ada")
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
-        rospy.loginfo('SAM recv from ada') 
+        if self.debug: rospy.loginfo('SAM recv from ada') 
 
-        rospy.loginfo(resp["scores"])
+        rospy.loginfo(f"SAM scores:{resp["scores"]}")
 
         masks = []
         for mask in resp["masks"]:

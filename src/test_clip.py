@@ -5,13 +5,18 @@ import numpy as np
 import cv2
 from cv_bridge import CvBridge
 from std_msgs.msg import String
-from sensor_msgs.msg import Image, CameraInfo, PointCloud2
-from image_geometry import PinholeCameraModel
+from sensor_msgs.msg import Image, CameraInfo
+from sensor_msgs.msg import PointCloud2
 import sensor_msgs.point_cloud2 as pc2
+from image_geometry import PinholeCameraModel
 from obj_segmentation.msg import SegmentedClustersArray
 from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
 
+BLUE = (255, 0, 0)
+GREEN = (0,255,0)
+RED = (0,0,255)
+PURPLE = (255,0,128)
 
 def get_centroid(pc):
     min_x = 1000.0
@@ -45,35 +50,6 @@ def get_centroid(pc):
 
     return center
 
-
-#get positions of parts
-    #obj_segmentation
-        #use second camera to get postions
-        #can move main to get closer / better view (optional for now)
-
-
-#get images of parts
-    #get segmented image of part
-        #positions (projected into image) + image > SAM
-    #have list of images + positions
-
-#get whisper of audio
-
-#get clip comparison of parts
-
-#get comformation
-    #how to determind sentament?
-        #LLM?
-
-#get slot position of parts
-    #for robot part hold up for other camera
-    #ask person to hold up for robot?
-
-blue = (255, 0, 0)
-green = (0,255,0)
-red = (0,0,255)
-purple = (255,0,128)
-
 def display_img(img):
     # show image
     cv2.imshow('image',img)
@@ -99,8 +75,6 @@ rospy.loginfo(f"cam_info_topic:{cam_info_topic}")
 rospy.loginfo(f"cluster_topic:{cluster_topic}")
 rospy.loginfo(f"transcript_topic:{transcript_topic}")
             
-mask_publisher = rospy.Publisher("/masks", Image, queue_size=10)
-
 rgb_image = rospy.wait_for_message(rgb_image_topic, Image) 
 rospy.loginfo("Got RGB image")
 
@@ -113,7 +87,7 @@ clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
 
-#transcript = rospy.wait_for_message(transcript_topic, String) 
+#transcript = [rospy.wait_for_message(transcript_topic, String)]
 transcript = ["red horse", "blue horse"]
 rospy.loginfo("Got transcript") 
 rospy.loginfo(transcript) 
@@ -139,44 +113,45 @@ for i, pc in enumerate(clusters.clusters):
 
     #display target on image
     disp_img = rgb_cv.copy()
-    cv2.circle(disp_img, (target_x, target_y), radius=5, color=purple, thickness=-1)
-    display_img(disp_img)
+    cv2.circle(disp_img, (target_x, target_y), radius=5, color=PURPLE, thickness=-1)
+    #display_img(disp_img)
 
     for j, mask in enumerate(resp.masks):
         rospy.loginfo(f"mask {j} of {len(resp.masks)}")
         #get image
         mask_cv = cvbridge.imgmsg_to_cv2(mask)
 
+        '''
         rospy.loginfo(f"shape:{mask_cv.shape}")
         rospy.loginfo(f"min:{np.min(mask_cv)}")
         rospy.loginfo(f"max:{np.max(mask_cv)}")
+        '''
 
         imgray = np.asarray(mask_cv, dtype=np.uint8)
         #display_img(imgray)
-
-         
 
         contours, _ = cv2.findContours(imgray, cv2.RETR_TREE, cv2.CHAIN_APPROX_TC89_KCOS)
         if len(contours) > max_num_contours:
             rospy.loginfo(f"{len(contours)}>{max_num_contours}")
             continue
 
+        '''
         contour_img = imgray.copy()
         contour_img = cv2.cvtColor(contour_img,cv2.COLOR_GRAY2RGB)
         #display target on image
-        cv2.circle(contour_img, (target_x, target_y),  radius=3, color=red, thickness=-1)
+        cv2.circle(contour_img, (target_x, target_y),  radius=3, color=RED, thickness=-1)
         #display the contours overlayed on copy of origional image
         cv2.drawContours(contour_img, contours, -1, green, 1)
-        #display_img(contour_img)
+        display_img(contour_img)
+        '''
 
         masked_image = cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask_cv.astype(np.uint8))
-        display_img(masked_image)
+        #display_img(masked_image)
 
         images.append(cvbridge.cv2_to_imgmsg(masked_image, "bgr8"))
+        #TODO get scores from SAM and use along with #contours to filter masks better
+        rospy.loginfo("Have decent image (TODO get scores from SAM and use along with #contours to filter masks better)")
         break
-
-    
-
 
 rospy.loginfo(f"#images:{len(images)}")
 rospy.loginfo(f"#transcripts:{len([transcript])}")
@@ -185,9 +160,6 @@ clip_probs = clip_serv(images, transcript)
 dims = tuple(map(lambda x: x.size, clip_probs.probs.layout.dim))
 probs = np.array(clip_probs.probs.data, dtype=np.float32).reshape(dims).astype(dtype=np.float32)
 
-
-rospy.loginfo(probs)
 rospy.loginfo(transcript)
 rospy.loginfo(positions)
-
-
+rospy.loginfo(probs)
