@@ -66,7 +66,7 @@ class DualArmTransform:
                   transform_to_world[self.left_arm_frame]["q"]["w"])
         self.br.sendTransform(left_p, left_q,
                                   rospy.Time.now(),
-                                  self.left_arm_frame,
+                                  "left_base_link",
                                   DUAL_ARM_BASE_FRAME)
         
         rospy.loginfo(f"{self.right_arm_frame}:\n{transform_to_world[self.right_arm_frame]}")
@@ -79,7 +79,7 @@ class DualArmTransform:
                    transform_to_world[self.right_arm_frame]["q"]["w"])
         self.br.sendTransform(right_p, right_q,
                                   rospy.Time.now(),
-                                  self.right_arm_frame,
+                                  "right_base_link",
                                   DUAL_ARM_BASE_FRAME)
         
 if __name__ == '__main__':
