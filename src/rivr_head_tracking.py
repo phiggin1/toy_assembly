@@ -7,7 +7,7 @@ import numpy as np
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
-HEAD_FRAME=""
+HEAD_FRAME="/Player/NoSteamVRFallbackObjects/FallbackObjects/FollowHead"
 
 def euler_from_quaternion(x, y, z, w):
     t0 = +2.0 * (w * x + y * z)
@@ -64,6 +64,16 @@ class HeadTracking:
         for transform in data:
             name = transform["name"]
 
+            p_x = transform['position']['x']
+            p_y = transform['position']['y']
+            p_z = transform['position']['z']
+
+            o_x = transform['rotation']['x']
+            o_y = transform['rotation']['y']
+            o_z = transform['rotation']['z']
+            o_w = transform['rotation']['w']
+            
+            '''
             p_x = transform['position']['z']
             p_y = -transform['position']['x']
             p_z = transform['position']['y']
@@ -72,6 +82,7 @@ class HeadTracking:
             o_y = transform['rotation']['x']
             o_z = -transform['rotation']['y']
             o_w = transform['rotation']['w']
+            '''
 
             m ={}
             m["p"] = {}
@@ -86,16 +97,16 @@ class HeadTracking:
 
             transform_to_world[name]=m
 
-        rospy.loginfo(transform[HEAD_FRAME])
+        rospy.loginfo(transform_to_world[HEAD_FRAME])
         head_pose = PoseStamped()
         head_pose.header.frame_id="dual_arm"
-        head_pose.pose.position.x = transform[HEAD_FRAME]["p"]["x"]
-        head_pose.pose.position.y = transform[HEAD_FRAME]["p"]["y"]
-        head_pose.pose.position.z = transform[HEAD_FRAME]["p"]["z"]
-        head_pose.pose.orientation.x = transform[HEAD_FRAME]["q"]["x"]
-        head_pose.pose.orientation.y = transform[HEAD_FRAME]["q"]["y"]
-        head_pose.pose.orientation.z = transform[HEAD_FRAME]["q"]["z"]
-        head_pose.pose.orientation.w = transform[HEAD_FRAME]["q"]["w"]
+        head_pose.pose.position.x = transform_to_world[HEAD_FRAME]["p"]["x"]
+        head_pose.pose.position.y = transform_to_world[HEAD_FRAME]["p"]["y"]
+        head_pose.pose.position.z = transform_to_world[HEAD_FRAME]["p"]["z"]
+        head_pose.pose.orientation.x = transform_to_world[HEAD_FRAME]["q"]["x"]
+        head_pose.pose.orientation.y = transform_to_world[HEAD_FRAME]["q"]["y"]
+        head_pose.pose.orientation.z = transform_to_world[HEAD_FRAME]["q"]["z"]
+        head_pose.pose.orientation.w = transform_to_world[HEAD_FRAME]["q"]["w"]
         self.head_pose_publisher.publish(head_pose)
         
 if __name__ == '__main__':
