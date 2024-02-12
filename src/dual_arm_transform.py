@@ -40,7 +40,18 @@ class DualArmTransform:
             o_y = transform['rotation']['y']
             o_z = transform['rotation']['z']
             o_w = transform['rotation']['w']
+            #converting from unity to ros
             m ={}
+            m["p"] = {}
+            m["p"]["x"] = p_z
+            m["p"]["y"] = -p_x
+            m["p"]["z"] = p_y
+            m["q"] = {}
+            m["q"]["x"] = -o_z
+            m["q"]["y"] = o_x
+            m["q"]["z"] = -o_y
+            m["q"]["w"] = o_w
+            '''
             m["p"] = {}
             m["p"]["x"] = p_x
             m["p"]["y"] = p_y
@@ -50,6 +61,7 @@ class DualArmTransform:
             m["q"]["y"] = o_y
             m["q"]["z"] = o_z
             m["q"]["w"] = o_w
+            '''
 
             #roll, pitch, yaw = tf.transformations.euler_from_quaternion([o_x, o_y, o_z, o_w])
             #m = tf.transformations.compose_matrix(None, None, (roll, pitch, yaw), (p_x,p_y,p_z), None)

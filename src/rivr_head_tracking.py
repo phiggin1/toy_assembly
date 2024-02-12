@@ -63,7 +63,8 @@ class HeadTracking:
         transform_to_world = dict()
         for transform in data:
             name = transform["name"]
-
+            
+            '''
             p_x = transform['position']['x']
             p_y = transform['position']['y']
             p_z = transform['position']['z']
@@ -72,7 +73,6 @@ class HeadTracking:
             o_y = transform['rotation']['y']
             o_z = transform['rotation']['z']
             o_w = transform['rotation']['w']
-            
             '''
             p_x = transform['position']['z']
             p_y = -transform['position']['x']
@@ -82,7 +82,6 @@ class HeadTracking:
             o_y = transform['rotation']['x']
             o_z = -transform['rotation']['y']
             o_w = transform['rotation']['w']
-            '''
 
             m ={}
             m["p"] = {}

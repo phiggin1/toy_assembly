@@ -8,12 +8,15 @@ import math
 import numpy as np
 from geometry_msgs.msg import PoseArray
 from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PointStamped
 from scipy.spatial.distance import cosine as cos_distance
+from scipy.spatial.transform import Rotation as R
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
 
 LEFT_CAMERA_FRAME="/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
 RIGHT_CAMERA_FRAME="/gen3_robotiq_2f_85_right/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
-OBJECTS_NAMES = [
+OBJECTS_NAMES = [LEFT_CAMERA_FRAME,
+                 RIGHT_CAMERA_FRAME, 
                  "/horse_body_red", 
                  "/horse_body_yellow", 
                 "/horse_body_blue"
@@ -57,11 +60,14 @@ def QuaternionUnity2Ros(quaternion):
 class HeadTracking:
     def __init__(self):    
             rospy.init_node('gaze')
-            #self.distance_type = rospy.get_param("distance_type", "euclidien_distance")
-            self.distance_type = rospy.get_param("distance_type", "cosine_distance")
+            
 
             self.head_pose_topic = rospy.get_param("head_pose_topic", "/head_pose")
             self.object_pose_topic = rospy.get_param("object_pose_topic", "/pose_array")
+
+
+            self.head_point_pub = rospy.Publisher("/head_point", PointStamped, queue_size=10)
+            self.gaze_point_pub = rospy.Publisher("/gaze_point", PointStamped, queue_size=10)
 
             self.head_pose_sub = message_filters.Subscriber(self.head_pose_topic, PoseStamped)
             self.object_pose_sub = message_filters.Subscriber(self.object_pose_topic, PoseArray)
@@ -82,31 +88,35 @@ class HeadTracking:
                             head_pose.pose.orientation.y,
                             head_pose.pose.orientation.z,
                             head_pose.pose.orientation.w])
-        gaze = euler_from_quaternion(gaze[0], gaze[1], gaze[2], gaze[3])
-
+        #gaze = euler_from_quaternion(gaze[0], gaze[1], gaze[2], gaze[3])
+        gaze = R.from_quat(gaze).apply([1.0, 0.0, 0.0])
         distances = []
         for i, obj_pose in enumerate(object_poses.poses):
             position = np.asarray([obj_pose.position.x,
                                    obj_pose.position.y,
                                    obj_pose.position.z])
-            rospy.loginfo(names[i])
-            rospy.loginfo(position)
-            rospy.loginfo(head_pos)
-            rospy.loginfo(gaze)
-            if self.distance_type == 'euclidien_distance':
-                euclidien_distance_3d = distance_point_to_ray(np.asfarray(head_pos), np.asfarray(head_pos + gaze), position)
-                d = euclidien_distance_3d
-            elif self.distance_type == 'cosine_distance':
-                cosine_distance_3d = cos_distance(gaze, position-head_pos)
-                d = cosine_distance_3d
+
+            head_point = PointStamped()
+            gaze_point = PointStamped()
+            head_point.header=head_pose.header
+            gaze_point.header=head_pose.header
+            head_point.point.x=head_pos[0]
+            head_point.point.y=head_pos[1]
+            head_point.point.z=head_pos[2]
+            gaze_point.point.x=head_pos[0]+gaze[0]
+            gaze_point.point.y=head_pos[1]+gaze[1]
+            gaze_point.point.z=head_pos[2]+gaze[2]
+            head_point.header.stamp=rospy.Time.now()
+            gaze_point.header.stamp=rospy.Time.now()
+            self.head_point_pub.publish(head_point)
+            self.gaze_point_pub.publish(gaze_point)
+
+            d = cos_distance(gaze, position-head_pos)
             distances.append((names[i],d))
-            rospy.loginfo(f"name:{names[i]}, distance:{d}")
+            #rospy.loginfo(f"name:{names[i]}, distance:{d}")
 
         distances = np.asarray(distances)
         sorted_indxs = np.argsort(np.asarray(distances)[:,1])
-        #rospy.loginfo(sorted_indxs)
-        #rospy.loginfo(distances)
-        #rospy.loginfo(distances[sorted_indxs])
         rospy.loginfo(f"The tuple with minimum value at index 1{distances[sorted_indxs[0],:]}")
         
 if __name__ == '__main__':
