@@ -2,7 +2,7 @@
     <!-- Arguments -->
     <!-- Start the GUIs -->
     <arg name="start_gazebo" default="true"/>
-    <arg name="gazebo_gui"   default ="true"/>
+    <arg name="gazebo_gui"   default ="false"/>
     <arg name="start_rviz" default="true"/>
     
     <!-- Arm type -->
