@@ -71,4 +71,8 @@
     <arg name="start_delay_seconds" value="$(arg start_delay_seconds)"/> 
   </include>
 <!-- -->
+
+  <node name="gadual_arm_transform.py" pkg="toy_assembly" type="dual_arm_transform.py.py" output="screen" >
+  </node>
+
 </launch>
