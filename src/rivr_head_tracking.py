@@ -96,7 +96,7 @@ class HeadTracking:
 
             transform_to_world[name]=m
 
-        rospy.loginfo(transform_to_world[HEAD_FRAME])
+        #rospy.loginfo(transform_to_world[HEAD_FRAME])
         head_pose = PoseStamped()
         head_pose.header.frame_id="dual_arm"
         head_pose.pose.position.x = transform_to_world[HEAD_FRAME]["p"]["x"]

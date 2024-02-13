@@ -1,4 +1,9 @@
 <launch>
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
+        <arg name="port" value="7777"/>
+        <arg name="bson_only_mode" value="true"/>
+    </include>
+    
     <node pkg="nodelet" type="nodelet" args="manager" name="record_player_manager" output="screen"/>
 
     <node name="decompress_rgb_right" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/right/rgb raw out:=/unity/camera/right/rgb/image_raw" />

@@ -7,6 +7,7 @@ import io
 from std_msgs.msg import String
 from toy_assembly.srv import Whisper
 from toy_assembly.srv import WhisperRequest
+from toy_assembly.msg import Transcription
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import MultiArrayDimension
 
@@ -27,11 +28,11 @@ class AudioSpeechToText:
         self.silent_wait = rospy.get_param("~silent_wait", 5)
 
         #Maximum audio clip length (seconds)
-        self.max_duration = rospy.get_param("~max_duration", 5)
+        self.max_duration = rospy.get_param("~max_duration", 1)
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
-        self.threshold = rospy.get_param("~threshold", 0.005)
+        self.threshold = rospy.get_param("~threshold", 0.00)
         if self.threshold < 0.0:
             rospy.loginfo("threshold should be normalized ([0,1.0])")
             self.threshold = 0.0
@@ -53,10 +54,10 @@ class AudioSpeechToText:
         self.snd_started = False
         self.audio_clip = []
 
-        rospy.wait_for_service('get_transciption')        
-        self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
+        #rospy.wait_for_service('get_transciption')        
+        #self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
         self.audio_subscriber = rospy.Subscriber("/audio", String, self.audio_cb)
-        self.transript_publisher = rospy.Publisher("/transcript", String, queue_size=10)
+        self.transript_publisher = rospy.Publisher("/transcript", Transcription, queue_size=10)
 
         rospy.spin()
     
@@ -99,12 +100,24 @@ class AudioSpeechToText:
 
     def get_transcription(self, audio):
             request  = WhisperRequest()
-            request.data.data = json.dumps(audio)
+            audio_data = json.dumps(audio)
+            request.data.data = audio_data
 
+            now = rospy.Time.now()
+            a = np.fromstring(audio_data[1:-1], sep=",") 
+            length = a.shape[0]/self.sample_rate
+
+            
             transcript = self.whisper_serv(request)
             rospy.loginfo(f"get_transcription:{transcript.transcription}")
             #publish full audio message (wavbytes and text)
-            self.transript_publisher.publish(transcript.transcription)
+
+            t = Transcription()
+            t.audio_recieved = now
+            t.duration = length
+            t.transcription = transcript
+            self.transript_publisher.publish(t)
+            
 
             self.snd_started = False
             self.num_silent = 0

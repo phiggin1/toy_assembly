@@ -44,6 +44,8 @@ class BayesGaze:
         self.timestamps = []
         self.prev_intrest = np.zeros(self.N)
         self.i = 0
+        
+        self.intrest_pub = rospy.Publisher("/intrest", Float32MultiArray, queue_size=10)
 
         self.sub  = rospy.Subscriber("/distances", Float32MultiArray, self.callback)
         rospy.spin()
@@ -76,18 +78,24 @@ class BayesGaze:
             else:
                 intrest[t_j] = dt*p_of_t_given_si[t_j]
 
-        rospy.loginfo(f"c:{self.c}")
-        rospy.loginfo(f"old:{self.prev_intrest}")
-        rospy.loginfo(f"new:{intrest}")
+        #rospy.loginfo(f"c:{self.c}")
+        #rospy.loginfo(f"old:{self.prev_intrest}")
+        #rospy.loginfo(f"new:{intrest}")
 
         self.prev_intrest += intrest
 
         #if overthreshold mark object as selected
         target = np.argmax(self.prev_intrest)
-        rospy.loginfo(f"update:{self.prev_intrest}")
+        #rospy.loginfo(f"{self.prev_intrest}")
 
         if (self.prev_intrest[target]) > self.theta:
-            rospy.loginfo(f"target:{self.objects[target]}")
+            name =  str(self.objects[target]).split('/')[1]
+            #rospy.loginfo(f"target:{name}")
+
+            float_array = Float32MultiArray()
+            float_array.data = self.prev_intrest
+            self.intrest_pub.publish(float_array)
+                    
             self.prev_intrest = np.zeros(self.N)
             self.c[target] += 1
             for t_ji, obj in enumerate(self.objects):

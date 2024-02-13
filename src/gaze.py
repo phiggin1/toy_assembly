@@ -80,7 +80,7 @@ class HeadTracking:
 
             d = cos_distance(gaze, position-head_pos)
             distances.append((names[i],d))
-            rospy.loginfo(f"name:{names[i]}, distance:{d}")
+            #rospy.loginfo(f"name:{names[i]}, distance:{d}")
 
 
         distances = np.asarray(distances)
@@ -90,7 +90,9 @@ class HeadTracking:
         self.dist_pub.publish(float_array)
 
         sorted_indxs = np.argsort(np.asarray(distances)[:,1])
-        rospy.loginfo(f"The tuple with minimum value at index 1{distances[sorted_indxs[0],:]}")
+        #rospy.loginfo(f"{distances[sorted_indxs,:]}")
+        name =  str(distances[sorted_indxs[0],:][0]).split('/')
+        #rospy.loginfo(f"target:{name}")
         
 if __name__ == '__main__':
     track = HeadTracking()

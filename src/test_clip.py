@@ -87,8 +87,7 @@ clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
 
-#transcript = [rospy.wait_for_message(transcript_topic, String)]
-transcript = ["red horse", "blue horse"]
+transcript = [rospy.wait_for_message(transcript_topic, String)]
 rospy.loginfo("Got transcript") 
 rospy.loginfo(transcript) 
 

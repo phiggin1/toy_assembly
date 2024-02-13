@@ -1,0 +1,3 @@
+string transcription
+time audio_recieved
+float32 duration

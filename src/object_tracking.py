@@ -86,7 +86,7 @@ class HeadTracking:
         object_poses.header.frame_id="dual_arm"
         for name in OBJECTS_NAMES:
             names.append(name)
-            rospy.loginfo(f"name:{name}, {transform_to_world[name]}")
+            #rospy.loginfo(f"name:{name}, {transform_to_world[name]}")
             p = Pose()
             p.position.x = transform_to_world[name]["p"]["x"]
             p.position.y = transform_to_world[name]["p"]["y"]
