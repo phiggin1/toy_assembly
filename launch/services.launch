@@ -3,9 +3,9 @@
   <node name="mask_service" pkg="toy_assembly" type="ada_client.py" output="screen" />
 
   <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
-    <param name="threshold"  value="0.01" />
+    <param name="threshold"  value="0.02" />
     <param name="silent_wait" value="5" />
-    <param name="max_duration"  value="25" />
+    <param name="max_duration"  value="15" />
   </node>
 
   <node name="head_track" pkg="toy_assembly" type="rivr_head_tracking.py" output="screen" >
@@ -31,7 +31,6 @@
   <arg name="min_cluster_size" default="100"/>
   <arg name="max_cluster_size" default="25000"/>
   <arg name="input_cloud" default="/unity/camera/left/depth/points"/>
-
   <node name= "object_segmentation" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
     <param name="minX"		value="$(arg minX)"/>
     <param name="maxX"		value="$(arg maxX)"/>

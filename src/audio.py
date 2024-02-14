@@ -25,14 +25,14 @@ class AudioSpeechToText:
 
         #Number of audio messages that are below threshold 
         #   to determine if person stopped talking
-        self.silent_wait = rospy.get_param("~silent_wait", 5)
+        self.silent_wait = rospy.get_param("~silent_wait", 3)
 
         #Maximum audio clip length (seconds)
-        self.max_duration = rospy.get_param("~max_duration", 1)
+        self.max_duration = rospy.get_param("~max_duration", 5)
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
-        self.threshold = rospy.get_param("~threshold", 0.00)
+        self.threshold = rospy.get_param("~threshold", 0.1)
         if self.threshold < 0.0:
             rospy.loginfo("threshold should be normalized ([0,1.0])")
             self.threshold = 0.0
@@ -54,15 +54,15 @@ class AudioSpeechToText:
         self.snd_started = False
         self.audio_clip = []
 
-        #rospy.wait_for_service('get_transciption')        
-        #self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
-        self.audio_subscriber = rospy.Subscriber("/audio", String, self.audio_cb)
+        rospy.wait_for_service('get_transciption')        
+        self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
+        self.audio_subscriber = rospy.Subscriber("/audio", Float32MultiArray, self.audio_cb)
         self.transript_publisher = rospy.Publisher("/transcript", Transcription, queue_size=10)
 
         rospy.spin()
     
     def audio_cb(self, msg):
-        float_array = json.loads(msg.data)
+        float_array = msg.data
         if self.debug: rospy.loginfo(f"msg recv, max volumn:{max(float_array)}")
         self.process_audio(float_array)
     
@@ -71,6 +71,7 @@ class AudioSpeechToText:
         silent = is_silent(data, self.threshold)
         if not silent:
             if self.debug: rospy.loginfo("there is sound")
+        
 
         self.audio_clip.extend(data)
 
@@ -101,11 +102,10 @@ class AudioSpeechToText:
     def get_transcription(self, audio):
             request  = WhisperRequest()
             audio_data = json.dumps(audio)
-            request.data.data = audio_data
+            request.string.data = audio_data
 
             now = rospy.Time.now()
-            a = np.fromstring(audio_data[1:-1], sep=",") 
-            length = a.shape[0]/self.sample_rate
+            duration = len(audio)/self.sample_rate
 
             
             transcript = self.whisper_serv(request)
@@ -114,8 +114,9 @@ class AudioSpeechToText:
 
             t = Transcription()
             t.audio_recieved = now
-            t.duration = length
-            t.transcription = transcript
+            t.duration = duration
+            t.transcription = transcript.transcription
+            #t.audio = audio_data
             self.transript_publisher.publish(t)
             
 

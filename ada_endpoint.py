@@ -93,13 +93,8 @@ class AdaEndPoint:
     
     def process_whisper(self, data):
         print('recv_msg')
-
-        print(type(data["data"]))
         data = data["data"]
-        print(data[0:24])
-
         audio = np.fromstring(data[1:-1], dtype=float, sep=',')
-
         wavfile_writer(self.tmp_audio_filename, self.sample_rate, audio)
 
         #get transcription from whisper

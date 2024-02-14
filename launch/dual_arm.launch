@@ -57,6 +57,7 @@
     <arg name="start_rviz" value="$(arg start_rviz)"/>
   </include>
 <!-- -->
+
   <include file="$(find toy_assembly)/launch/iral_spawn_arm.launch" >   
     <arg name="x0" value="$(arg right_x0)"/>
     <arg name="y0" value="$(arg right_y0)"/>
