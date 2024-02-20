@@ -11,7 +11,7 @@ import argparse
 import PIL
 
 class AdaEndPoint:
-    def __init__(self, hostname, port, sam_model_path, whisper_model_path, clip_model_path):
+    def __init__(self, hostname, port, sam_model_path, whisper_model_path, clip_model_path, torch_home_path):
         print("PyTorch version:", torch.__version__)
         print("Torchvision version:", torchvision.__version__)
         print("CUDA is available:", torch.cuda.is_available())
@@ -19,6 +19,9 @@ class AdaEndPoint:
         print("sam_model_path:", sam_model_path)
         print("whisper_model_path:", whisper_model_path)
         print("clip_model_path:", clip_model_path)
+        print("torcho home path:", torch_home_path)
+
+        torch.hub.set_dir(torch_home_path)
 
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         print("device:",self.device)
@@ -170,6 +173,9 @@ if __name__ == '__main__':
                         help="Path to the Whisper model")
     parser.add_argument("--clip_model_path", default="/nfs/ada/cmat/users/phiggin1/clip_models/ViT-B-32.pt", required=False,
                         help="Path to the CLIP model")
+    parser.add_argument("--torch_home_path", default="/nfs/ada/cmat/users/phiggin1/torch_home", required=False,
+                        help="Path to the Torch Home directory.")
+    torch_home_path
     args = parser.parse_args()
 
     hostname = args.hostname
