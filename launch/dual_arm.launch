@@ -73,7 +73,6 @@
   </include>
 <!-- -->
 
-  <node name="gadual_arm_transform.py" pkg="toy_assembly" type="dual_arm_transform.py.py" output="screen" >
-  </node>
+  <node name="dual_arm_transform" pkg="toy_assembly" type="dual_arm_transform.py" output="screen" >  </node>
 
 </launch>

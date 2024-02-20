@@ -11,6 +11,7 @@ from toy_assembly.msg import Transcription
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import MultiArrayDimension
 
+from scipy.io.wavfile import write as wavfile_writer
 
 def is_silent(snd_data, threshold):
     "Returns 'True' if below the 'silent' threshold"
@@ -67,37 +68,32 @@ class AudioSpeechToText:
         self.process_audio(float_array)
     
     def process_audio(self, data):
-
         silent = is_silent(data, self.threshold)
         if not silent:
             if self.debug: rospy.loginfo("there is sound")
-        
 
-        self.audio_clip.extend(data)
-
-        if silent and self.snd_started:
-            self.num_silent += 1
-        elif not silent and not self.snd_started:
+        if not silent and not self.snd_started:
             self.snd_started = True
             self.num_silent = 0
             self.audio_clip = []
+        elif silent and self.snd_started:
+            self.num_silent += 1
 
-        if self.snd_started and self.num_silent > self.silent_wait:
+        if self.snd_started:
+            self.audio_clip.extend(data)
+
+        if self.snd_started and self.num_silent > self.silent_wait:     #enough quite time that they stopped speaking
             if self.debug: rospy.loginfo("got audio clip")
             self.get_transcription(self.audio_clip)
-        
-        '''
-        add in some code for potential audio recording visualization aides
-        if snd_started and not silent -> ?green activly lisenting
-        elif snd_started and num_silent > 0(some number less than silent_wait greater than zero) -> ?yellow thinks speaker is finished but unsure
-        else -> ?red waiting for someone to talk
-        '''
-
-        #if the audio clip is over max duration get the transcription
-        #clip is len(audio_clip)/rate seconds long
-        if len(self.audio_clip)>(self.sample_rate*self.max_duration) and self.snd_started:
+            self.snd_started = False
+            self.num_silent = 0
+            self.audio_clip = []
+        elif len(self.audio_clip)>(self.sample_rate*self.max_duration) and self.snd_started:    #hit the maxiumum clip duration
             if self.debug: rospy.loginfo("max clip length")
             self.get_transcription(self.audio_clip)
+            self.snd_started = False
+            self.num_silent = 0
+            self.audio_clip = []
 
     def get_transcription(self, audio):
             request  = WhisperRequest()
@@ -107,7 +103,10 @@ class AudioSpeechToText:
             now = rospy.Time.now()
             duration = len(audio)/self.sample_rate
 
-            
+            #log audio file
+            #audio = np.fromstring(audio_data[1:-1], dtype=float, sep=',')
+            #wavfile_writer("/home/phiggin1/"+str(rospy.time.Now().to_sec())+".wav", self.sample_rate, audio)
+    
             transcript = self.whisper_serv(request)
             rospy.loginfo(f"get_transcription:{transcript.transcription}")
             #publish full audio message (wavbytes and text)

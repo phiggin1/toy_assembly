@@ -28,12 +28,15 @@ class AdaEndPoint:
         sever_address = hostname
         server_port  = port
 
-        self.whisper_model = whisper.load_model("small", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
+        print("loading whipser")
+        self.whisper_model = whisper.load_model("medium", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
+        print("loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
         self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
 
+        print("loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
 
         print(f"Connecting to {sever_address}:{server_port}")
@@ -48,7 +51,7 @@ class AdaEndPoint:
     def run(self):
         while True:
             msg = self.socket.recv_json()
-            print('recv_msg')
+            print('recieved')
 
             msg_type = msg["type"]
             if msg_type == "sam":
@@ -61,6 +64,7 @@ class AdaEndPoint:
                 resp = {}
 
             self.socket.send_json(resp)
+            print('replied')
 
     def process_sam(self, data):
         target_x = data["target_x"]
@@ -68,12 +72,13 @@ class AdaEndPoint:
         
         img = np.asarray(data["image"], dtype=np.uint8)
 
-        print(img.shape)
         
         input_point = np.array([[target_x, target_y]])
         input_label = np.array([1])
 
         print('sam start')
+        print(img.shape)
+
         self.predictor.set_image(img)
         masks, scores, logits = self.predictor.predict(
             point_coords=input_point,
@@ -92,13 +97,15 @@ class AdaEndPoint:
         return response
     
     def process_whisper(self, data):
-        print('recv_msg')
         data = data["data"]
         audio = np.fromstring(data[1:-1], dtype=float, sep=',')
         wavfile_writer(self.tmp_audio_filename, self.sample_rate, audio)
 
         #get transcription from whisper
+
+        print('whisper start')
         result = self.whisper_model.transcribe(self.tmp_audio_filename) 
+        print('whisper end')
 
         print(result["text"])
         response = {"type":"whisper",
@@ -114,7 +121,6 @@ class AdaEndPoint:
         raw_images = []
         for img in data["images"]:
             #images.append(preprocess(image))
-
             raw_images.append( self.clip_preprocess(PIL.Image.fromarray(np.asarray(img, dtype=np.uint8))).unsqueeze(0) )
         raw_text = []
         for t in data["text"]:
@@ -127,11 +133,12 @@ class AdaEndPoint:
         #text_features = self.clip_model.encode_text(text)
 
         with torch.no_grad():
-            logits_per_image, _ = self.clip_model(images, text)
-            probs = logits_per_image.softmax(dim=-1).cpu().numpy()
-
-        print("Label probs:", probs)  
+            logits_per_image, logits_per_text = self.clip_model(images, text)
+            probs = logits_per_text.softmax(dim=-1).cpu().numpy()
         print('clip model end')
+
+        print("logits:", logits_per_text) 
+        print("Label probs:", probs)  
     
         response = {"type":"clip",
                     "probs":probs.tolist()

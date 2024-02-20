@@ -12,6 +12,7 @@ from image_geometry import PinholeCameraModel
 from obj_segmentation.msg import SegmentedClustersArray
 from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
+from toy_assembly.msg import Transcription
 
 BLUE = (255, 0, 0)
 GREEN = (0,255,0)
@@ -65,8 +66,8 @@ segment_serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
 
 max_num_contours = 12
 
-rgb_image_topic =  "/unity/camera/right/rgb/image_raw"
-cam_info_topic =   "/unity/camera/right/rgb/camera_info"
+rgb_image_topic =  "/unity/camera/left/rgb/image_raw"
+cam_info_topic =   "/unity/camera/left/rgb/camera_info"
 cluster_topic =    "/object_clusters"
 transcript_topic = "/transcript"
 
@@ -86,17 +87,20 @@ cam_model.fromCameraInfo(cam_info)
 clusters = rospy.wait_for_message(cluster_topic, SegmentedClustersArray)
 rospy.loginfo("Got clusters")
 
+#transcript = ["red horse"]
+#transcript = ["red horse"]
 
-transcript = [rospy.wait_for_message(transcript_topic, String)]
+
+transcript = rospy.wait_for_message(transcript_topic, Transcription)
 rospy.loginfo("Got transcript") 
+transcript =  [transcript.transcription]
 rospy.loginfo(transcript) 
-
 
 images = []
 positions = []
-
+num_clusters = len(clusters.clusters)
 for i, pc in enumerate(clusters.clusters):
-    print(f"obj {i}")
+    print(f"obj {i+1} of {num_clusters}")
     p = get_centroid(pc)
     positions.append(p)
 
@@ -106,14 +110,16 @@ for i, pc in enumerate(clusters.clusters):
 
     target_x = int(u)
     target_y = int(v)
-    resp  = segment_serv(rgb_image, target_x, target_y)
-    #scores = resp.scores
-    rgb_cv = cvbridge.imgmsg_to_cv2(rgb_image)
 
     #display target on image
+    rgb_cv = cvbridge.imgmsg_to_cv2(rgb_image)
     disp_img = rgb_cv.copy()
     cv2.circle(disp_img, (target_x, target_y), radius=5, color=PURPLE, thickness=-1)
     #display_img(disp_img)
+
+    resp  = segment_serv(rgb_image, target_x, target_y)
+    #scores = resp.scores
+
 
     for j, mask in enumerate(resp.masks):
         rospy.loginfo(f"mask {j} of {len(resp.masks)}")
@@ -134,23 +140,27 @@ for i, pc in enumerate(clusters.clusters):
             rospy.loginfo(f"{len(contours)}>{max_num_contours}")
             continue
 
-        '''
+        
         contour_img = imgray.copy()
         contour_img = cv2.cvtColor(contour_img,cv2.COLOR_GRAY2RGB)
         #display target on image
         cv2.circle(contour_img, (target_x, target_y),  radius=3, color=RED, thickness=-1)
         #display the contours overlayed on copy of origional image
-        cv2.drawContours(contour_img, contours, -1, green, 1)
-        display_img(contour_img)
-        '''
+        cv2.drawContours(contour_img, contours, -1, GREEN, 1)
+        #display_img(contour_img)
+        
 
         masked_image = cv2.bitwise_and(rgb_cv, rgb_cv, mask=mask_cv.astype(np.uint8))
         #display_img(masked_image)
 
         images.append(cvbridge.cv2_to_imgmsg(masked_image, "bgr8"))
-        #TODO get scores from SAM and use along with #contours to filter masks better
+        #TODO get scores from SAM and use along with number of contours to filter masks better
+        # number of contours seems to work fairly well as a quality metric
         rospy.loginfo("Have decent image (TODO get scores from SAM and use along with #contours to filter masks better)")
         break
+
+for i, img in enumerate(images):
+    cv2.imwrite(f"obj_{i}.png", cvbridge.imgmsg_to_cv2(img))
 
 rospy.loginfo(f"#images:{len(images)}")
 rospy.loginfo(f"#transcripts:{len([transcript])}")

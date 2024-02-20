@@ -7,8 +7,8 @@ import numpy as np
 from std_msgs.msg import String
 from geometry_msgs.msg import PoseStamped
 
-HEAD_FRAME="/Player/NoSteamVRFallbackObjects/FallbackObjects/FollowHead"
-#HEAD_FRAME="/Player/SteamVRObjects/VRCamera"
+FRONT_SLOT_NAME="/horse_body_blue/FrontSlotTarget"
+BACK_SLOT_NAME="/horse_body_blue/BackSlotTarget"
 
 def euler_from_quaternion(x, y, z, w):
     t0 = +2.0 * (w * x + y * z)
@@ -52,7 +52,8 @@ class HeadTracking:
 
             self.scene_transform_topic = rospy.get_param("transform_topic", "/scene/transform")
 
-            self.head_pose_publisher = rospy.Publisher("/head_pose", PoseStamped, queue_size=10)
+            self.front_slot_publisher = rospy.Publisher("/front_slot", PoseStamped, queue_size=10)
+            self.back_slot_publisher = rospy.Publisher("/back_slot", PoseStamped, queue_size=10)
             
             self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
             rospy.spin()
@@ -64,17 +65,7 @@ class HeadTracking:
         transform_to_world = dict()
         for transform in data:
             name = transform["name"]
-            
-            '''
-            p_x = transform['position']['x']
-            p_y = transform['position']['y']
-            p_z = transform['position']['z']
 
-            o_x = transform['rotation']['x']
-            o_y = transform['rotation']['y']
-            o_z = transform['rotation']['z']
-            o_w = transform['rotation']['w']
-            '''
             p_x = transform['position']['z']
             p_y = -transform['position']['x']
             p_z = transform['position']['y']
@@ -97,17 +88,30 @@ class HeadTracking:
 
             transform_to_world[name]=m
 
-        #rospy.loginfo(transform_to_world[HEAD_FRAME])
-        head_pose = PoseStamped()
-        head_pose.header.frame_id="dual_arm"
-        head_pose.pose.position.x = transform_to_world[HEAD_FRAME]["p"]["x"]
-        head_pose.pose.position.y = transform_to_world[HEAD_FRAME]["p"]["y"]
-        head_pose.pose.position.z = transform_to_world[HEAD_FRAME]["p"]["z"]
-        head_pose.pose.orientation.x = transform_to_world[HEAD_FRAME]["q"]["x"]
-        head_pose.pose.orientation.y = transform_to_world[HEAD_FRAME]["q"]["y"]
-        head_pose.pose.orientation.z = transform_to_world[HEAD_FRAME]["q"]["z"]
-        head_pose.pose.orientation.w = transform_to_world[HEAD_FRAME]["q"]["w"]
-        self.head_pose_publisher.publish(head_pose)
+        front_slot_pose = PoseStamped()
+        back_slot_pose = PoseStamped()
+
+        front_slot_pose.header.frame_id="dual_arm"
+        back_slot_pose.header.frame_id="dual_arm"
+
+        front_slot_pose.pose.position.x = transform_to_world[FRONT_SLOT_NAME]["p"]["x"]
+        front_slot_pose.pose.position.y = transform_to_world[FRONT_SLOT_NAME]["p"]["y"]
+        front_slot_pose.pose.position.z = transform_to_world[FRONT_SLOT_NAME]["p"]["z"]
+        front_slot_pose.pose.orientation.x = transform_to_world[FRONT_SLOT_NAME]["q"]["x"]
+        front_slot_pose.pose.orientation.y = transform_to_world[FRONT_SLOT_NAME]["q"]["y"]
+        front_slot_pose.pose.orientation.z = transform_to_world[FRONT_SLOT_NAME]["q"]["z"]
+        front_slot_pose.pose.orientation.w = transform_to_world[FRONT_SLOT_NAME]["q"]["w"]
+
+        back_slot_pose.pose.position.x = transform_to_world[BACK_SLOT_NAME]["p"]["x"]
+        back_slot_pose.pose.position.y = transform_to_world[BACK_SLOT_NAME]["p"]["y"]
+        back_slot_pose.pose.position.z = transform_to_world[BACK_SLOT_NAME]["p"]["z"]
+        back_slot_pose.pose.orientation.x = transform_to_world[BACK_SLOT_NAME]["q"]["x"]
+        back_slot_pose.pose.orientation.y = transform_to_world[BACK_SLOT_NAME]["q"]["y"]
+        back_slot_pose.pose.orientation.z = transform_to_world[BACK_SLOT_NAME]["q"]["z"]
+        back_slot_pose.pose.orientation.w = transform_to_world[BACK_SLOT_NAME]["q"]["w"]
+
+        self.front_slot_publisher.publish(front_slot_pose)
+        self.back_slot_publisher.publish(back_slot_pose)
         
 if __name__ == '__main__':
     track = HeadTracking()

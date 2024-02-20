@@ -68,7 +68,7 @@ class DualArmTransform:
             
             transform_to_world[name]=m
 
-        rospy.loginfo(f"{self.left_arm_frame}:\n{transform_to_world[self.left_arm_frame]}")
+        #rospy.loginfo(f"{self.left_arm_frame}:\n{transform_to_world[self.left_arm_frame]}")
         left_p = (transform_to_world[self.left_arm_frame]["p"]["x"], 
                   transform_to_world[self.left_arm_frame]["p"]["y"], 
                   transform_to_world[self.left_arm_frame]["p"]["z"])
@@ -81,7 +81,7 @@ class DualArmTransform:
                                   "left_base_link",
                                   DUAL_ARM_BASE_FRAME)
         
-        rospy.loginfo(f"{self.right_arm_frame}:\n{transform_to_world[self.right_arm_frame]}")
+        #rospy.loginfo(f"{self.right_arm_frame}:\n{transform_to_world[self.right_arm_frame]}")
         right_p = (transform_to_world[self.right_arm_frame]["p"]["x"], 
                    transform_to_world[self.right_arm_frame]["p"]["y"], 
                    transform_to_world[self.right_arm_frame]["p"]["z"])

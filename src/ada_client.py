@@ -9,10 +9,13 @@ from toy_assembly.srv import Whisper, CLIP, SAM
 from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import MultiArrayDimension
+from multiprocessing import Lock
 
 class AdaClient:
     def __init__(self):
         rospy.init_node('ada_services')
+
+        self.mutex = Lock()
 
         self.cvbridge = CvBridge()
         
@@ -41,10 +44,12 @@ class AdaClient:
                "data":audio_json
         }
 
-        self.socket.send_json(msg)
-        resp = self.socket.recv_json()
+        with self.mutex:
+            self.socket.send_json(msg)
+            resp = self.socket.recv_json()
 
         if self.debug: rospy.loginfo('Whisper recv from ada')
+        print(resp)
         transcription = resp["text"]
         rospy.loginfo(f"Whsiper transcription:{transcription}")
 
@@ -65,8 +70,9 @@ class AdaClient:
                "text":text
         }
 
-        self.socket.send_json(msg)
-        resp = self.socket.recv_json()
+        with self.mutex:
+            self.socket.send_json(msg)
+            resp = self.socket.recv_json()
 
         probs = np.asarray(resp["probs"])
         if self.debug: rospy.loginfo('CLIP recv from ada')
@@ -96,8 +102,10 @@ class AdaClient:
         }
 
         if self.debug: rospy.loginfo("SAM sending to ada")
-        self.socket.send_json(msg)
-        resp = self.socket.recv_json()
+        
+        with self.mutex:
+            self.socket.send_json(msg)
+            resp = self.socket.recv_json()
         if self.debug: rospy.loginfo('SAM recv from ada') 
 
         #rospy.loginfo(f"SAM scores:{resp["scores"]}")
