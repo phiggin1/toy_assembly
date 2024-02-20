@@ -4,10 +4,8 @@ import torchvision
 import clip
 import whisper
 from segment_anything import SamPredictor, sam_model_registry
-
 from scipy.io.wavfile import write as wavfile_writer
 import numpy as np
-import json
 import zmq
 import argparse
 import PIL
@@ -38,7 +36,18 @@ class AdaEndPoint:
 
         print("loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
-                
+        
+        print("loading tacotron2")
+        self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
+        self.tacotron2 = tacotron2.to(self.device)
+        self.tacotron2.eval()
+
+        print("loading waveglow")
+        self.waveglow = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp16')
+        self.waveglow = waveglow.remove_weightnorm(self.waveglow)
+        self.waveglow = waveglow.to(self.device)
+        self.waveglow.eval()
+
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
         print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
         print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(0)/1024/1024/1024))
@@ -106,7 +115,6 @@ class AdaEndPoint:
         wavfile_writer(self.tmp_audio_filename, self.sample_rate, audio)
 
         #get transcription from whisper
-
         print('whisper start')
         result = self.whisper_model.transcribe(self.tmp_audio_filename) 
         print('whisper end')
