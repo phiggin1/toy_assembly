@@ -42,13 +42,13 @@ class AdaEndPoint:
         
         print("loading tacotron2")
         self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
-        self.tacotron2 = tacotron2.to(self.device)
+        self.tacotron2 = self.tacotron2.to(self.device)
         self.tacotron2.eval()
 
         print("loading waveglow")
         self.waveglow = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp16')
-        self.waveglow = waveglow.remove_weightnorm(self.waveglow)
-        self.waveglow = waveglow.to(self.device)
+        self.waveglow = self.waveglow.remove_weightnorm(self.waveglow)
+        self.waveglow = self.waveglow.to(self.device)
         self.waveglow.eval()
 
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
