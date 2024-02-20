@@ -175,7 +175,7 @@ if __name__ == '__main__':
                         help="Path to the CLIP model")
     parser.add_argument("--torch_home_path", default="/nfs/ada/cmat/users/phiggin1/torch_home", required=False,
                         help="Path to the Torch Home directory.")
-    torch_home_path
+    
     args = parser.parse_args()
 
     hostname = args.hostname
@@ -183,6 +183,7 @@ if __name__ == '__main__':
     sam_model_path = args.sam_model_path
     whisper_model_path = args.whisper_model_path
     clip_model_path = args.clip_model_path
+    torch_home_path = args.torch_home_path
 
-    endpoint = AdaEndPoint(hostname=hostname, port=port, sam_model_path=sam_model_path, whisper_model_path=whisper_model_path, clip_model_path=clip_model_path)
+    endpoint = AdaEndPoint(hostname=hostname, port=port, sam_model_path=sam_model_path, whisper_model_path=whisper_model_path, clip_model_path=clip_model_path, torch_home_path=torch_home_path)
     endpoint.run()
