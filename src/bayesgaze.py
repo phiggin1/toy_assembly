@@ -3,6 +3,7 @@ import numpy as np
 import rospy
 import math
 from std_msgs.msg import Float32MultiArray
+from toy_assembly.msg import Intrest
 
 LEFT_CAMERA_FRAME="/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
 RIGHT_CAMERA_FRAME="/gen3_robotiq_2f_85_right/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
@@ -45,15 +46,19 @@ class BayesGaze:
         self.prev_intrest = np.zeros(self.N)
         self.i = 0
         
-        self.intrest_pub = rospy.Publisher("/intrest", Float32MultiArray, queue_size=10)
+        #self.intrest_pub = rospy.Publisher("/intrest", Float32MultiArray, queue_size=10)
+        #self.sub  = rospy.Subscriber("/distances", Float32MultiArray, self.callback)
 
-        self.sub  = rospy.Subscriber("/distances", Float32MultiArray, self.callback)
+        self.intrest_pub = rospy.Publisher("/intrest", Intrest, queue_size=10)
+        self.sub  = rospy.Subscriber("/distances", Intrest, self.callback)
+
         rospy.spin()
 
     def callback(self, msg):
         np.set_printoptions(precision=5)
         stamp = rospy.Time.now().to_sec()
-        object_distances = msg.data
+        object_distances = msg.intrest
+        positions = msg.positions
 
         intrest = np.zeros(self.N)
         self.timestamps.append(stamp)
@@ -94,7 +99,12 @@ class BayesGaze:
 
             float_array = Float32MultiArray()
             float_array.data = self.prev_intrest
-            self.intrest_pub.publish(float_array)
+            intrest_msg = Intrest()
+            intrest_msg.header = msg.header
+            intrest_msg.positions=positions
+            intrest_msg.intrest=self.prev_intrest
+            #self.intrest_pub.publish(float_array)
+            self.intrest_pub.publish(intrest_msg)
                     
             self.prev_intrest = np.zeros(self.N)
             self.c[target] += 1

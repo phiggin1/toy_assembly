@@ -38,6 +38,10 @@ class AdaEndPoint:
 
         print("loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
+                
+        print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
+        print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
+        print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(0)/1024/1024/1024))
 
         print(f"Connecting to {sever_address}:{server_port}")
         context = zmq.Context()

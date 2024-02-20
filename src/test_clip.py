@@ -172,3 +172,6 @@ probs = np.array(clip_probs.probs.data, dtype=np.float32).reshape(dims).astype(d
 rospy.loginfo(transcript)
 rospy.loginfo(positions)
 rospy.loginfo(probs)
+target_indx = np.argmax(probs)
+rospy.loginfo(positions[target_indx])
+display_img(cvbridge.imgmsg_to_cv2(images[target_indx]))

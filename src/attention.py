@@ -5,7 +5,7 @@ import rospy
 import math
 from std_msgs.msg import Float32MultiArray
 from toy_assembly.msg import Transcription
-#from toy_assembly.msg import Distances
+from toy_assembly.msg import Intrest
 
 class Attention:
     def __init__(self):    
@@ -21,7 +21,8 @@ class Attention:
         #use transcrip start and duration to slice focus
         #self.bayes_gaze_sub = rospy.Subscriber("/intrest", Float32MultiArray, self.bayes_gaze_cb)
         
-        self.gaze_sub = rospy.Subscriber("/distances", Float32MultiArray, self.gaze_cb)
+        #self.gaze_sub = rospy.Subscriber("/distances", Float32MultiArray, self.gaze_cb)
+        self.gaze_sub = rospy.Subscriber("/distances", Intrest, self.gaze_cb)
         self.transript_sub = rospy.Subscriber("/transcript", Transcription, self.transcript_cb)
 
         rospy.spin()
@@ -30,13 +31,15 @@ class Attention:
 
     def gaze_cb(self, distances):
         time = rospy.Time.now().to_sec()
-        data = [time, distances.data]
+        #data = [time, distances.data]
+        data = [time, distances.intrest, distances.positions]
         self.targets.append(data)
 
         
     def bayes_gaze_cb(self, distances):
         time = rospy.Time.now().to_sec()
-        data = [time, distances.data]
+        #data = [time, distances.data]
+        data = [time, distances.intrest, distances.positions]
         self.targets.append(data)
 
     def transcript_cb(self, transcription):
