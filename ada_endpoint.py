@@ -29,7 +29,7 @@ class AdaEndPoint:
 
         sever_address = hostname
         server_port  = port
-
+        '''
         print("loading whipser")
         self.whisper_model = whisper.load_model("medium", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
@@ -40,7 +40,7 @@ class AdaEndPoint:
 
         print("loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
-        
+        '''
         print("loading tacotron2 and waveglow")
         self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
         self.tacotron2 = self.tacotron2.to(self.device)
@@ -94,19 +94,20 @@ class AdaEndPoint:
             mel, _, _ = self.tacotron2.infer(sequences, lengths)
             audio = self.waveglow.infer(mel)
         audio_numpy = audio[0].data.cpu().numpy()
+
         rate = 22050
         #wavfile_writer('/tmp/audio.mp3', rate, audio_numpy)
-        audio_json=audio_numpy.dumps()
+        audio_json=json.dumps(audio_numpy.tolist())
         print(type(audio_json))
         print(audio_json[0:10])
         response = {"type":"tts",
                     "text":text,
                     "rate":rate,
-                    "audio":str(audio_json)
+                    "audio":audio_json
         }
         return response
 
-
+    '''
     def process_sam(self, data):
         target_x = data["target_x"]
         target_y = data["target_y"]
@@ -185,7 +186,7 @@ class AdaEndPoint:
         }
 
         return response
-    
+    '''
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--hostname", default="iral-pinky.cs.umbc.edu", required=False,

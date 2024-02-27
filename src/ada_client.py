@@ -135,7 +135,7 @@ class AdaClient:
         
         with self.mutex:
             self.socket.send_json(msg)
-            resp = self.socket.recv_json()
+            #resp = self.socket.recv_json()
         if self.debug: rospy.loginfo('TTS recv from ada') 
 
         text = resp["text"]
