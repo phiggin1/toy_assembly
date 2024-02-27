@@ -6,8 +6,8 @@ import rospy
 import json
 import pickle
 from cv_bridge import CvBridge
-from toy_assembly.srv import Whisper, CLIP, SAM
-from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse
+from toy_assembly.srv import Whisper, CLIP, SAM, TTS
+from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse, TTSResponse
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import MultiArrayDimension
 from multiprocessing import Lock
@@ -28,14 +28,12 @@ class AdaClient:
         self.socket.bind("tcp://*:%s" % server_port)
         rospy.loginfo(f"Server listening on port:{server_port}")
 
-
         self.whisper_serv = rospy.Service('get_transciption', Whisper, self.Whisper)
         self.clip_serv = rospy.Service('get_clip_probabilities', CLIP, self.CLIP)
         self.sam_serv = rospy.Service('get_sam_segmentation', SAM, self.SAM)
+        self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
 
-        self.tts_serv = rospy.Publisher("/audio_test", Float32MultiArray, queue_size=10)
-
-        #rospy.spin()
+        rospy.spin()
 
     def Whisper(self, request):
         if self.debug: rospy.loginfo('Whisper req recv')
@@ -125,28 +123,33 @@ class AdaClient:
     def TTS(self, request):
         if self.debug: rospy.loginfo('TTS req recv')
 
-        text = request
-
+        text = request.text
+        print(request)
+        print(text)
         msg = {"type":"tts",
                "text":text
         }
 
         if self.debug: rospy.loginfo("TTS sending to ada")
-        
+        if self.debug: rospy.loginfo(f"Text:{text}")
         with self.mutex:
             self.socket.send_json(msg)
-            #resp = self.socket.recv_json()
+            resp = self.socket.recv_json()
         if self.debug: rospy.loginfo('TTS recv from ada') 
 
         text = resp["text"]
         rate = resp["rate"]
-        audio = pickle.loads(resp["audio"])
-        print(audio[0:10])
-        audio=  np.fromstring(audio[1:-1], dtype=float, sep=',')
+        audio = resp["audio"]
         rospy.loginfo(f"rate:{rate}, text:{text}")
-        self.tts_serv.publish(audio)
+
+        audio=  np.fromstring(audio[1:-1], dtype=float, sep=',')
+        float_array = Float32MultiArray()
+        float_array.data = audio
+
+        resp = TTSResponse()
+        resp.audio = float_array
+        return resp
     
 if __name__ == '__main__':
     get_target = AdaClient()
-    get_target.TTS("testing the text to speech")
 

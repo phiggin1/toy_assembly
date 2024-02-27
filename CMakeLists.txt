@@ -66,6 +66,7 @@ add_message_files(
     CLIP.srv
     DetectSlot.srv
     Indicate.srv
+    TTS.srv
  )
 
 ## Generate actions in the 'action' folder

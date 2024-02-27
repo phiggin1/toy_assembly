@@ -29,7 +29,7 @@ class AdaEndPoint:
 
         sever_address = hostname
         server_port  = port
-        '''
+        
         print("loading whipser")
         self.whisper_model = whisper.load_model("medium", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
@@ -40,7 +40,7 @@ class AdaEndPoint:
 
         print("loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
-        '''
+        
         print("loading tacotron2 and waveglow")
         self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
         self.tacotron2 = self.tacotron2.to(self.device)
@@ -107,7 +107,7 @@ class AdaEndPoint:
         }
         return response
 
-    '''
+    
     def process_sam(self, data):
         target_x = data["target_x"]
         target_y = data["target_y"]
@@ -186,7 +186,7 @@ class AdaEndPoint:
         }
 
         return response
-    '''
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--hostname", default="iral-pinky.cs.umbc.edu", required=False,
