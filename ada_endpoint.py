@@ -9,6 +9,7 @@ import numpy as np
 import zmq
 import argparse
 import PIL
+import json
 
 class AdaEndPoint:
     def __init__(self, hostname, port, sam_model_path, whisper_model_path, clip_model_path, torch_home_path):
@@ -40,16 +41,16 @@ class AdaEndPoint:
         print("loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         
-        print("loading tacotron2")
+        print("loading tacotron2 and waveglow")
         self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
         self.tacotron2 = self.tacotron2.to(self.device)
         self.tacotron2.eval()
-
-        print("loading waveglow")
         self.waveglow = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_waveglow', model_math='fp16')
         self.waveglow = self.waveglow.remove_weightnorm(self.waveglow)
         self.waveglow = self.waveglow.to(self.device)
         self.waveglow.eval()
+        self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tts_utils')
+        
 
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
         print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
@@ -76,11 +77,31 @@ class AdaEndPoint:
                 resp = self.process_clip(msg)
             elif msg_type == "whisper":
                 resp = self.process_whisper(msg)
+            elif msg_type =="tts":
+                resp = self.process_tts(msg)
             else:
                 resp = {}
 
             self.socket.send_json(resp)
             print('replied')
+
+    def process_tts(self, data):
+        #testing
+        text = data["text"]
+        sequences, lengths = self.utils.prepare_input_sequence([text])
+        with torch.no_grad():
+            mel, _, _ = self.tacotron2.infer(sequences, lengths)
+            audio = self.waveglow.infer(mel)
+        audio_numpy = audio[0].data.cpu().numpy()
+        rate = 22050
+        #wavfile_writer('/tmp/audio.mp3', rate, audio_numpy)
+        response = {"type":"tts",
+                    "text":text,
+                    "rate":rate,
+                    "audio":json.dumps(audio_numpy)
+        }
+        return response
+
 
     def process_sam(self, data):
         target_x = data["target_x"]

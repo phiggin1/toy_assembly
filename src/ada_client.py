@@ -32,6 +32,8 @@ class AdaClient:
         self.clip_serv = rospy.Service('get_clip_probabilities', CLIP, self.CLIP)
         self.sam_serv = rospy.Service('get_sam_segmentation', SAM, self.SAM)
 
+        self.tts_serv = rospy.Publisher("/audio_test", Float32MultiArray, queue_size=10)
+
         rospy.spin()
 
     def Whisper(self, request):
@@ -119,7 +121,29 @@ class AdaClient:
         response.masks = masks
         return response
 
+    def TTS(self, request):
+        if self.debug: rospy.loginfo('TTS req recv')
 
+        text = request
+
+        msg = {"type":"tts",
+               "text":text
+        }
+
+        if self.debug: rospy.loginfo("TTS sending to ada")
+        
+        with self.mutex:
+            self.socket.send_json(msg)
+            resp = self.socket.recv_json()
+        if self.debug: rospy.loginfo('TTS recv from ada') 
+
+        text = resp["text"]
+        rate = resp["rate"]
+        audio = resp["audio"]
+        audio=  np.fromstring(audio[1:-1], dtype=float, sep=',')
+        rospy.loginfo(f"rate:{rate}, text:{text}")
+        self.tts_serv.publish(audio)
+    
 if __name__ == '__main__':
     get_target = AdaClient()
 

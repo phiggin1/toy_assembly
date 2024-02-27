@@ -21,7 +21,7 @@ class DualArmTransform:
             self.scene_transform_topic = rospy.get_param("transform_topic", "/scene/transform")
             
             self.br = tf.TransformBroadcaster()
-
+            self.t_old = rospy.Time.now()
             self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
             
             rospy.spin()
@@ -40,6 +40,7 @@ class DualArmTransform:
             o_y = transform['rotation']['y']
             o_z = transform['rotation']['z']
             o_w = transform['rotation']['w']
+
             #converting from unity to ros
             m ={}
             m["p"] = {}
@@ -51,17 +52,7 @@ class DualArmTransform:
             m["q"]["y"] = o_x
             m["q"]["z"] = -o_y
             m["q"]["w"] = o_w
-            '''
-            m["p"] = {}
-            m["p"]["x"] = p_x
-            m["p"]["y"] = p_y
-            m["p"]["z"] = p_z
-            m["q"] = {}
-            m["q"]["x"] = o_x
-            m["q"]["y"] = o_y
-            m["q"]["z"] = o_z
-            m["q"]["w"] = o_w
-            '''
+
 
             #roll, pitch, yaw = tf.transformations.euler_from_quaternion([o_x, o_y, o_z, o_w])
             #m = tf.transformations.compose_matrix(None, None, (roll, pitch, yaw), (p_x,p_y,p_z), None)
@@ -76,10 +67,6 @@ class DualArmTransform:
                   transform_to_world[self.left_arm_frame]["q"]["y"], 
                   transform_to_world[self.left_arm_frame]["q"]["z"], 
                   transform_to_world[self.left_arm_frame]["q"]["w"])
-        self.br.sendTransform(left_p, left_q,
-                                  rospy.Time.now(),
-                                  "left_base_link",
-                                  DUAL_ARM_BASE_FRAME)
         
         #rospy.loginfo(f"{self.right_arm_frame}:\n{transform_to_world[self.right_arm_frame]}")
         right_p = (transform_to_world[self.right_arm_frame]["p"]["x"], 
@@ -89,10 +76,24 @@ class DualArmTransform:
                    transform_to_world[self.right_arm_frame]["q"]["y"], 
                    transform_to_world[self.right_arm_frame]["q"]["z"], 
                    transform_to_world[self.right_arm_frame]["q"]["w"])
-        self.br.sendTransform(right_p, right_q,
+
+        p = [left_p[0]-right_p[0],
+             left_p[1]-right_p[1],
+             left_p[2]-right_p[2]
+        ]
+        q = [0.0,0.0,0.0,1.0]
+        t = rospy.Time.now()
+        #print(t)
+        #print(self.t_old)
+        #print('----')
+        if t > (self.t_old + rospy.Duration(0.1)):
+            rospy.loginfo((t,p,q))
+            self.br.sendTransform(p, q,
                                   rospy.Time.now(),
-                                  "right_base_link",
-                                  DUAL_ARM_BASE_FRAME)
+                                  "left_base_link",
+                                  "right_base_link")
+            self.t_old = t
+
         
 if __name__ == '__main__':
     track = DualArmTransform()
