@@ -88,6 +88,7 @@ class AdaEndPoint:
     def process_tts(self, data):
         #testing
         text = data["text"]
+        print('tts start')
         sequences, lengths = self.utils.prepare_input_sequence([text])
         with torch.no_grad():
             mel, _, _ = self.tacotron2.infer(sequences, lengths)
@@ -95,10 +96,13 @@ class AdaEndPoint:
         audio_numpy = audio[0].data.cpu().numpy()
         rate = 22050
         #wavfile_writer('/tmp/audio.mp3', rate, audio_numpy)
+        audio_json=audio_numpy.dumps()
+        print(type(audio_json))
+        print(audio_json[0:10])
         response = {"type":"tts",
                     "text":text,
                     "rate":rate,
-                    "audio":audio_numpy.dumps()
+                    "audio":audio_json
         }
         return response
 
