@@ -98,7 +98,7 @@ class AdaEndPoint:
         response = {"type":"tts",
                     "text":text,
                     "rate":rate,
-                    "audio":json.dumps(audio_numpy)
+                    "audio":audio_numpy.dumps()
         }
         return response
 

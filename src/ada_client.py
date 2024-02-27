@@ -4,6 +4,7 @@ import zmq
 import numpy as np
 import rospy
 import json
+import pickle
 from cv_bridge import CvBridge
 from toy_assembly.srv import Whisper, CLIP, SAM
 from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse
@@ -34,7 +35,7 @@ class AdaClient:
 
         self.tts_serv = rospy.Publisher("/audio_test", Float32MultiArray, queue_size=10)
 
-        rospy.spin()
+        #rospy.spin()
 
     def Whisper(self, request):
         if self.debug: rospy.loginfo('Whisper req recv')
@@ -139,11 +140,13 @@ class AdaClient:
 
         text = resp["text"]
         rate = resp["rate"]
-        audio = resp["audio"]
+        audio = pickle.loads(resp["audio"])
+        print(audio[0:10])
         audio=  np.fromstring(audio[1:-1], dtype=float, sep=',')
         rospy.loginfo(f"rate:{rate}, text:{text}")
         self.tts_serv.publish(audio)
     
 if __name__ == '__main__':
     get_target = AdaClient()
+    get_target.TTS("testing the text to speech")
 
