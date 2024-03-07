@@ -32,7 +32,8 @@ def parse_args():
                         help="hostname for ROS system running ada_client.py")
     parser.add_argument("--port", default="8877", required=False,
                         help="port transcribe_server.py is listening on.")
-    parser.add_argument("--cfg-path", required=True, help="path to configuration file.")
+    parser.add_argument("--cfg-path", default="eval_configs/minigpt4_eval.yaml", 
+                        help="path to configuration file.")
     parser.add_argument("--gpu-id", type=int, default=0, help="specify the gpu to load the model.")
     parser.add_argument(
         "--options",
