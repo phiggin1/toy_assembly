@@ -3,11 +3,13 @@
 import zmq
 import numpy as np
 import rospy
-import json
-import pickle
 from cv_bridge import CvBridge
-from toy_assembly.srv import Whisper, CLIP, SAM, TTS
-from toy_assembly.srv import WhisperResponse, CLIPResponse, SAMResponse, TTSResponse
+from toy_assembly.srv import Whisper, WhisperResponse
+from toy_assembly.srv import CLIP, CLIPResponse
+from toy_assembly.srv import SAM, SAMResponse
+from toy_assembly.srv import TTS, TTSResponse
+from toy_assembly.srv import LLMImage, LLMImageResponse 
+from toy_assembly.srv import LLMText, LLMTextResponse
 from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import MultiArrayDimension
 from multiprocessing import Lock
@@ -22,16 +24,25 @@ class AdaClient:
         
         self.debug = rospy.get_param("~debug", True)
         server_port = rospy.get_param("~port", "8888")
+        llm_server_port = rospy.get_param("~port_llm", "8877")
 
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.bind("tcp://*:%s" % server_port)
         rospy.loginfo(f"Server listening on port:{server_port}")
 
+        llm_context = zmq.Context()
+        self.llm_socket = llm_context.socket(zmq.PAIR)
+        self.llm_socket.bind("tcp://*:%s" % llm_server_port)
+        rospy.loginfo(f"LLM Server listening on port:{llm_server_port}")
+
         self.whisper_serv = rospy.Service('get_transciption', Whisper, self.Whisper)
         self.clip_serv = rospy.Service('get_clip_probabilities', CLIP, self.CLIP)
         self.sam_serv = rospy.Service('get_sam_segmentation', SAM, self.SAM)
         self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
+
+        self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
+        self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
 
         rospy.spin()
 
@@ -150,6 +161,49 @@ class AdaClient:
         resp.audio = float_array
         return resp
     
+    def LLMImage(self, request):
+        if self.debug: rospy.loginfo('LLMImage req recv')
+
+        image = self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")      
+        print(image.shape)
+
+        msg = {"type":"llm_image",
+               "image":image.tolist(),
+        }
+
+        if self.debug: rospy.loginfo("LLMImage sending to ada")
+        
+        with self.mutex:
+            self.socket.send_json(msg)
+            resp = self.socket.recv_json()
+        if self.debug: rospy.loginfo('LLMImage recv from ada') 
+
+        #TODO Add in reponse
+
+        return True
+
+    def LLMText(self, request):
+        if self.debug: rospy.loginfo('LLMText req recv')
+
+        text = request.text
+        print(request)
+        print(text)
+        msg = {"type":"llm_ask",
+               "text":text
+        }
+
+        if self.debug: rospy.loginfo("LLMText sending to ada")
+        if self.debug: rospy.loginfo(f"Text:{text}")
+        with self.mutex:
+            self.socket.send_json(msg)
+            resp = self.socket.recv_json()
+        if self.debug: rospy.loginfo('LLMText recv from ada') 
+
+        text = resp["text"]
+        rospy.loginfo(f"text:{text}")
+
+        return resp
+
 if __name__ == '__main__':
     get_target = AdaClient()
 

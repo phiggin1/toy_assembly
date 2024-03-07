@@ -67,6 +67,8 @@ add_message_files(
     DetectSlot.srv
     Indicate.srv
     TTS.srv
+    LLMImage.srv
+    LLMText.srv
  )
 
 ## Generate actions in the 'action' folder
