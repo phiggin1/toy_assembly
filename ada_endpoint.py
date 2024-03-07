@@ -68,9 +68,10 @@ class AdaEndPoint:
     def run(self):
         while True:
             msg = self.socket.recv_json()
-            print('recieved')
 
             msg_type = msg["type"]
+            print(f"{time.time_ns()}: Message recieved type: {msg_type}")
+
             if msg_type == "sam":
                 resp = self.process_sam(msg)
             elif msg_type == "clip":
@@ -83,7 +84,7 @@ class AdaEndPoint:
                 resp = {}
 
             self.socket.send_json(resp)
-            print('replied')
+            print(f"{time.time_ns()}: Message replied type: {msg_type}")
 
     def process_tts(self, data):
         #testing
