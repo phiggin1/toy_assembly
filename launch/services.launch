@@ -1,13 +1,16 @@
 <launch>
 
   <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
+  <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
 
   <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
     <param name="threshold"  value="0.02" />
     <param name="silent_wait" value="5" />
     <param name="max_duration"  value="15" />
+    <param name="debug"  value="True" />
   </node>
-  
+
+
   <node name="head_track" pkg="toy_assembly" type="rivr_head_tracking.py" output="screen" >  </node>
   <node name="object_track" pkg="toy_assembly" type="object_tracking.py" output="screen" >  </node>
   <node name="robot_part_tracking" pkg="toy_assembly" type="robot_part_tracking.py" output="screen" >  </node>

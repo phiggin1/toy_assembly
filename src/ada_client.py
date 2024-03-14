@@ -174,13 +174,15 @@ class AdaClient:
         if self.debug: rospy.loginfo("LLMImage sending to ada")
         
         with self.mutex:
-            self.socket.send_json(msg)
-            resp = self.socket.recv_json()
+            self.llm_socket.send_json(msg)
+            resp = self.llm_socket.recv_json()
         if self.debug: rospy.loginfo('LLMImage recv from ada') 
 
         #TODO Add in reponse
+        resp = LLMImageResponse()
+        resp.result = True
 
-        return True
+        return resp
 
     def LLMText(self, request):
         if self.debug: rospy.loginfo('LLMText req recv')
@@ -195,12 +197,15 @@ class AdaClient:
         if self.debug: rospy.loginfo("LLMText sending to ada")
         if self.debug: rospy.loginfo(f"Text:{text}")
         with self.mutex:
-            self.socket.send_json(msg)
-            resp = self.socket.recv_json()
+            self.llm_socket.send_json(msg)
+            resp = self.llm_socket.recv_json()
         if self.debug: rospy.loginfo('LLMText recv from ada') 
 
         text = resp["text"]
         rospy.loginfo(f"text:{text}")
+
+        resp = LLMTextResponse()
+        resp.text = text
 
         return resp
 

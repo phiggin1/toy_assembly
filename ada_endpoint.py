@@ -10,6 +10,7 @@ import zmq
 import argparse
 import PIL
 import json
+import time
 
 class AdaEndPoint:
     def __init__(self, hostname, port, sam_model_path, whisper_model_path, clip_model_path, torch_home_path):
@@ -30,18 +31,18 @@ class AdaEndPoint:
         sever_address = hostname
         server_port  = port
         
-        print("loading whipser")
+        print(f"{{time.time_ns()}}: loading whipser")
         self.whisper_model = whisper.load_model("medium", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
-        print("loading sam")
+        print(f"{{time.time_ns()}}: loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
         self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
 
-        print("loading clip")
+        print(f"{{time.time_ns()}}: loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         
-        print("loading tacotron2 and waveglow")
+        print(f"{{time.time_ns()}}: loading tacotron2 and waveglow")
         self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
         self.tacotron2 = self.tacotron2.to(self.device)
         self.tacotron2.eval()

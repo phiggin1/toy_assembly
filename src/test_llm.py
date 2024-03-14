@@ -6,6 +6,7 @@ import cv2
 from cv_bridge import CvBridge
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
+from toy_assembly.msg import Transcription
 from toy_assembly.srv import LLMImage
 from toy_assembly.srv import LLMText
 from toy_assembly.srv import TTS
@@ -22,39 +23,45 @@ def display_img(img):
     cv2.imshow('image',img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+class TestLLM:
+    def __init__(self):
+        rospy.init_node('test_llm')
+        cvbridge = CvBridge()
 
-rospy.init_node('test_llm')
-cvbridge = CvBridge()
+        self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
 
+        rospy.wait_for_service('llm_image')
+        self.llm_img_serv = rospy.ServiceProxy('llm_image', LLMImage)
 
-robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
+        rospy.wait_for_service('llm_text')
+        self.llm_text_serv = rospy.ServiceProxy('llm_text', LLMText)
 
-rospy.wait_for_service('llm_image')
-llm_img_serv = rospy.ServiceProxy('llm_image', LLMImage)
+        rgb_image_topic =  "/unity/camera/left/rgb/image_raw"
+        transcript_topic = "/transcript"
 
-rospy.wait_for_service('llm_text')
-llm_text_srv = rospy.ServiceProxy('llm_text', LLMText)
-
-
-rgb_image_topic =  "/unity/camera/left/rgb/image_raw"
-transcript_topic = "/transcript"
-
-rospy.loginfo(f"rgb_image_topic:{rgb_image_topic}")
-rospy.loginfo(f"transcript_topic:{transcript_topic}")
+        rospy.loginfo(f"rgb_image_topic:{rgb_image_topic}")
+        rospy.loginfo(f"transcript_topic:{transcript_topic}")
             
-rgb_image = rospy.wait_for_message(rgb_image_topic, Image) 
-rospy.loginfo("Got RGB image")
+        rospy.loginfo("Wait for RGB image")
+        rgb_image = rospy.wait_for_message(rgb_image_topic, Image) 
+        rospy.loginfo("Got RGB image")
 
-resp = llm_img_serv(rgb_image)
-rospy.loginfo(resp)
+        #llm_img_serv(rgb_image)
+        #rospy.loginfo(resp)
+        
+        text_sub = rospy.Subscriber("/transcript", Transcription, self.text_cb)
+        rospy.spin()
 
-transcript = rospy.wait_for_message(transcript_topic, Transcription)
-rospy.loginfo("Got transcript")
+    def text_cb(self, transcript):
+        transcript =  transcript.transcription
+        rospy.loginfo(f"Got transcript:'{transcript}'")
 
-transcript =  [transcript.transcription]
-rospy.loginfo(transcript) 
+        resp = self.llm_text_serv(transcript)
+        rospy.loginfo(resp)
 
-resp = llm_text_serv(transcript)
-rospy.loginfo(resp)
+        self.robot_speech_pub.publish(resp.text)
 
-robot_speech_pub.publish(resp.text)
+
+if __name__ == '__main__':
+    test = TestLLM()
+
