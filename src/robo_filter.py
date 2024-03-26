@@ -39,8 +39,10 @@ class RobotFilter:
         self.debug_pub = rospy.Publisher("/debug_array", PoseArray, queue_size=10)
         self.obj_cluster_sub = rospy.Subscriber("/object_clusters", SegmentedClustersArray, self.process_clusters)
         
-        '''self.obj_cluster_sub = rospy.wait_for_message("/object_clusters", SegmentedClustersArray)
-        self.process_clusters(self.obj_cluster_sub)'''
+        '''
+        self.obj_cluster_sub = rospy.wait_for_message("/object_clusters", SegmentedClustersArray)
+        self.process_clusters(self.obj_cluster_sub)
+        '''
 
         rospy.spin()
         
@@ -61,7 +63,7 @@ class RobotFilter:
             now = rospy.Time.now()
             self.tf_listener.waitForTransform(cluster_frame, frame, now, rospy.Duration(4.0))
             p_in_base = self.tf_listener.transformPose(cluster_frame, p1)
-            pose_array.poses.append(p_in_base.pose)
+            #pose_array.poses.append(p_in_base.pose)
             a = [
                 p_in_base.pose.position.x,
                 p_in_base.pose.position.y,
@@ -74,7 +76,6 @@ class RobotFilter:
             frame = None
 
             for p in pc2.read_points(cluster, field_names = ("x", "y", "z"), skip_nans=True):
-        
                 for robot_part in robot_parts:
                     d = distance(robot_part,p)
                     if d < min_dist:
@@ -86,7 +87,6 @@ class RobotFilter:
 
             if min_dist > self.threshold:
                 output_clusters.clusters.append(cluster)
-                '''
                 for p in pc2.read_points(cluster, field_names = ("x", "y", "z"), skip_nans=True):
                     pose = Pose()
                     pose.position.x = p[0]
@@ -95,7 +95,7 @@ class RobotFilter:
                     pose.orientation.w = 1.0
                     pose_array.poses.append(pose)
                     break
-                '''
+                
             else:
                 print(f"discarding Cluster {i}, frame: {frame}")
         
