@@ -87,6 +87,7 @@ class RobotFilter:
 
             if min_dist > self.threshold:
                 output_clusters.clusters.append(cluster)
+                
                 for p in pc2.read_points(cluster, field_names = ("x", "y", "z"), skip_nans=True):
                     pose = Pose()
                     pose.position.x = p[0]
