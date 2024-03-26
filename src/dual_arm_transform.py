@@ -8,6 +8,8 @@ import numpy as np
 from std_msgs.msg import String
 from geometry_msgs.msg import PointStamped, Point
 
+import tf 
+
 LEFT_ARM = "/gen3_robotiq_2f_85_left"
 RIGHT_ARM = "/gen3_robotiq_2f_85_right"
 DUAL_ARM_BASE_FRAME = "/dual_arm"
@@ -21,6 +23,7 @@ class DualArmTransform:
             self.scene_transform_topic = rospy.get_param("transform_topic", "/scene/transform")
             
             self.br = tf.TransformBroadcaster()
+            self.transformer = tf.TransformerROS()
             self.t_old = rospy.Time.now()
             self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
             
@@ -60,38 +63,47 @@ class DualArmTransform:
             transform_to_world[name]=m
 
         #rospy.loginfo(f"{self.left_arm_frame}:\n{transform_to_world[self.left_arm_frame]}")
-        left_p = (transform_to_world[self.left_arm_frame]["p"]["x"], 
+        left_p = [transform_to_world[self.left_arm_frame]["p"]["x"], 
                   transform_to_world[self.left_arm_frame]["p"]["y"], 
-                  transform_to_world[self.left_arm_frame]["p"]["z"])
-        left_q = (transform_to_world[self.left_arm_frame]["q"]["x"], 
+                  transform_to_world[self.left_arm_frame]["p"]["z"]]
+        left_q = [transform_to_world[self.left_arm_frame]["q"]["x"], 
                   transform_to_world[self.left_arm_frame]["q"]["y"], 
                   transform_to_world[self.left_arm_frame]["q"]["z"], 
-                  transform_to_world[self.left_arm_frame]["q"]["w"])
+                  transform_to_world[self.left_arm_frame]["q"]["w"]]
+        world_to_left = self.transformer.fromTranslationRotation(translation=left_p, rotation=left_q)
         
         #rospy.loginfo(f"{self.right_arm_frame}:\n{transform_to_world[self.right_arm_frame]}")
-        right_p = (transform_to_world[self.right_arm_frame]["p"]["x"], 
+        right_p = [transform_to_world[self.right_arm_frame]["p"]["x"], 
                    transform_to_world[self.right_arm_frame]["p"]["y"], 
-                   transform_to_world[self.right_arm_frame]["p"]["z"])
-        right_q = (transform_to_world[self.right_arm_frame]["q"]["x"], 
+                   transform_to_world[self.right_arm_frame]["p"]["z"]]
+        right_q = [transform_to_world[self.right_arm_frame]["q"]["x"], 
                    transform_to_world[self.right_arm_frame]["q"]["y"], 
                    transform_to_world[self.right_arm_frame]["q"]["z"], 
-                   transform_to_world[self.right_arm_frame]["q"]["w"])
+                   transform_to_world[self.right_arm_frame]["q"]["w"]]
+        world_to_right = self.transformer.fromTranslationRotation(translation=right_p, rotation=right_q)
 
-        p = [left_p[0]-right_p[0],
-             left_p[1]-right_p[1],
-             left_p[2]-right_p[2]
-        ]
-        q = [0.0,0.0,0.0,1.0]
+        #left_to_world = tf.transformations.inverse_matrix(world_to_left)
+        right_to_world = tf.transformations.inverse_matrix(world_to_right)
+
+        #left_to_right = tf.transformations.concatenate_matrices(left_to_world, world_to_right)
+        right_to_left = tf.transformations.concatenate_matrices(right_to_world, world_to_left)
+
+        #print(right_to_left)
+
+        p = tf.transformations.translation_from_matrix(right_to_left)
+        q = tf.transformations.quaternion_from_matrix(right_to_left)
+
         t = rospy.Time.now()
         #print(t)
         #print(self.t_old)
         #print('----')
         if t > (self.t_old + rospy.Duration(0.1)):
             rospy.loginfo((t,p,q))
-            self.br.sendTransform(p, q,
-                                  rospy.Time.now(),
-                                  "left_base_link",
-                                  "right_base_link")
+            self.br.sendTransform(translation=p, 
+                                  rotation=q,
+                                  time=rospy.Time.now(),
+                                  child="left_base_link",
+                                  parent="right_base_link")
             self.t_old = t
 
         
