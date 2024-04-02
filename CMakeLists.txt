@@ -61,6 +61,7 @@ add_message_files(
 ## Generate services in the 'srv' folder
  add_service_files(
    FILES
+    Servo.srv
     Whisper.srv
     SAM.srv
     CLIP.srv

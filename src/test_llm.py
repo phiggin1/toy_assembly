@@ -23,6 +23,7 @@ def display_img(img):
     cv2.imshow('image',img)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
+    
 class TestLLM:
     def __init__(self):
         rospy.init_node('test_llm')

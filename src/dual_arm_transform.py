@@ -22,7 +22,8 @@ class DualArmTransform:
             self.right_arm_frame = rospy.get_param("right_arm_frame", RIGHT_ARM)
             self.scene_transform_topic = rospy.get_param("transform_topic", "/scene/transform")
             
-            self.br = tf.TransformBroadcaster()
+            self.br_left = tf.TransformBroadcaster()
+            self.br_right = tf.TransformBroadcaster()
             self.transformer = tf.TransformerROS()
             self.t_old = rospy.Time.now()
             self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
@@ -82,9 +83,41 @@ class DualArmTransform:
                    transform_to_world[self.right_arm_frame]["q"]["w"]]
         world_to_right = self.transformer.fromTranslationRotation(translation=right_p, rotation=right_q)
 
-        #left_to_world = tf.transformations.inverse_matrix(world_to_left)
+
+        l_p = tf.transformations.translation_from_matrix(world_to_left)
+        l_q = tf.transformations.quaternion_from_matrix(world_to_left)
+
+        r_p = tf.transformations.translation_from_matrix(world_to_right)
+        r_q = tf.transformations.quaternion_from_matrix(world_to_right)
+
+        '''
+        left_to_world = tf.transformations.inverse_matrix(world_to_left)
         right_to_world = tf.transformations.inverse_matrix(world_to_right)
 
+        l_p = tf.transformations.translation_from_matrix(left_to_world)
+        l_q = tf.transformations.quaternion_from_matrix(left_to_world)
+
+        r_p = tf.transformations.translation_from_matrix(right_to_world)
+        r_q = tf.transformations.quaternion_from_matrix(right_to_world)
+        '''
+
+        t = rospy.Time.now()
+        if t > (self.t_old + rospy.Duration(0.1)):
+            #rospy.loginfo((t,l_p,l_q))
+            #rospy.loginfo((t,r_p,r_q))
+            self.br_left.sendTransform(translation=l_p, 
+                                  rotation=l_q,
+                                  time=t,
+                                  child="left_world",
+                                  parent="dual_arm")
+            self.br_right.sendTransform(translation=r_p, 
+                                  rotation=r_q,
+                                  time=t,
+                                  child="right_world",
+                                  parent="dual_arm")
+            self.t_old = t
+
+        '''
         #left_to_right = tf.transformations.concatenate_matrices(left_to_world, world_to_right)
         right_to_left = tf.transformations.concatenate_matrices(right_to_world, world_to_left)
 
@@ -94,9 +127,6 @@ class DualArmTransform:
         q = tf.transformations.quaternion_from_matrix(right_to_left)
 
         t = rospy.Time.now()
-        #print(t)
-        #print(self.t_old)
-        #print('----')
         if t > (self.t_old + rospy.Duration(0.1)):
             rospy.loginfo((t,p,q))
             self.br.sendTransform(translation=p, 
@@ -106,6 +136,6 @@ class DualArmTransform:
                                   parent="right_base_link")
             self.t_old = t
 
-        
+        '''
 if __name__ == '__main__':
     track = DualArmTransform()

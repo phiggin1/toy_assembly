@@ -41,8 +41,8 @@ class AdaClient:
         self.sam_serv = rospy.Service('get_sam_segmentation', SAM, self.SAM)
         self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
 
-        self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
-        self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
+        #self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
+        #self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
 
         rospy.spin()
 

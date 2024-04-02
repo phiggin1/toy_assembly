@@ -98,7 +98,8 @@ class ImageSegment:
             lineType               = 2
             text = "obj_"+str(i)
             cv2.putText(rgb_img, text, bottomLeftCornerOfText, font, fontScale, fontColor, thickness, lineType)
-        
+            rospy.loginfo(text)
+            
         rospy.loginfo(f"-----------------------")    
         rgb_msg = self.bridge.cv2_to_imgmsg(rgb_img, "bgr8")
         self.overlayed_images_pub.publish(rgb_msg)
