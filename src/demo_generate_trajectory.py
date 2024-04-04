@@ -36,10 +36,12 @@ def angle_axis(q):
     qw = q[3]
 
     theta = 2*math.acos(qw)
-    theta = theta % 2*math.pi
+    #print(theta)
+    #theta = theta % 2*math.pi
+    #print(theta)
     s = math.sqrt(1-qw*qw)
-
-    if (s < 0.001):
+    #print(s)
+    if (s < 0.1):
         ax=qx
         ay=qy
         az=qz
@@ -140,10 +142,7 @@ class GenerateTrajectory:
 
             self.ts = message_filters.TimeSynchronizer([self.human_slot_sub, self.robot_slot_sub], 100)#, slop=12.0)
             self.ts.registerCallback(self.callback)
-
-
             self.service = rospy.Service('Servo', Servo, self.servo)
-
 
             rospy.spin()
             
@@ -170,9 +169,9 @@ class GenerateTrajectory:
         #print(f"q_rob:{q_robot}")
         #print(f"q_tar:{q_target}")
 
-        self.q_r = quaternion_multiply(q_robot  , quaternion_inverse(q_target))
+        self.q_r = quaternion_multiply(q_robot, quaternion_inverse(q_target))
 
-        #print(f"q_rot:{self.q_r}")
+        print(f"q_rot:{self.q_r}")
 
         self.angular_error, self.ax, self.ay, self.az = angle_axis(self.q_r)
 
@@ -186,9 +185,9 @@ class GenerateTrajectory:
         #print(f"q_ee:{ (180/math.pi)*np.asarray( euler_from_quaternion(q_ee))}")
         #print(f"q_ee:{ q_ee}")
 
-        #np.set_printoptions(precision=2)
-        #print(f"pe:  {np.asarray(self.positional_error)}")
-        #print(f"q_r :{q_r}")
+        np.set_printoptions(precision=2)
+        print(f"pe: {np.asarray(self.positional_error)}")
+        print(f"ae: {self.angular_error:.2}, {self.ax:.2}, {self.ay:.2}, {self.az:.2}")
 
 
     def servo(self, req):
@@ -232,8 +231,8 @@ class GenerateTrajectory:
             '''
             
             rospy.loginfo(f"total time:{total_time}\n[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]\n[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
-            print(f"[{self.positional_error}], {self.positional_tolerance}")
-            print(f"{self.angular_error}, {self.angular_tolerance}")
+            #print(f"[{self.positional_error}], {self.positional_tolerance}")
+            #print(f"{self.angular_error}, {self.angular_tolerance}")
             #print(f"[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]")
             #print(f"[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
 

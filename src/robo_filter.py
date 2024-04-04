@@ -35,7 +35,7 @@ class RobotFilter:
             "right_left_inner_finger_pad"
         ]
 
-        self.obj_cluster_pub = rospy.Publisher("/filtered_object_clusters", SegmentedClustersArray, queue_size=10)
+        self.obj_cluster_pub = rospy.Publisher("/filtered_object_clusters", SegmentedClustersArray, queue_size=1)
         self.debug_pub = rospy.Publisher("/debug_array", PoseArray, queue_size=10)
         self.obj_cluster_sub = rospy.Subscriber("/object_clusters", SegmentedClustersArray, self.process_clusters)
         
@@ -47,12 +47,12 @@ class RobotFilter:
         rospy.spin()
         
     def process_clusters(self, clusters):
+        rospy.loginfo("start")
         cluster_frame = clusters.header.frame_id
 
         output_clusters = SegmentedClustersArray()
         output_clusters.header = clusters.header
 
-        #print("===============================")
         pose_array = PoseArray()
         pose_array.header = clusters.header
         robot_parts = []
@@ -71,7 +71,9 @@ class RobotFilter:
             ]
             robot_parts.append(a)
 
+        #rospy.loginfo("a")
         for i, cluster in enumerate(clusters.clusters):
+            #rospy.loginfo("b")
             min_dist = 99999.9
             frame = None
 
@@ -81,12 +83,13 @@ class RobotFilter:
                     if d < min_dist:
                         min_dist = d
                         frame = robot_part
-                    #break
+                #break
 
-            #print(f"Cluster {i}: min_dist: {min_dist}, frame: {frame}")
+            rospy.loginfo(f"Cluster {i}: min_dist: {min_dist}, frame: {frame}")
 
             if min_dist > self.threshold:
                 output_clusters.clusters.append(cluster)
+                
                 
                 for p in pc2.read_points(cluster, field_names = ("x", "y", "z"), skip_nans=True):
                     pose = Pose()
@@ -97,12 +100,14 @@ class RobotFilter:
                     pose_array.poses.append(pose)
                     break
                 
+                
             else:
-                print(f"discarding Cluster {i}, frame: {frame}")
+                print(f"Discarding Cluster {i}, frame: {frame}\n")
         
         self.debug_pub.publish(pose_array)
         #output_clusters.header.stamp = rospy.Time.now()
         self.obj_cluster_pub.publish(output_clusters)
+        rospy.loginfo("end")
 
 if __name__ == '__main__':
     filter = RobotFilter()

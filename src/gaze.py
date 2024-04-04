@@ -35,7 +35,6 @@ class HeadTracking:
 
             self.head_point_pub = rospy.Publisher("/head_point", PointStamped, queue_size=10)
             self.gaze_point_pub = rospy.Publisher("/gaze_point", PointStamped, queue_size=10)
-            #self.dist_pub = rospy.Publisher("/distances", Float32MultiArray, queue_size=10)
             self.dist_pub = rospy.Publisher("/distances", Intrest, queue_size=10)
 
             self.head_pose_sub = message_filters.Subscriber(self.head_pose_topic, PoseStamped)
@@ -59,6 +58,21 @@ class HeadTracking:
                             head_pose.pose.orientation.w])
         gaze = R.from_quat(gaze).apply([1.0, 0.0, 0.0])
 
+        head_point = PointStamped()
+        gaze_point = PointStamped()
+        head_point.header=head_pose.header
+        gaze_point.header=head_pose.header
+        head_point.point.x=head_pos[0]
+        head_point.point.y=head_pos[1]
+        head_point.point.z=head_pos[2]
+        gaze_point.point.x=head_pos[0]+gaze[0]
+        gaze_point.point.y=head_pos[1]+gaze[1]
+        gaze_point.point.z=head_pos[2]+gaze[2]
+        head_point.header.stamp=rospy.Time.now()
+        gaze_point.header.stamp=rospy.Time.now()
+        self.head_point_pub.publish(head_point)
+        self.gaze_point_pub.publish(gaze_point)
+
         distances = []
         intrest = Intrest()
         #TODO get everything in correct frame
@@ -68,21 +82,6 @@ class HeadTracking:
             position = np.asarray([obj_pose.position.x,
                                    obj_pose.position.y,
                                    obj_pose.position.z])
-
-            head_point = PointStamped()
-            gaze_point = PointStamped()
-            head_point.header=head_pose.header
-            gaze_point.header=head_pose.header
-            head_point.point.x=head_pos[0]
-            head_point.point.y=head_pos[1]
-            head_point.point.z=head_pos[2]
-            gaze_point.point.x=head_pos[0]+gaze[0]
-            gaze_point.point.y=head_pos[1]+gaze[1]
-            gaze_point.point.z=head_pos[2]+gaze[2]
-            head_point.header.stamp=rospy.Time.now()
-            gaze_point.header.stamp=rospy.Time.now()
-            self.head_point_pub.publish(head_point)
-            self.gaze_point_pub.publish(gaze_point)
 
             d = cos_distance(gaze, position-head_pos)
             distances.append((names[i],d,position))

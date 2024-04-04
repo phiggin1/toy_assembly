@@ -10,9 +10,12 @@ from geometry_msgs.msg import PoseArray, Pose
 
 LEFT_CAMERA_FRAME="/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
 RIGHT_CAMERA_FRAME="/gen3_robotiq_2f_85_right/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
-OBJECTS_NAMES = [#LEFT_CAMERA_FRAME,
-                 #RIGHT_CAMERA_FRAME, 
-                "/red_horse_front_legs"
+OBJECTS_NAMES = ["/red_horse_front_legs",
+                 "/yellow_horse_back_legs",
+                 "/horse_body_blue",
+                 "/horse_body_yellow",
+                 "/horse_body_red"
+
 ]
 
 def PositionUnity2Ros(vector3):

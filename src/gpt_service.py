@@ -11,16 +11,14 @@ class GPTServ:
         self.stop = False
         rospy.init_node('gpt_service_node')
         
-        '''
+        
         key_filename = "/home/phiggin1/ai.key"
         with open(key_filename, "rb") as key_file:
             key = key_file.read().decode("utf-8")
-
-
         self.client = OpenAI(
             api_key = key,
         )
-        '''
+        
         #self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
         self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
         rospy.spin()
@@ -56,12 +54,12 @@ Please do not begin working until I say "Start working." Instead, simply output 
         return prompt
 
     def chat_complete(self, statement):
-        start_time = time.time_ns()
-        print(f"{start_time/10**9} :\tSending query")
-
+        '''
         prompt = self.get_prompt(statement)
         
-        '''
+        
+        start_time = time.time_ns()
+        print(f"{start_time/10**9} :\tSending query")
         response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo-16k",
                 messages=prompt,
@@ -70,34 +68,24 @@ Please do not begin working until I say "Start working." Instead, simply output 
                 top_p=0.5,
                 frequency_penalty=0.0,
                 presence_penalty=0.0)
-        
         end_time = time.time_ns()
         print(f"{end_time/10**9} :\tRespone recieved")
         print(f"latency: {(end_time-start_time)/(10**9)}")
-
+        
         text = response.choices[0].message.content
         '''
-
         text = """Sure! Here is the dictionary with the objects we should pick up:
 
 {
   "robot": "<horse_body_blue>",
   "human": "<red_horse_front_legs>"
 }"""
-
+        
         return text
-        '''
-        a = text.find('{')
-        b = text.find('}')+1
-        text_json = text[a:b]
-        json_dict = json.loads(text_json)
 
-        return json_dict
-        '''
-
+    
     def LLMText(self, req):
         statement = req.text
-
         text = self.chat_complete(statement)
 
         resp = LLMTextResponse()

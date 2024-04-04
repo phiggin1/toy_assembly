@@ -3,7 +3,7 @@
     <!-- Start the GUIs -->
     <arg name="start_gazebo" default="true"/>
     <arg name="gazebo_gui"   default ="false"/>
-    <arg name="start_rviz" default="true"/>
+    <arg name="start_rviz" default="false"/>
     
     <!-- Arm type -->
     <arg name="arm" default="gen3"/>
@@ -71,8 +71,8 @@
     <arg name="cyclic_data_publish_rate" value="$(arg cyclic_data_publish_rate)"/> 
     <arg name="start_delay_seconds" value="$(arg start_delay_seconds)"/> 
   </include>
-<!-- -->
+
   
   <node name="dual_arm_transform" pkg="toy_assembly" type="dual_arm_transform.py" output="screen" >  </node>
- 
+  
 </launch>

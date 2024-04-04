@@ -70,6 +70,9 @@ add_message_files(
     TTS.srv
     LLMImage.srv
     LLMText.srv
+    MoveITPose.srv
+    MoveITNamedPose.srv
+    MoveITGrabPose.srv
  )
 
 ## Generate actions in the 'action' folder
