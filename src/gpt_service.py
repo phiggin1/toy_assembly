@@ -18,52 +18,55 @@ class GPTServ:
         self.client = OpenAI(
             api_key = key,
         )
-        
+
         #self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
         self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
         rospy.spin()
 
     def get_prompt(self, statement):
         objects = ['<red_horse_front_legs>', '<yellow_horse_back_legs>', '<horse_body_blue>', '<horse_body_red>', '<horse_body_yellow>']
-
-        prompt_mesgage = f"""
-You are a robotic system that is working togheter with a human to build a slot togeter toy horse.
-
-You can see 5 different 'objects': {objects}.
-
-The human will tell you what part they will pick up and what part you (the robot should) pick up.
-
-When told by the human what parts are to be picked up you sould respond with a python ndictionary.
-The dictionary should have two keys.
-
-dictonary["robot"] : the object that the robot should pickup
-dictonary["human"] : the object that the human will pickup
-                
-Please do not begin working until I say "Start working." Instead, simply output the message "Waiting for next input." Understood?        
-"""
         
-        query = "Start working.\n"
-        prompt = []
-        prompt.append({"role": "system", 
-                       "content": prompt_mesgage})
-        prompt.append({"role": "assistant", 
-                       "content" : 'Understood. Waiting for next input.'})
-        prompt.append({"role": "user", 
-                       "content" : query+statement})
+        with open("/home/phiggin1/catkin_ws/src/toy_assembly/src/prompt/system.txt") as f:
+            system = f.read()
+        with open("/home/phiggin1/catkin_ws/src/toy_assembly/src/prompt/prompt.txt") as f:
+            prompt = f.read()
+        with open("/home/phiggin1/catkin_ws/src/toy_assembly/src/prompt/query.txt") as f:
+            query = f.read()
 
-        return prompt
+        if query.find("[OBJECTS]") != -1:
+            query = query.replace("[OBJECTS]", ", ".join(objects))
+
+        if query.find("[STATEMENT]") != -1:
+            query = query.replace("[STATEMENT]", statement)
+
+        messages = []
+        messages.append({"role": "system", 
+                       "content": system})
+        messages.append({"role": "assistant", 
+                       "content" : 'Understood. Waiting for next input.'})
+        
+        messages.append({"role": "user", 
+                       "content": prompt})
+        messages.append({"role": "assistant", 
+                       "content" : 'Understood. Waiting for next input.'})
+        
+        messages.append({"role": "user", 
+                       "content" : query})
+
+        return messages
 
     def chat_complete(self, statement):
-        '''
-        prompt = self.get_prompt(statement)
+        print(statement)
+        messages = self.get_prompt(statement)
+        
         
         
         start_time = time.time_ns()
         print(f"{start_time/10**9} :\tSending query")
         response = self.client.chat.completions.create(
                 model="gpt-3.5-turbo-16k",
-                messages=prompt,
-                temperature=0.1,
+                messages=messages,
+                temperature=0.0,
                 max_tokens=8000,
                 top_p=0.5,
                 frequency_penalty=0.0,
@@ -77,10 +80,13 @@ Please do not begin working until I say "Start working." Instead, simply output 
         text = """Sure! Here is the dictionary with the objects we should pick up:
 
 {
-  "robot": "<horse_body_blue>",
+  "robot": "<horse_body_yellow>",
   "human": "<red_horse_front_legs>"
-}"""
+}"""'''
         
+
+        
+        print(text)
         return text
 
     

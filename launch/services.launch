@@ -1,30 +1,36 @@
 <launch>
-  <!-- This node does the servoing calculations     <node name="gen_trajectory" pkg="toy_assembly" type="demo_generate_trajectory.py" output="screen" >  </node>
--->
+  <!-- This node does the servoing calculations     -->
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_right">
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_right.yaml" />
   </node> 
+  <node name="gen_trajectory" pkg="toy_assembly" type="demo_generate_trajectory.py" output="screen" >  </node>
 
   <node name="robot_part_tracking" pkg="toy_assembly" type="robot_part_tracking.py" output="screen" >  </node>
   <node name="human_part_tracking" pkg="toy_assembly" type="human_part_tracking.py" output="screen" >  </node>
-  <node name="object_track" pkg="toy_assembly" type="object_tracking.py" output="screen" >  </node>
 
   <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
   <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" >  </node>
 
   <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
   <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
-    <param name="threshold"  value="0.02" />
+    <param name="threshold"  value="0.015" />
     <param name="silent_wait" value="5" />
     <param name="max_duration"  value="15" />
     <param name="debug"  value="True" />
   </node>
 
 
+  <node name="object_track" pkg="toy_assembly" type="object_tracking.py" output="screen" >  </node>
   <node name="head_track" pkg="toy_assembly" type="rivr_head_tracking.py" output="screen" >  </node>
   <node name="gaze" pkg="toy_assembly" type="gaze.py" output="screen" >  </node>
-  <node name="bayesgaze" pkg="toy_assembly" type="bayesgaze.py" output="screen" >  </node>
+  <node name="gaze_target" pkg="toy_assembly" type="gaze_target.py" output="screen" >  </node>
+  <node name="overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  </node>
 
+<!-- 
+  <node name="bayesgaze" pkg="toy_assembly" type="bayesgaze.py" output="screen" >  </node>
+-->
+
+  <node name="robot_filter" pkg="toy_assembly" type="robo_filter.py" output="screen" >  </node>
 
   <arg name="minX" default="-10.0"/>
   <arg name="maxX" default="10.0"/>
@@ -50,9 +56,5 @@
     <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
     <param name="input_cloud" 		value="$(arg input_cloud)"/>
   </node>
-  
-  <!--
-    <node name="robot_filter" pkg="toy_assembly" type="robo_filter.py" output="screen" >  </node>
--->
 
 </launch>

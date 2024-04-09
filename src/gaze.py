@@ -16,11 +16,11 @@ from toy_assembly.msg import Intrest
 
 LEFT_CAMERA_FRAME="/gen3_robotiq_2f_85_left/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
 RIGHT_CAMERA_FRAME="/gen3_robotiq_2f_85_right/world/base_link/shoulder_link/bicep_link/forearm_link/spherical_wrist_1_link/spherical_wrist_2_link/bracelet_link/end_effector_link/camera_link"
-OBJECTS_NAMES = [#LEFT_CAMERA_FRAME,
-                 #RIGHT_CAMERA_FRAME, 
-                 "/horse_body_red", 
+OBJECTS_NAMES = ["/horse_body_red", 
                  "/horse_body_yellow", 
-                "/horse_body_blue"
+                 "/horse_body_blue",
+                 "/red_horse_front_legs",
+                 "/yellow_horse_front_legs"
 ]
 
 
@@ -30,8 +30,7 @@ class HeadTracking:
             
 
             self.head_pose_topic = rospy.get_param("head_pose_topic", "/head_pose")
-            self.object_pose_topic = rospy.get_param("object_pose_topic", "/pose_array")
-
+            self.object_pose_topic = rospy.get_param("object_pose_topic", "/toy_part_pose_array")
 
             self.head_point_pub = rospy.Publisher("/head_point", PointStamped, queue_size=10)
             self.gaze_point_pub = rospy.Publisher("/gaze_point", PointStamped, queue_size=10)

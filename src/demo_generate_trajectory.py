@@ -171,7 +171,7 @@ class GenerateTrajectory:
 
         self.q_r = quaternion_multiply(q_robot, quaternion_inverse(q_target))
 
-        print(f"q_rot:{self.q_r}")
+        #print(f"q_rot:{self.q_r}")
 
         self.angular_error, self.ax, self.ay, self.az = angle_axis(self.q_r)
 
@@ -185,9 +185,9 @@ class GenerateTrajectory:
         #print(f"q_ee:{ (180/math.pi)*np.asarray( euler_from_quaternion(q_ee))}")
         #print(f"q_ee:{ q_ee}")
 
-        np.set_printoptions(precision=2)
-        print(f"pe: {np.asarray(self.positional_error)}")
-        print(f"ae: {self.angular_error:.2}, {self.ax:.2}, {self.ay:.2}, {self.az:.2}")
+        #np.set_printoptions(precision=2)
+        #print(f"pe: {np.asarray(self.positional_error)}")
+        #print(f"ae: {self.angular_error:.2}, {self.ax:.2}, {self.ay:.2}, {self.az:.2}")
 
 
     def servo(self, req):
@@ -230,9 +230,10 @@ class GenerateTrajectory:
             t_a_z = self.angular_error*self.az
             '''
             
-            rospy.loginfo(f"total time:{total_time}\n[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]\n[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
-            #print(f"[{self.positional_error}], {self.positional_tolerance}")
-            #print(f"{self.angular_error}, {self.angular_tolerance}")
+            rospy.loginfo(f"total time:{total_time}")
+            print(f"[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]\n[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
+            print(f"[{self.positional_error}], {self.positional_tolerance}")
+            print(f"{self.angular_error}, {self.angular_tolerance}")
             #print(f"[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]")
             #print(f"[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
 

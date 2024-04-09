@@ -38,10 +38,12 @@ class ImageSegment:
         self.obj_cluster_sub = rospy.Subscriber("/filtered_object_clusters", SegmentedClustersArray, self.cluster_callback)
         
 
-        '''self.rgb_image_sub = message_filters.Subscriber("/unity/camera/left/rgb/image_raw", Image)
+        '''
+        self.rgb_image_sub = message_filters.Subscriber("/unity/camera/left/rgb/image_raw", Image)
         self.obj_cluster_sub = message_filters.Subscriber("/filtered_object_clusters", SegmentedClustersArray)
         self.ts = message_filters.ApproximateTimeSynchronizer([self.rgb_image_sub, self.obj_cluster_sub], queue_size=10, slop=12.0, allow_headerless=True)
-        self.ts.registerCallback(self.callback)'''
+        self.ts.registerCallback(self.callback)
+        '''
 
         rospy.spin()
 
@@ -89,46 +91,47 @@ class ImageSegment:
 
                 rospy.loginfo(f"{i}, {center_pix}")
             
-        self.have_objects = True
+            self.have_objects = True
 
 
 
     def image_cb(self, rgb_ros_image):
         rgb_img = np.asarray(self.bridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="passthrough"))
 
-        if len(self.objects) < 1:
-            return
+        with self.mutex:
+            if len(self.objects) < 1:
+                return
 
-        for obj in self.objects:
-            i = obj["i"]
-            min_pix = obj["min_pix"]
-            max_pix = obj["max_pix"]
-            center_pix = obj["center_pix"]
+            for obj in self.objects:
+                i = obj["i"]
+                min_pix = obj["min_pix"]
+                max_pix = obj["max_pix"]
+                center_pix = obj["center_pix"]
 
-            #25 is to try and avoid clipping the object off
-            #this might not be needed/a bad idea
-            u_min = max(int(math.floor(min_pix[0]))-25, 0)
-            v_min = max(int(math.floor(min_pix[1]))-25, 0)
+                #25 is to try and avoid clipping the object off
+                #this might not be needed/a bad idea
+                u_min = max(int(math.floor(min_pix[0]))-25, 0)
+                v_min = max(int(math.floor(min_pix[1]))-25, 0)
+                    
+                u_max = min(int(math.ceil(max_pix[0]))+25, rgb_img.shape[1])
+                v_max = min(int(math.ceil(max_pix[1]))+25, rgb_img.shape[1])
                 
-            u_max = min(int(math.ceil(max_pix[0]))+25, rgb_img.shape[1])
-            v_max = min(int(math.ceil(max_pix[1]))+25, rgb_img.shape[1])
-            
-            rospy.loginfo(f"{i}, {center_pix}")
-            
-            font = cv2.FONT_HERSHEY_SIMPLEX
-            bottomLeftCornerOfText = (int(center_pix[0]),int(center_pix[1]))#(u_min,v_min)
-            fontScale = 0.75
-            fontColor = (255,255,255)
-            thickness = 2
-            lineType = cv2.LINE_AA
-            text = "obj_"+str(i)
+                rospy.loginfo(f"{i}, {center_pix}")
+                
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                bottomLeftCornerOfText = (int(center_pix[0]),int(center_pix[1]))#(u_min,v_min)
+                fontScale = 0.75
+                fontColor = (255,255,255)
+                thickness = 2
+                lineType = cv2.LINE_AA
+                text = "obj_"+str(i)
 
-            #mask = cv2.putText(mask, "PLOTCH", (50, 128), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255,255,255), 5)
-            #mask = cv2.putText(mask, "PLOTCH", (50, 128), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,0,0), 2)
+                #mask = cv2.putText(mask, "PLOTCH", (50, 128), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255,255,255), 5)
+                #mask = cv2.putText(mask, "PLOTCH", (50, 128), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,0,0), 2)
 
-            cv2.putText(rgb_img, text, bottomLeftCornerOfText, font, fontScale, (0,0,0), thickness+3, lineType)
-            cv2.putText(rgb_img, text, bottomLeftCornerOfText, font, fontScale, (255,255,255), thickness, lineType)
-            rospy.loginfo(text)
+                cv2.putText(rgb_img, text, bottomLeftCornerOfText, font, fontScale, (0,0,0), thickness+3, lineType)
+                cv2.putText(rgb_img, text, bottomLeftCornerOfText, font, fontScale, (255,255,255), thickness, lineType)
+                rospy.loginfo(text)
             
         rospy.loginfo(f"-----------------------")    
         rgb_msg = self.bridge.cv2_to_imgmsg(rgb_img, "bgr8")
