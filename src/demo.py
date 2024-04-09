@@ -140,17 +140,11 @@ class Demo:
 
         return self.target
 
-
-
-
     def get_gpt_response(self, statement):
-        rospy.loginfo('----------------------')
-        rospy.loginfo(statement)
         req = LLMTextRequest()
         req.text = statement
         resp = self.llm_text_srv(req)
         text = resp.text
-
 
         '''
         text = """{
@@ -160,7 +154,8 @@ class Demo:
 }"""
         '''
 
-        rospy.loginfo(text)
+        rospy.loginfo(f"gpt reponse:{text}")
+        rospy.loginfo("===================================")
         a = text.find('{')
         b = text.find('}')+1
         text_json = text[a:b]
@@ -168,22 +163,18 @@ class Demo:
 
         return json_dict
 
-    def experiment(self):
-
-
-        
-        robot_asks = "what objects are you going to pick up, and what object should I pick up?"
+    def experiment(self):        
+        rospy.loginfo("===================================")
+        robot_asks = "what objects are you going to pick up, and what object should the robot pick up?"
         req = TTSRequest()
         req.text = robot_asks
         resp = self.tts_serv(req)
         float_audio_array = resp.audio
         self.rivr_robot_speech.publish(float_audio_array)
-        
-        #call tts service
-        '''
-        "robot": "<horse_body_yellow>",
-        "human": "<red_horse_front_legs>"
-        '''
+        rospy.loginfo(f"robot asks:{robot_asks}")
+        rospy.loginfo("===================================")
+
+
         
         '''
         overlayed_image = rospy.wait_for_message("/overlayed_images", Image)
@@ -193,22 +184,26 @@ class Demo:
 
         #human_reply = rospy.wait_for_message("/transcript", Transcription)
         #human = human_reply.transcription
+
         #human = "Can you pick up the yellow body, I am going to pickup the red legs."
         #human = "I was gonna pick up red lace, can pick up blue bob."
         #human = "I'm going to pick up the red links, pick up blue by the"
         human = "Can you pick the blue body or is it going to pick the red eggs?"
-        rospy.loginfo(human)
+
+        rospy.loginfo(f"human:{human}")
+        rospy.loginfo(f"===================================")
 
         #querty GPT for response
         resp = self.get_gpt_response(human)
 
-        print(resp)
+        rospy.loginfo(resp)
+        rospy.loginfo(f"===================================")
         h = String()
         h.data = resp["human"][1:-1]
         r = String()
         r.data = resp["robot"][1:-1]
-        print(f"human: {h}")
-        print(f"robot: {r}")
+        #print(f"human: {h}")
+        #print(f"robot: {r}")
 
         #publish what object the pose tracking componest should look for
         rate = rospy.Rate(50)
