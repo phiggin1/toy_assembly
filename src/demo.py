@@ -60,14 +60,14 @@ class Demo:
     def get_gpt_response(self, statement):
         req = LLMTextRequest()
         req.text = statement
-        #resp = self.llm_text_srv(req)
-        #text = resp.text
+        resp = self.llm_text_srv(req)
+        text = resp.text
 
-        text = """{
+        '''text = """{
 "robot": "<horse_body_blue>",
 "human": "<red_horse_front_legs>",
 "question": ""
-}"""
+}"""'''
 
         rospy.loginfo(f"gpt reponse:{text}")
         rospy.loginfo("===================================")
