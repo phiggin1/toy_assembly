@@ -7,8 +7,8 @@ from geometry_msgs.msg import Pose, PoseStamped, PoseArray
 from toy_assembly.srv import LLMText, LLMTextRequest
 from toy_assembly.srv import LLMImage, LLMImageRequest
 from toy_assembly.srv import TTS, TTSRequest, TTSResponse
+from toy_assembly.srv import Servo
 from toy_assembly.msg import Transcription
-
 
 class Demo:
     def __init__(self):
@@ -60,8 +60,14 @@ class Demo:
     def get_gpt_response(self, statement):
         req = LLMTextRequest()
         req.text = statement
-        resp = self.llm_text_srv(req)
-        text = resp.text
+        #resp = self.llm_text_srv(req)
+        #text = resp.text
+
+        text = """{
+"robot": "<horse_body_blue>",
+"human": "<red_horse_front_legs>",
+"question": ""
+}"""
 
         rospy.loginfo(f"gpt reponse:{text}")
         rospy.loginfo("===================================")
@@ -74,6 +80,15 @@ class Demo:
 
         #return just the dict
         return json_dict
+
+    def servo(self):
+        rospy.wait_for_service('Servo')
+        try:
+            servo = rospy.ServiceProxy('Servo', Servo)
+            resp = servo()
+            return resp.resp
+        except rospy.ServiceException as e:
+            print("Service call failed: %s"%e)
 
     def experiment(self):        
         rospy.loginfo("===================================")
@@ -128,17 +143,16 @@ class Demo:
         robot_part_pose = self.get_init_robot_target()
 
         #tell robot to grab robot part
-
         #TODO
 
-        #move robot part above human part
+        #get target location of human part
         human_part_pose = self.get_init_human_target()
 
-        #add standoff
+        #move robot part above human part
+        #TODO
 
         #servo robot part into human part
-
-        #TODO: CALL SERVO SERVICE
+        #TODO  
         
 if __name__ == '__main__':
     demo = Demo()
