@@ -1,0 +1,14 @@
+
+Start working. Resume using the objects listed below.
+"""
+{"environment": objects = [ [OBJECTS] ] }
+"""
+The instruction is as follows:
+"""
+{"instruction": "[STATEMENT]"}
+"""
+The dictionary that you return should be formatted as python dictionary. Follow these rules:
+1. Never leave ',' at the end of the list.
+2. All keys of the dictionary should be double-quoted.
+3. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
+4. Only use the objects listed in the environment.

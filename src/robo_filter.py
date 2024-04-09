@@ -45,9 +45,8 @@ class RobotFilter:
         '''
 
         rospy.spin()
-        
+    
     def process_clusters(self, clusters):
-        rospy.loginfo("start")
         cluster_frame = clusters.header.frame_id
 
         output_clusters = SegmentedClustersArray()
@@ -85,12 +84,10 @@ class RobotFilter:
                         frame = robot_part
                 #break
 
-            rospy.loginfo(f"Cluster {i}: min_dist: {min_dist}, frame: {frame}")
+            #rospy.loginfo(f"Cluster {i}: min_dist: {min_dist}, frame: {frame}")
 
             if min_dist > self.threshold:
                 output_clusters.clusters.append(cluster)
-                
-                
                 for p in pc2.read_points(cluster, field_names = ("x", "y", "z"), skip_nans=True):
                     pose = Pose()
                     pose.position.x = p[0]
@@ -99,15 +96,12 @@ class RobotFilter:
                     pose.orientation.w = 1.0
                     pose_array.poses.append(pose)
                     break
-                
-                
-            else:
-                print(f"Discarding Cluster {i}, frame: {frame}\n")
+            #else:
+            #    print(f"Discarding Cluster {i}, frame: {frame}\n")
         
         self.debug_pub.publish(pose_array)
         #output_clusters.header.stamp = rospy.Time.now()
         self.obj_cluster_pub.publish(output_clusters)
-        rospy.loginfo("end")
 
 if __name__ == '__main__':
     filter = RobotFilter()

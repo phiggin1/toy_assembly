@@ -33,7 +33,7 @@ class AudioSpeechToText:
 
         #Threshold to detect when there is sound 
         # normalized ([0,1.0])
-        self.threshold = rospy.get_param("~threshold", 0.1)
+        self.threshold = rospy.get_param("~threshold", 0.01)
         if self.threshold < 0.0:
             rospy.loginfo("threshold should be normalized ([0,1.0])")
             self.threshold = 0.0
@@ -78,12 +78,16 @@ class AudioSpeechToText:
             self.audio_clip = []
         elif silent and self.snd_started:
             self.num_silent += 1
+        elif not silent and self.snd_started:
+            self.num_silent = 0           
+            rospy.loginfo(f"num_silent:{self.num_silent}")
+
 
         if self.snd_started:
             self.audio_clip.extend(data)
 
         if self.snd_started and self.num_silent > self.silent_wait:     #enough quite time that they stopped speaking
-            if self.debug: rospy.loginfo("got audio clip")
+            if self.debug: rospy.loginfo(f"got audio clip, num_silent:{self.num_silent}")
             self.get_transcription(self.audio_clip)
             self.snd_started = False
             self.num_silent = 0
