@@ -66,11 +66,12 @@ class Right_arm:
         self.horse_pose = self.transform_obj_pos(pose)
         print(f'transformed: {self.horse_pose}')
 
-    def get_object(self, object_pose):
+    def get_object(self, request):
+        object_pose = self.transform_obj_pos(request.pose)        
         #print(object_pose)
         pose_goal = Pose()
         #print('timeout1')
-        pose_goal.position = object_pose.pose.pose.position
+        pose_goal.position = object_pose.pose.position
         quat = quaternion_from_euler(math.pi, 0.0, 0.0)
         #print(quat)
         pose_goal.orientation.x = quat[0]
@@ -91,7 +92,7 @@ class Right_arm:
         #print(object_pose)
         pose_goal2 = Pose()
         #print('timeout1')
-        pose_goal2.position = object_pose.pose.pose.position
+        pose_goal2.position = object_pose.pose.position
         quat = quaternion_from_euler(math.pi, 0.0, 0.0)
         #print(quat)
         pose_goal2.orientation.x = quat[0]
