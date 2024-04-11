@@ -93,7 +93,8 @@ class HeadTracking:
             #rospy.loginfo(f"name:{names[i]}, distance:{d}")
 
         self.dist_pub.publish(intrest)
-        '''distances = np.asarray(distances)
+        '''
+        distances = np.asarray(distances)
 
         float_array = Float32MultiArray()
         float_array.data = distances[:,1].astype(float)
@@ -102,7 +103,8 @@ class HeadTracking:
         sorted_indxs = np.argsort(np.asarray(distances)[:,1])
         #rospy.loginfo(f"{distances[sorted_indxs,:]}")
         name =  str(distances[sorted_indxs[0],:][0]).split('/')
-        #rospy.loginfo(f"target:{name}")'''
+        #rospy.loginfo(f"target:{name}")
+        '''
         
 if __name__ == '__main__':
     track = HeadTracking()

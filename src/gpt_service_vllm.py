@@ -19,11 +19,11 @@ class GPTServ:
             api_key = key,
         )
 
-        #self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
+        self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
         self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
         rospy.spin()
 
-    def get_prompt(self, statement):
+    def get_prompt_llm(self, statement):
         objects = ['<red_horse_front_legs>', '<yellow_horse_back_legs>', '<horse_body_blue>', '<horse_body_red>', '<horse_body_yellow>']
         with open("/home/phiggin1/catkin_ws/src/toy_assembly/src/prompt/system.txt") as f:
             system = f.read()

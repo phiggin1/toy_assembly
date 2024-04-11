@@ -90,21 +90,11 @@ class DualArmTransform:
         r_p = tf.transformations.translation_from_matrix(world_to_right)
         r_q = tf.transformations.quaternion_from_matrix(world_to_right)
 
-        '''
-        left_to_world = tf.transformations.inverse_matrix(world_to_left)
-        right_to_world = tf.transformations.inverse_matrix(world_to_right)
-
-        l_p = tf.transformations.translation_from_matrix(left_to_world)
-        l_q = tf.transformations.quaternion_from_matrix(left_to_world)
-
-        r_p = tf.transformations.translation_from_matrix(right_to_world)
-        r_q = tf.transformations.quaternion_from_matrix(right_to_world)
-        '''
 
         t = rospy.get_rostime()
         if t > (self.t_old + rospy.Duration(0.05)):
-            #rospy.loginfo((t,l_p,l_q))
-            #rospy.loginfo((t,r_p,r_q))
+            rospy.loginfo((t,l_p,l_q))
+            rospy.loginfo((t,r_p,r_q))
             self.br_left.sendTransform(translation=l_p, 
                                   rotation=l_q,
                                   time=t,
@@ -117,25 +107,6 @@ class DualArmTransform:
                                   parent="dual_arm")
             self.t_old = t
 
-        '''
-        #left_to_right = tf.transformations.concatenate_matrices(left_to_world, world_to_right)
-        right_to_left = tf.transformations.concatenate_matrices(right_to_world, world_to_left)
 
-        #print(right_to_left)
-
-        p = tf.transformations.translation_from_matrix(right_to_left)
-        q = tf.transformations.quaternion_from_matrix(right_to_left)
-
-        t = rospy.Time.now()
-        if t > (self.t_old + rospy.Duration(0.1)):
-            rospy.loginfo((t,p,q))
-            self.br.sendTransform(translation=p, 
-                                  rotation=q,
-                                  time=rospy.Time.now(),
-                                  child="left_base_link",
-                                  parent="right_base_link")
-            self.t_old = t
-
-        '''
 if __name__ == '__main__':
     track = DualArmTransform()
