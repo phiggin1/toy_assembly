@@ -12,6 +12,7 @@ from image_geometry import PinholeCameraModel
 import sensor_msgs.point_cloud2 as pc2
 from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
+from toy_assembly.srv import MoveITGrabPose
 import moveit_commander
 import moveit_msgs.msg
 from geometry_msgs.msg import Pose
@@ -39,30 +40,8 @@ class Right_arm:
         self.listener = tf.TransformListener()
         self.grab = rospy.Publisher('/buttons', String, queue_size=10)
 
-        """
-        self.servo_pub = rospy.Publisher('/my_gen3_right/servo_server/delta_twist_cmds', TwistStamped, queue_size=10)  # may need to edit topics
-        while not rospy.is_shutdown():
-            if self.horse_pose:
-                self.get_object(self.horse_pose)
-        """ 
-        #print(self.horse_pose)
-        success = False
-        while not rospy.is_shutdown():
-            if (self.horse_pose is not None):
-                """
-                create function tranfomr_obj_pos
-                update time message on publisher to be able to transform
-                publish PosStamped instead of pointstamped
-                """
-                if (not success):
-                    #obj_pos = self.transform_obj_pos(self.horse_pose)
-                    self.get_object(self.horse_pose)
-                    success = True
-                else:
-                    break
-            #else:
-                #print('fail')
-                #break
+        self.grab_object = rospy.Service('grab_object', MoveITGrabPose, self.get_object)
+        rospy.spin()
 	
     def init_position(self):
         moveit_commander.roscpp_initialize(sys.argv)
@@ -87,7 +66,8 @@ class Right_arm:
         self.horse_pose = self.transform_obj_pos(pose)
         print(f'transformed: {self.horse_pose}')
 
-    def get_object(self, object_pose):
+    def get_object(self, request):
+        object_pose = self.transform_obj_pos(request.pose)        
         #print(object_pose)
         pose_goal = Pose()
         #print('timeout1')
@@ -121,10 +101,11 @@ class Right_arm:
         pose_goal2.orientation.w = quat[3]
         #print(pose_goal2.orientation)
         
-        self.arm_move_group.go(pose_goal2, wait = True)
+        status = False
+        status = self.arm_move_group.go(pose_goal2, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
- 
+
         """
         publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
         """
@@ -133,6 +114,7 @@ class Right_arm:
         a["action"] = "grab"
         s = json.dumps(a)
         self.grab.publish(s)
+        return status
         
         
     def transform_obj_pos(self, obj_pos):

@@ -1,15 +1,12 @@
 #!/usr/bin/env python3
 
 import rospy
-import message_filters
 import numpy as np
 import image_geometry
 import math
 import cv2
 from cv_bridge import CvBridge
 from obj_segmentation.msg import SegmentedClustersArray
-
-from sensor_msgs.msg import PointCloud2
 from sensor_msgs.msg import Image, CameraInfo
 import sensor_msgs.point_cloud2 as pc2
 from multiprocessing import Lock
@@ -19,7 +16,7 @@ import sys
 
 class ImageSegment:
     def __init__(self):
-        rospy.init_node('image_segment', anonymous=True)
+        rospy.init_node('image_overlay', anonymous=True)
         self.bridge = CvBridge()
 
         self.mutex = Lock()
@@ -33,17 +30,8 @@ class ImageSegment:
 
         self.overlayed_images_pub = rospy.Publisher('/overlayed_images', Image, queue_size=10)
 
-    
         self.rgb_image_sub = rospy.Subscriber('/unity/camera/left/rgb/image_raw', Image, self.image_cb)
         self.obj_cluster_sub = rospy.Subscriber("/filtered_object_clusters", SegmentedClustersArray, self.cluster_callback)
-        
-
-        '''
-        self.rgb_image_sub = message_filters.Subscriber("/unity/camera/left/rgb/image_raw", Image)
-        self.obj_cluster_sub = message_filters.Subscriber("/filtered_object_clusters", SegmentedClustersArray)
-        self.ts = message_filters.ApproximateTimeSynchronizer([self.rgb_image_sub, self.obj_cluster_sub], queue_size=10, slop=12.0, allow_headerless=True)
-        self.ts.registerCallback(self.callback)
-        '''
 
         rospy.spin()
 
@@ -102,35 +90,47 @@ class ImageSegment:
             if len(self.objects) < 1:
                 return
 
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 0.3
+            thickness = 1
+            line_type = cv2.LINE_AA
+
             for obj in self.objects:
                 i = obj["i"]
                 min_pix = obj["min_pix"]
                 max_pix = obj["max_pix"]
                 center_pix = obj["center_pix"]
 
-                #25 is to try and avoid clipping the object off
-                #this might not be needed/a bad idea
-                u_min = max(int(math.floor(min_pix[0]))-25, 0)
-                v_min = max(int(math.floor(min_pix[1]))-25, 0)
+                u_min = max(int(math.floor(min_pix[0])), 0)
+                v_min = max(int(math.floor(min_pix[1])), 0)
                     
-                u_max = min(int(math.ceil(max_pix[0]))+25, rgb_img.shape[1])
-                v_max = min(int(math.ceil(max_pix[1]))+25, rgb_img.shape[1])
+                u_max = min(int(math.ceil(max_pix[0])), rgb_img.shape[1])
+                v_max = min(int(math.ceil(max_pix[1])), rgb_img.shape[1])
+
+                cv2.rectangle(rgb_img, (u_min, v_min), (u_max, v_max), color=(255,255,255), thickness=1)
+
+
+            for obj in self.objects:
+                i = obj["i"]
+                min_pix = obj["min_pix"]
+                max_pix = obj["max_pix"]
+                center_pix = obj["center_pix"]
+
+                u_min = max(int(math.floor(min_pix[0])), 0)
+                v_min = max(int(math.floor(min_pix[1])), 0)
+                    
+                u_max = min(int(math.ceil(max_pix[0])), rgb_img.shape[1])
+                v_max = min(int(math.ceil(max_pix[1])), rgb_img.shape[1])
                 
                 rospy.loginfo(f"{i}, {center_pix}")
-                
-                font = cv2.FONT_HERSHEY_SIMPLEX
-                bottomLeftCornerOfText = (int(center_pix[0]),int(center_pix[1]))#(u_min,v_min)
-                fontScale = 0.75
-                fontColor = (255,255,255)
-                thickness = 2
-                lineType = cv2.LINE_AA
+
+                #text_location = (int(center_pix[0]),int(center_pix[1]))  #center of object
+                text_location = (u_min,v_min)   #top right rocer of object's bounding box
                 text = "obj_"+str(i)
+                
+                cv2.putText(rgb_img, text, text_location, font, font_scale, (0,0,0), thickness+1, line_type)
+                cv2.putText(rgb_img, text, text_location, font, font_scale, (255,255,255), thickness, line_type)
 
-                #mask = cv2.putText(mask, "PLOTCH", (50, 128), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (255,255,255), 5)
-                #mask = cv2.putText(mask, "PLOTCH", (50, 128), cv2.FONT_HERSHEY_SIMPLEX, 1.5, (0,0,0), 2)
-
-                cv2.putText(rgb_img, text, bottomLeftCornerOfText, font, fontScale, (0,0,0), thickness+3, lineType)
-                cv2.putText(rgb_img, text, bottomLeftCornerOfText, font, fontScale, (255,255,255), thickness, lineType)
                 rospy.loginfo(text)
             
         rospy.loginfo(f"-----------------------")    
