@@ -140,15 +140,17 @@ class Demo:
         
 
         h = String()
-        h.data = "horse_body_yellow"
+        h.data = "horse_body_blue"
         r = String()
         r.data = "red_horse_front_legs"
+
         '''
         h = String()
         h.data = resp["human"][1:-1]
         r = String()
         r.data = resp["robot"][1:-1]
         '''
+
         #publish what object the pose tracking componest should look for
         # redo this as a service possib;y
         rate = rospy.Rate(50)
@@ -163,7 +165,7 @@ class Demo:
         print(robot_part_pose)
 
         rospy.loginfo("tell robot to grab robot part")
-        status = self.right_arm_move_to_pose(robot_part_pose)
+        status = self.right_arm_grab(robot_part_pose)
         print(status)
 
         a = input("waiting...")
