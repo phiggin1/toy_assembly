@@ -1,4 +1,7 @@
 <launch>
+  <arg name="/use_sim_time" default="true"/>
+
+
   <!-- This node does the servoing calculations     -->
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_right">
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_right.yaml" />
@@ -42,8 +45,10 @@
   <arg name="cluster_tolerance" default="0.02"/>
   <arg name="min_cluster_size" default="100"/>
   <arg name="max_cluster_size" default="2500"/>
-  <arg name="input_cloud" default="/unity/camera/left/depth/points"/>
-  <node name= "object_segmentation" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
+  <arg name="input_cloud_left"  default="/unity/camera/left/depth/points"/>
+  <arg name="output_cloud_left" default="/unity/camera/left/depth/object_clusters"/>
+  <arg name="debug_output_cloud_left" default="/unity/camera/left/objects/"/>
+  <node name= "object_segmentation_left" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
     <param name="minX"		value="$(arg minX)"/>
     <param name="maxX"		value="$(arg maxX)"/>
     <param name="minY"		value="$(arg minY)"/>
@@ -54,7 +59,28 @@
     <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
     <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>
     <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
-    <param name="input_cloud" 		value="$(arg input_cloud)"/>
+    <param name="input_cloud" 		value="$(arg input_cloud_left)"/>
+    <param name="output_cloud" 		value="$(arg output_cloud_left)"/>
+    <param name="debug_output_cloud" 		value="$(arg debug_output_cloud_left)"/>
+  </node>
+
+  <arg name="input_cloud_right"  default="/unity/camera/right/depth/points"/>
+  <arg name="output_cloud_right" default="/unity/camera/right/depth/object_clusters"/>
+  <arg name="debug_output_cloud_right" default="/unity/camera/right/objects/"/>
+  <node name= "object_segmentation_right" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
+    <param name="minX"		value="$(arg minX)"/>
+    <param name="maxX"		value="$(arg maxX)"/>
+    <param name="minY"		value="$(arg minY)"/>
+    <param name="maxY"		value="$(arg maxY)"/>
+    <param name="minZ"		value="$(arg minZ)"/>
+    <param name="maxZ"		value="$(arg maxZ)"/>
+    <param name="distance_threshold"	value="$(arg distance_threshold)"/>
+    <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
+    <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>
+    <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
+    <param name="input_cloud" 		value="$(arg input_cloud_right)"/>
+    <param name="output_cloud" 		value="$(arg output_cloud_right)"/>
+    <param name="debug_output_cloud" 		value="$(arg debug_output_cloud_right)"/>
   </node>
 
 </launch>

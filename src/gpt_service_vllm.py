@@ -5,6 +5,7 @@ from std_msgs.msg import String
 from openai import OpenAI
 import time
 from toy_assembly.srv import LLMText, LLMTextRequest, LLMTextResponse
+from toy_assembly.srv import LLMImage, LLMImageRequest, LLMImageResponse
 
 class GPTServ:
     def __init__(self):
@@ -95,7 +96,14 @@ class GPTServ:
 
         return resp
 
+    def LLMImage(self, req):
+        statement = req.text
+        text = self.chat_complete(statement)
 
+        resp = LLMTextResponse()
+        resp.text = text
+
+        return resp
 
 if __name__ == '__main__':
     gpt = GPTServ()

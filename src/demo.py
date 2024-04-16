@@ -11,6 +11,7 @@ from toy_assembly.srv import Servo
 #from toy_assembly.srv import MoveITPose, MoveITPoseRequest
 from toy_assembly.srv import MoveITGrabPose, MoveITGrabPoseRequest
 from toy_assembly.msg import Transcription
+from copy import deepcopy
 
 class Demo:
     def __init__(self):
@@ -107,6 +108,7 @@ class Demo:
             rospy.loginfo("Service call failed: %s"%e)
 
     def experiment(self):        
+        '''
         rospy.loginfo("===================================")
         robot_asks = "What objects are you going to pick up, and what object should the robot pick up?"
         req = TTSRequest()
@@ -116,7 +118,7 @@ class Demo:
         self.rivr_robot_speech.publish(float_audio_array)
         rospy.loginfo(f"robot asks:{robot_asks}")
         rospy.loginfo("===================================")
-
+        '''
         '''
         overlayed_image = rospy.wait_for_message("/overlayed_images", Image)
         gaze_targets = rospy.wait_for_message("/gaze_targets", Float32MultiArray)
@@ -128,21 +130,20 @@ class Demo:
         #human = "Can you pick up the yellow body, I am going to pickup the red legs."
         #human = "I was gonna pick up red lace, can pick up blue bob."
         #human = "I'm going to pick up the red links, pick up blue by the"
-        human = "Can you pick the blue body or is it going to pick the red eggs?"
+        #human = "Can you pick the blue body or is it going to pick the red eggs?"
         
-        rospy.loginfo(f"human:{human}")
-        rospy.loginfo(f"===================================")
+        #rospy.loginfo(f"human:{human}")
+        #rospy.loginfo(f"===================================")
 
         #querty GPT for response
         #resp = self.get_gpt_response(human)
-        rospy.loginfo(resp)
+        #rospy.loginfo(resp)
         rospy.loginfo(f"===================================")
         
-
         h = String()
-        h.data = "horse_body_blue"
+        h.data = "red_horse_front_legs"
         r = String()
-        r.data = "red_horse_front_legs"
+        r.data = "horse_body_yellow"
 
         '''
         h = String()
@@ -167,7 +168,7 @@ class Demo:
         rospy.loginfo("tell robot to grab robot part")
         status = self.right_arm_grab(robot_part_pose)
         print(status)
-
+        
         a = input("waiting...")
 
         rospy.loginfo("get target location of human part")
@@ -175,10 +176,16 @@ class Demo:
 
         print(human_part_pose)
 
+        standoff_pose = deepcopy(human_part_pose)
+        standoff_pose.pose.position.z += self.standoff_distance
+        print(standoff_pose)
         '''
         #move robot part above human part
-        status = self.right_arm_move_to_pose(human_part_pose)
+        status = self.right_arm_move_to_pose(standoff_pose)
         print(status)
+        while not status:
+            standoff_pose.pose.position.z += 0.1
+            status = self.right_arm_move_to_pose(standoff_pose)
 
         a = input("waiting...")
 

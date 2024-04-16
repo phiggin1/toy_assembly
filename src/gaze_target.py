@@ -5,6 +5,8 @@ import rospy
 from std_msgs.msg import Float32MultiArray
 from toy_assembly.msg import Intrest
 from toy_assembly.msg import Transcription
+from toy_assembly.msg import ImageArray
+from sensor_msgs.msg import Image, CameraInfo
 from multiprocessing import Lock
 from scipy.special import softmax
 
@@ -19,13 +21,19 @@ class GetGazeTarget:
     def __init__(self):    
         rospy.init_node('GetGazeTarget')
         self.mutex = Lock()
-        self.max_length = 30*360 #~30fps times 6 minues
+        self.max_length = 30*300 #~30fps times 6 minutes
+        self.max_length_img = 10*300 #~10fps times 5 mintues
         self.distances = []
-        self.dist_sub = rospy.Subscriber("/distances", Intrest, self.dist_cb)
-        self.transript_sub = rospy.Subscriber("/transcript", Transcription, self.transcript_cb)
-
+        self.images = []
         self.gaze_target_pub = rospy.Publisher("/gaze_target", Float32MultiArray, queue_size=10)
+        self.images_pub = rospy.Publisher("/transcription_images", ImageArray, queue_size=10)
 
+        self.dist_sub = rospy.Subscriber("/distances", Intrest, self.dist_cb)
+
+        self.transript_sub = rospy.Subscriber("/unity/camera/left/rgb/image_raw", Image, self.img_cb)
+
+
+        self.transript_sub = rospy.Subscriber("/transcript", Transcription, self.transcript_cb)
         '''
         self.transript_pub = rospy.Publisher("/transcript", Transcription, queue_size=10)
         t = Transcription()
@@ -49,6 +57,21 @@ class GetGazeTarget:
             if len(self.distances) > self.max_length:
                 self.distances.pop(0)
                 rospy.loginfo("len(distances) > max_length")
+
+    def img_cb(self, ros_img):
+        now = rospy.Time.now()
+        '''
+        if len(self.images) > 0:
+            if now < self.images[-1][0]+rospy.Duration(0.5):
+                return
+        '''
+        
+        #rospy.loginfo(len(self.images))
+        with self.mutex:
+            self.images.append((now, ros_img))
+            if len(self.images) > self.max_length_img:
+                self.images.pop(0)
+                rospy.loginfo("len(images) > max_length_img")
          
     def transcript_cb(self, transcript):
         text = transcript.transcription
@@ -93,7 +116,9 @@ class GetGazeTarget:
             float_array = Float32MultiArray()
             float_array.data = running_targets/count
             self.gaze_target_pub.publish(float_array)
-
+            image_array = ImageArray()
+            image_array.images = self.images()
+            self.images_pub.publish(image_array)
 
             '''
             print(running_distances)

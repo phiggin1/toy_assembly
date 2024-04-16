@@ -93,8 +93,8 @@ class DualArmTransform:
 
         t = rospy.get_rostime()
         if t > (self.t_old + rospy.Duration(0.05)):
-            rospy.loginfo((t,l_p,l_q))
-            rospy.loginfo((t,r_p,r_q))
+            #rospy.loginfo((t,l_p,l_q))
+            #rospy.loginfo((t,r_p,r_q))
             self.br_left.sendTransform(translation=l_p, 
                                   rotation=l_q,
                                   time=t,
