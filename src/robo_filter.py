@@ -19,6 +19,14 @@ class RobotFilter:
     def __init__(self):
         rospy.init_node('robot_filter')
 
+        self.object_clusters_topic = rospy.get_param("object_clusters_topic", "/unity/camera/left/depth/object_clusters")
+        topic = self.object_clusters_topic.split("/")
+        ns = "/".join(topic[0:-1])
+        topic_name = topic[-1]
+        filtered_topic_name = "/filtered_"+topic_name
+        self.filtered_object_clusters_topic = ns+filtered_topic_name
+
+
         self.tf_listener = tf.TransformListener()
 
         self.threshold = 0.05
@@ -35,16 +43,12 @@ class RobotFilter:
             "right_left_inner_finger_pad"
         ]
 
-        self.obj_cluster_pub = rospy.Publisher("/filtered_object_clusters", SegmentedClustersArray, queue_size=1)
+        self.obj_cluster_pub = rospy.Publisher(self.filtered_object_clusters_topic, SegmentedClustersArray, queue_size=1)
         self.debug_pub = rospy.Publisher("/debug_array", PoseArray, queue_size=10)
-        self.obj_cluster_sub = rospy.Subscriber("/object_clusters", SegmentedClustersArray, self.process_clusters)
+        self.obj_cluster_sub = rospy.Subscriber(self.object_clusters_topic, SegmentedClustersArray, self.process_clusters)
         
-        '''
-        self.obj_cluster_sub = rospy.wait_for_message("/object_clusters", SegmentedClustersArray)
-        self.process_clusters(self.obj_cluster_sub)
-        '''
 
-        rospy.spin()
+        #rospy.spin()
     
     def process_clusters(self, clusters):
         cluster_frame = clusters.header.frame_id

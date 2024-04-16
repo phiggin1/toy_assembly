@@ -31,7 +31,7 @@ class ImageSegment:
         self.overlayed_images_pub = rospy.Publisher('/overlayed_images', Image, queue_size=10)
 
         self.rgb_image_sub = rospy.Subscriber('/unity/camera/left/rgb/image_raw', Image, self.image_cb)
-        self.obj_cluster_sub = rospy.Subscriber("/filtered_object_clusters", SegmentedClustersArray, self.cluster_callback)
+        self.obj_cluster_sub = rospy.Subscriber("/unity/camera/left/depth/filtered_object_clusters", SegmentedClustersArray, self.cluster_callback)
 
         rospy.spin()
 
@@ -77,7 +77,7 @@ class ImageSegment:
                 obj["center_pix"] = center_pix
                 self.objects.append(obj)
 
-                rospy.loginfo(f"{i}, {center_pix}")
+                #rospy.loginfo(f"{i}, {center_pix}")
             
             self.have_objects = True
 
@@ -91,7 +91,7 @@ class ImageSegment:
                 return
 
             font = cv2.FONT_HERSHEY_SIMPLEX
-            font_scale = 0.3
+            font_scale = 0.4
             thickness = 1
             line_type = cv2.LINE_AA
 
@@ -122,7 +122,7 @@ class ImageSegment:
                 u_max = min(int(math.ceil(max_pix[0])), rgb_img.shape[1])
                 v_max = min(int(math.ceil(max_pix[1])), rgb_img.shape[1])
                 
-                rospy.loginfo(f"{i}, {center_pix}")
+                #rospy.loginfo(f"{i}, {center_pix}")
 
                 #text_location = (int(center_pix[0]),int(center_pix[1]))  #center of object
                 text_location = (u_min,v_min)   #top right rocer of object's bounding box
@@ -131,9 +131,9 @@ class ImageSegment:
                 cv2.putText(rgb_img, text, text_location, font, font_scale, (0,0,0), thickness+1, line_type)
                 cv2.putText(rgb_img, text, text_location, font, font_scale, (255,255,255), thickness, line_type)
 
-                rospy.loginfo(text)
+                #rospy.loginfo(text)
             
-        rospy.loginfo(f"-----------------------")    
+        #rospy.loginfo(f"-----------------------")    
         rgb_msg = self.bridge.cv2_to_imgmsg(rgb_img, "bgr8")
         self.overlayed_images_pub.publish(rgb_msg)
 

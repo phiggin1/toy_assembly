@@ -31,7 +31,7 @@ class Left_arm:
         self.cam_model = PinholeCameraModel()
         self.cam_model.fromCameraInfo(self.cam_info)
 
-        self.cluster_topic = "/filtered_object_clusters"
+        self.cluster_topic = "/unity/camera/left/depth/filtered_object_clusters"
         self.clusters = rospy.wait_for_message(self.cluster_topic, SegmentedClustersArray)
 
         self.horses_pose = []
