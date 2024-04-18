@@ -27,21 +27,22 @@ class Left_arm:
         self.goal_tolerance = 0.01
         self.init_position()
 
-        self.cam_info = rospy.wait_for_message('/unity/camera/left/depth/camera_info', CameraInfo)
-        self.cam_model = PinholeCameraModel()
-        self.cam_model.fromCameraInfo(self.cam_info)
+        #self.cam_info = rospy.wait_for_message('/unity/camera/left/depth/camera_info', CameraInfo)
+        #self.cam_model = PinholeCameraModel()
+        #self.cam_model.fromCameraInfo(self.cam_info)
 
-        self.cluster_topic = "/unity/camera/left/depth/filtered_object_clusters"
-        self.clusters = rospy.wait_for_message(self.cluster_topic, SegmentedClustersArray)
+        #self.cluster_topic = "/unity/camera/left/depth/filtered_object_clusters"
+        #self.clusters = rospy.wait_for_message(self.cluster_topic, SegmentedClustersArray)
 
         self.horses_pose = []
 
         self.horse_pose_pub = rospy.Publisher('/object_positions', PoseStamped, queue_size=10)  # may need to edit topics
 
         # pose array has a specific format but i can make those zeros so dont have to worry about setting up the message, hence just sending the position
+        rospy.spin()
 
-        while not rospy.is_shutdown():
-            self.get_horses_pose(self.clusters);
+        #while not rospy.is_shutdown():
+        #    self.get_horses_pose(self.clusters);
         
     def init_position(self):
         moveit_commander.roscpp_initialize(sys.argv)

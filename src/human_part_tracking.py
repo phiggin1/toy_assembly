@@ -24,22 +24,26 @@ class HeadTracking:
             self.scene_transform_topic = rospy.get_param("transform_topic", "/scene/transform")
 
             self.slot_array_pub = rospy.Publisher("human_slot_array", PoseArray,  queue_size=10)
+            self.obj_name= None
 
             
             rospy.loginfo("waiting for human_text_topic")
-            self.text_topic = rospy.get_param("/human_text_topic", "human_text_topic")
-            self.obj_name = rospy.wait_for_message(self.text_topic, String)
-            self.obj_name = "/"+self.obj_name.data
-            rospy.loginfo("human: "+self.obj_name)
-
-            '''
-            self.obj_name = "/red_horse_front_legs"
-            '''
+            self.text_topic = rospy.get_param("/human_text_topic", "human_text_topic") 
+            self.sub = rospy.Subscriber(self.text_topic, String, self.object_cb)
+            #self.obj_name = rospy.wait_for_message(self.text_topic, String)
+            #self.obj_name = "/"+self.obj_name.data
+            #rospy.loginfo("human: "+self.obj_name)
 
             self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
             rospy.spin()
 
+    def object_cb(self, text):
+        self.obj_name = "/"+text.data
+        rospy.loginfo("human: "+self.obj_name)
+
     def transform_cb(self, str_msg):
+        if self.obj_name is None:
+            return
         np.set_printoptions(precision=3)
         data = json.loads(str_msg.data)
 

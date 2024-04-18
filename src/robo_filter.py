@@ -25,7 +25,7 @@ class RobotFilter:
         topic_name = topic[-1]
         filtered_topic_name = "/filtered_"+topic_name
         self.filtered_object_clusters_topic = ns+filtered_topic_name
-
+        self.obj_cluster_pub = rospy.Publisher(self.filtered_object_clusters_topic, SegmentedClustersArray, queue_size=1)
 
         self.tf_listener = tf.TransformListener()
 
@@ -43,7 +43,6 @@ class RobotFilter:
             "right_left_inner_finger_pad"
         ]
 
-        self.obj_cluster_pub = rospy.Publisher(self.filtered_object_clusters_topic, SegmentedClustersArray, queue_size=1)
         self.debug_pub = rospy.Publisher("/debug_array", PoseArray, queue_size=10)
         self.obj_cluster_sub = rospy.Subscriber(self.object_clusters_topic, SegmentedClustersArray, self.process_clusters)
         

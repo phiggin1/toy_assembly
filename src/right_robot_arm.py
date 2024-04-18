@@ -12,7 +12,7 @@ from image_geometry import PinholeCameraModel
 import sensor_msgs.point_cloud2 as pc2
 from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
-from toy_assembly.srv import MoveITGrabPose
+from toy_assembly.srv import MoveITGrabPose, MoveITPose
 import moveit_commander
 import moveit_msgs.msg
 from geometry_msgs.msg import Pose
@@ -28,17 +28,19 @@ class Right_arm:
         self.start_pose = [0.00062, -0.12636, -1.07251, -0.00121, -2.11940, 1.57205]
         self.init_position()	
 
-        self.cam_info = rospy.wait_for_message('/unity/camera/right/rgb/camera_info', CameraInfo)
-        self.cam_model = PinholeCameraModel()
-        self.cam_model.fromCameraInfo(self.cam_info)
+        #self.cam_info = rospy.wait_for_message('/unity/camera/right/rgb/camera_info', CameraInfo)
+        #self.cam_model = PinholeCameraModel()
+        #self.cam_model.fromCameraInfo(self.cam_info)
         
         self.horse_topic = '/object_positions'
         self.horse_pose = None  
-        self.horses = rospy.Subscriber(self.horse_topic, PoseStamped, self.get_horse_pose)
+        #self.horses = rospy.Subscriber(self.horse_topic, PoseStamped, self.get_horse_pose)
         #self.horse_pose = []
 
         self.listener = tf.TransformListener()
         self.grab = rospy.Publisher('/buttons', String, queue_size=10)
+
+        self.move_pose = rospy.Service('move_pose', MoveITPose, self.move_pose)
 
         self.grab_object = rospy.Service('grab_object', MoveITGrabPose, self.get_object)
         rospy.spin()
@@ -66,6 +68,23 @@ class Right_arm:
         self.horse_pose = self.transform_obj_pos(pose)
         print(f'transformed: {self.horse_pose}')
 
+    def move_pose(self, request):
+        object_pose = self.transform_obj_pos(request.pose)        
+        #print(object_pose)
+        pose_goal = Pose()
+        #print('timeout1')
+        pose_goal.position = object_pose.pose.position
+        pose_goal.orientation = object_pose.pose.orientation
+        self.arm_move_group.set_pose_target(pose_goal)
+
+        #print('timeout3')
+        status = False
+        status = self.arm_move_group.go(pose_goal, wait = True)
+        self.arm_move_group.stop()
+        self.arm_move_group.clear_pose_targets()
+
+        return status
+
     def get_object(self, request):
         object_pose = self.transform_obj_pos(request.pose)        
         #print(object_pose)
@@ -76,7 +95,7 @@ class Right_arm:
         #print(quat)
         pose_goal.orientation.x = quat[0]
         pose_goal.orientation.y = quat[1]
-        pose_goal.orientation.z += 0.1
+        pose_goal.orientation.z = quat[2]
         pose_goal.orientation.w = quat[3]
         #print(pose_goal.orientation)
 
@@ -114,6 +133,12 @@ class Right_arm:
         a["action"] = "grab"
         s = json.dumps(a)
         self.grab.publish(s)
+
+
+        self.arm_move_group.set_max_velocity_scaling_factor(0.750)
+        self.arm_move_group.go(self.start_pose, wait=True) 
+        self.arm_move_group.stop()
+
         return status
         
         
