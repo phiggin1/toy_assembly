@@ -176,7 +176,7 @@ class Demo:
         print(status)
 
         rospy.loginfo(f"===================================")
-        #a = input("waiting...")
+        a = input("waiting...")
 
         rospy.loginfo("get target location of human part")
         print(h)
@@ -195,7 +195,7 @@ class Demo:
 
         print(status)
         rospy.loginfo(f"===================================")
-        #a = input("waiting...")
+        a = input("waiting...")
         
         rospy.loginfo("servo robot part into human part")
         status = self.servo()
