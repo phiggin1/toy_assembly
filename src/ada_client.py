@@ -24,25 +24,18 @@ class AdaClient:
         
         self.debug = rospy.get_param("~debug", True)
         server_port = rospy.get_param("~port", "8888")
-        llm_server_port = rospy.get_param("~port_llm", "8877")
 
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.bind("tcp://*:%s" % server_port)
         rospy.loginfo(f"Server listening on port:{server_port}")
 
-        llm_context = zmq.Context()
-        self.llm_socket = llm_context.socket(zmq.PAIR)
-        self.llm_socket.bind("tcp://*:%s" % llm_server_port)
-        rospy.loginfo(f"LLM Server listening on port:{llm_server_port}")
 
         self.whisper_serv = rospy.Service('get_transciption', Whisper, self.Whisper)
         self.clip_serv = rospy.Service('get_clip_probabilities', CLIP, self.CLIP)
         self.sam_serv = rospy.Service('get_sam_segmentation', SAM, self.SAM)
         self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
 
-        #self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
-        #self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
 
         rospy.spin()
 
@@ -121,6 +114,8 @@ class AdaClient:
         if self.debug: rospy.loginfo('SAM recv from ada') 
 
         #rospy.loginfo(f"SAM scores:{resp["scores"]}")
+
+        print(resp)
 
         masks = []
         for mask in resp["masks"]:
