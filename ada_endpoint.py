@@ -39,8 +39,9 @@ class AdaEndPoint:
         self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
 
-        #print(f"{time.time_ns()}: loading clip")
-        #self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
+        '''
+        print(f"{time.time_ns()}: loading clip")
+        self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         
         print(f"{time.time_ns()}: loading tacotron2 and waveglow")
         self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
@@ -51,7 +52,7 @@ class AdaEndPoint:
         self.waveglow = self.waveglow.to(self.device)
         self.waveglow.eval()
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tts_utils')
-        
+        '''
 
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
         print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
