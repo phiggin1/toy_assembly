@@ -1,0 +1,45 @@
+Run Short WoZ pilot
+	Track what people say/how they instruct the robot
+	Force people and robot to use 1 hand
+
+Once parts are picked get language on how to build
+	
+Timeline
+	Run WoZ  = VR + some real world
+	Eval of WoZ by 1st week of June
+	User study started by 1st  week Aug
+	All done but final writing by Sept 1st
+
+Robot questions
+    what parts do you want to use, and waht parts should the robot pick up
+        hand over object is this the correct
+            while not move to next most and repeat
+
+    ask if picked part up correctly
+        if not reposition
+
+    look at part in hand get slots
+        verify how many
+        move arm below each slot ask if correct location
+        ask if correct 
+            adjust and reverify
+        if guess about slot amount wrong
+            if under ask where it is reative to known location
+
+
+What parts do you want to use? 
+What parts should the robot pick up?
+How do you want to do this?
+
+
+gripper orientaitons
+    hand_pointing_down_cam_right     =  [-1,            0,          0,          0]
+    hand_pointing_down_cam_front     =  [-sqrt(2)/2,    -sqrt(2)/2, 0,          0]
+    hand_pointing_left_cam_up        =  [0,             sqrt(2)/2,  sqrt(2)/2,  0]
+    hand_pointing_left_cam_front     =  [-0.5,          -0.5,       -0.5,       -0.5]
+    hand_pointing_right_cam_up       =  [sqrt(2)/2,     0,          0,          sqrt(2)/2]
+    hand_pointing_right_cam_front    =  [0.5,           0.5,        -0.5,       0.5]
+    hand_pointing_forward_cam_up     =  [0.5,           0.5,        0.5,        0.5]
+    hand_pointing_forward_cam_right  =  [sqrt(2)/2,     0.0,        sqrt(2)/2,  0.0]
+
+hold vs insert
