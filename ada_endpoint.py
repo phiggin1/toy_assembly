@@ -31,18 +31,19 @@ class AdaEndPoint:
         sever_address = hostname
         server_port  = port
         
-        print(f"{{time.time_ns()}}: loading whipser")
+        print(f"{time.time_ns()}: loading whipser")
         self.whisper_model = whisper.load_model("medium", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         
-        print(f"{{time.time_ns()}}: loading sam")
+        print(f"{time.time_ns()}: loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
         self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
 
-        print(f"{{time.time_ns()}}: loading clip")
+        '''
+        print(f"{time.time_ns()}: loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         
-        print(f"{{time.time_ns()}}: loading tacotron2 and waveglow")
+        print(f"{time.time_ns()}: loading tacotron2 and waveglow")
         self.tacotron2 = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tacotron2', model_math='fp16')
         self.tacotron2 = self.tacotron2.to(self.device)
         self.tacotron2.eval()
@@ -51,7 +52,7 @@ class AdaEndPoint:
         self.waveglow = self.waveglow.to(self.device)
         self.waveglow.eval()
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tts_utils')
-        
+        '''
 
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
         print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
@@ -75,8 +76,8 @@ class AdaEndPoint:
 
             if msg_type == "sam":
                 resp = self.process_sam(msg)
-            elif msg_type == "clip":
-                resp = self.process_clip(msg)
+            #elif msg_type == "clip":
+            #    resp = self.process_clip(msg)
             elif msg_type == "whisper":
                 resp = self.process_whisper(msg)
             elif msg_type =="tts":

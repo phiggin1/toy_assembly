@@ -80,8 +80,9 @@ class GPTServ:
 {
   "robot": "<horse_body_yellow>",
   "human": "<red_horse_front_legs>"
-}"""'''
-        
+}"""
+        '''
+
         print(text)
         return text
 

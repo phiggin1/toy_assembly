@@ -209,7 +209,7 @@ class GenerateTrajectory:
         while (not self.satisfy_tolerance(self.angular_error, self.positional_error) and total_time < self.time_out): 
             
             #get twist linear values from PID controllers
-            
+            '''
             t_l_x = x_pid(self.positional_error[0], dt)
             t_l_y = y_pid(self.positional_error[1], dt)
             t_l_z = z_pid(self.positional_error[2], dt)
@@ -228,14 +228,8 @@ class GenerateTrajectory:
             t_a_x = self.angular_error*self.ax
             t_a_y = self.angular_error*self.ay
             t_a_z = self.angular_error*self.az
-            '''
             
-            rospy.loginfo(f"total time:{total_time}")
-            print(f"[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]\n[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
-            print(f"[{self.positional_error}], {self.positional_tolerance}")
-            print(f"{self.angular_error}, {self.angular_tolerance}")
-            #print(f"[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]")
-            #print(f"[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
+            
 
 
             twist = TwistStamped()
@@ -248,9 +242,21 @@ class GenerateTrajectory:
             twist.twist.angular.y = t_a_y if abs(t_a_y) > self.angular_tolerance else 0.0
             twist.twist.angular.z = t_a_z if abs(t_a_z) > self.angular_tolerance else 0.0
 
+            print(t_l_y)
+            print(self.positional_tolerance)
+            print(abs(t_l_y) > self.positional_tolerance)
+
             if abs(t_l_x) > self.positional_tolerance and abs(t_l_y) > self.positional_tolerance:
                 twist.twist.angular.z = 0.0
 
+            rospy.loginfo(f"total time:{total_time}")
+            print(f"[{self.positional_error}], {self.positional_tolerance}")
+            print(f"{self.angular_error}, {self.angular_tolerance}")
+            print(f"[{twist.twist.linear.x:.3f},{twist.twist.linear.y:.3f},{twist.twist.linear.z:.3f}]")
+            print(f"[{twist.twist.angular.x:.3f},{twist.twist.angular.y:.3f},{twist.twist.angular.z:.3f}]")
+            print("==================")
+            #print(f"[{t_l_x:.3f},{t_l_y:.3f},{t_l_z:.3f}]")
+            #print(f"[{t_a_x:.3f},{t_a_y:.3f},{t_a_z:.3f}]")
 
             #rospy.loginfo(twist)
             self.cart_vel_pub.publish(twist)        #send zero twist to halt servoing

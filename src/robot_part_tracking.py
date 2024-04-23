@@ -22,25 +22,29 @@ class HeadTracking:
             rospy.init_node('robotslot_part_pose')
 
             self.scene_transform_topic = rospy.get_param("transform_topic", "/scene/transform")
-
-
             
             self.slot_array_pub = rospy.Publisher("robot_slot_array", PoseArray,  queue_size=10)
-            
-            
+                        
             rospy.loginfo("waiting for robot_text_topic")
             self.text_topic = rospy.get_param("robot_text_topic", "robot_text_topic")
-            self.obj_name = rospy.wait_for_message(self.text_topic, String)
-            self.obj_name = "/"+self.obj_name.data
-            rospy.loginfo("robot: "+self.obj_name)
-            '''
-            self.obj_name = "/horse_body_blue"
-            '''
+            
+            self.obj_name= None
+
+            self.sub = rospy.Subscriber(self.text_topic, String, self.object_cb)
+            #self.obj_name = rospy.wait_for_message(self.text_topic, String)
+            #self.obj_name = "/"+self.obj_name.data
+            #rospy.loginfo("robot: "+self.obj_name)
 
             self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
             rospy.spin()
 
+    def object_cb(self, text):
+        self.obj_name = "/"+text.data
+        rospy.loginfo("robot: "+self.obj_name)
+
     def transform_cb(self, str_msg):
+        if self.obj_name is None:
+            return
         np.set_printoptions(precision=3)
         data = json.loads(str_msg.data)
 
@@ -89,7 +93,7 @@ class HeadTracking:
             pose_array.poses.append(pose)
 
         #rospy.loginfo(f"robot len: {len(pose_array.poses)}")
-        #rospy.loginfo(f"robot part: {pose_array.poses[0]}")
+        #rospy.loginfo(f"robot part: {pose_array}")
         self.slot_array_pub.publish(pose_array)
 
         

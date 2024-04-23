@@ -8,7 +8,7 @@ from toy_assembly.srv import LLMText, LLMTextRequest
 from toy_assembly.srv import LLMImage, LLMImageRequest
 from toy_assembly.srv import TTS, TTSRequest, TTSResponse
 from toy_assembly.srv import Servo
-#from toy_assembly.srv import MoveITPose, MoveITPoseRequest
+from toy_assembly.srv import MoveITPose, MoveITPoseRequest
 from toy_assembly.srv import MoveITGrabPose, MoveITGrabPoseRequest
 from toy_assembly.msg import Transcription
 from copy import deepcopy
@@ -17,6 +17,8 @@ class Demo:
     def __init__(self):
         self.stop = False
         rospy.init_node('toy_assembly_demo')
+
+        self.standoff_distance = 0.3
 
         self.robot_part_pub = rospy.Publisher("robot_text_topic", String, queue_size=10)
         self.human_part_pub = rospy.Publisher("human_text_topic", String, queue_size=10)
@@ -88,10 +90,10 @@ class Demo:
             rospy.loginfo("Service call failed: %s"%e)
 
     def right_arm_move_to_pose(self, pose):
-        rospy.wait_for_service('')
+        rospy.wait_for_service('/my_gen3_right/move_pose')
         print("right_arm_move_to_pose")
         try:
-            moveit_pose = rospy.ServiceProxy('', MoveITGrabPose)
+            moveit_pose = rospy.ServiceProxy('/my_gen3_right/move_pose', MoveITPose)
             resp = moveit_pose(pose)
             return resp
         except rospy.ServiceException as e:
@@ -108,7 +110,7 @@ class Demo:
             rospy.loginfo("Service call failed: %s"%e)
 
     def experiment(self):        
-        '''
+        
         rospy.loginfo("===================================")
         robot_asks = "What objects are you going to pick up, and what object should the robot pick up?"
         req = TTSRequest()
@@ -118,39 +120,44 @@ class Demo:
         self.rivr_robot_speech.publish(float_audio_array)
         rospy.loginfo(f"robot asks:{robot_asks}")
         rospy.loginfo("===================================")
-        '''
+        
         '''
         overlayed_image = rospy.wait_for_message("/overlayed_images", Image)
         gaze_targets = rospy.wait_for_message("/gaze_targets", Float32MultiArray)
         rospy.loginfo(gaze_targets)
         '''
 
-        #human_reply = rospy.wait_for_message("/transcript", Transcription)
-        #human = human_reply.transcription
+        human_reply = rospy.wait_for_message("/transcript", Transcription)
+        human = human_reply.transcription
+        
         #human = "Can you pick up the yellow body, I am going to pickup the red legs."
         #human = "I was gonna pick up red lace, can pick up blue bob."
         #human = "I'm going to pick up the red links, pick up blue by the"
-        #human = "Can you pick the blue body or is it going to pick the red eggs?"
-        
-        #rospy.loginfo(f"human:{human}")
-        #rospy.loginfo(f"===================================")
 
-        #querty GPT for response
-        #resp = self.get_gpt_response(human)
-        #rospy.loginfo(resp)
-        rospy.loginfo(f"===================================")
         
+        rospy.loginfo(f"human:{human}")
+        rospy.loginfo(f"===================================")
+
+        
+        #querty GPT for response
+        resp = self.get_gpt_response(human)
+        rospy.loginfo(resp)
+        '''
         h = String()
         h.data = "red_horse_front_legs"
         r = String()
         r.data = "horse_body_yellow"
-
         '''
+
         h = String()
         h.data = resp["human"][1:-1]
+        print(h.data)
         r = String()
         r.data = resp["robot"][1:-1]
-        '''
+        print(r.data)
+        rospy.loginfo(f"===================================")
+
+
 
         #publish what object the pose tracking componest should look for
         # redo this as a service possib;y
@@ -162,37 +169,38 @@ class Demo:
 
         #get target location of robot part
         robot_part_pose = self.get_init_robot_target()
-
-        print(robot_part_pose)
-
+        
         rospy.loginfo("tell robot to grab robot part")
+        print(r)
         status = self.right_arm_grab(robot_part_pose)
         print(status)
-        
+
+        rospy.loginfo(f"===================================")
         a = input("waiting...")
 
         rospy.loginfo("get target location of human part")
+        print(h)
         human_part_pose = self.get_init_human_target()
-
-        print(human_part_pose)
-
         standoff_pose = deepcopy(human_part_pose)
         standoff_pose.pose.position.z += self.standoff_distance
-        print(standoff_pose)
-        '''
+        print(f"standoff\n{standoff_pose.pose.position}")
         #move robot part above human part
         status = self.right_arm_move_to_pose(standoff_pose)
-        print(status)
-        while not status:
-            standoff_pose.pose.position.z += 0.1
+        rospy.loginfo(status)
+        while not status and standoff_pose.pose.position.z > 0.1:
+            standoff_pose.pose.position.z -= 0.1
+            print(f"standoff\n{standoff_pose.pose.position.z}")
             status = self.right_arm_move_to_pose(standoff_pose)
+            rospy.loginfo(status)
 
+        print(status)
+        rospy.loginfo(f"===================================")
         a = input("waiting...")
-
+        
         rospy.loginfo("servo robot part into human part")
         status = self.servo()
         print(status)
-        '''
+        
         
 if __name__ == '__main__':
     demo = Demo()
