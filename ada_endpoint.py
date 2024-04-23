@@ -25,8 +25,14 @@ class AdaEndPoint:
 
         torch.hub.set_dir(torch_home_path)
 
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        if torch.cuda.device_count() < 2:
+            print("Requires at least 2 2080s")
+            exit()
+
+        self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         print("device:",self.device)
+
+        self.sam_device = "cuda:1"
 
         sever_address = hostname
         server_port  = port
@@ -36,10 +42,10 @@ class AdaEndPoint:
         
         print(f"{time.time_ns()}: loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
-        self.sam.to(self.device)
+        self.sam.to(self.sam_device)
         self.predictor = SamPredictor(self.sam)
 
-        '''
+        
         print(f"{time.time_ns()}: loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         
@@ -52,7 +58,7 @@ class AdaEndPoint:
         self.waveglow = self.waveglow.to(self.device)
         self.waveglow.eval()
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tts_utils')
-        '''
+        
 
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
         print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))

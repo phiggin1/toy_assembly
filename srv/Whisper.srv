@@ -1,3 +1,4 @@
 std_msgs/String string
+std_msgs/String context
 ---
 string transcription
