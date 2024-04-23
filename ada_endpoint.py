@@ -71,7 +71,7 @@ class AdaEndPoint:
         self.sample_rate = 16000
         self.tmp_audio_filename = '/tmp/audio.mp3'
 
-    def get_mem_usage(self, device);
+    def get_mem_usage(self, device):
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(device)/1024/1024/1024))
         print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(device)/1024/1024/1024))
         print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(device)/1024/1024/1024))
