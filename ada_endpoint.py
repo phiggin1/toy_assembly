@@ -59,7 +59,7 @@ class AdaEndPoint:
         self.waveglow.eval()
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tts_utils')
         
-        self.get_mem_usage(self.device
+        self.get_mem_usage(self.device)
         self.get_mem_usage(self.sam_device)
 
         print(f"Connecting to {sever_address}:{server_port}")

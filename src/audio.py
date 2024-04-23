@@ -55,6 +55,8 @@ class AudioSpeechToText:
         self.snd_started = False
         self.audio_clip = []
 
+        #self.robot_statments = rospy.Subscriber("robot_spp")
+
         rospy.wait_for_service('get_transciption')        
         self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
         self.audio_subscriber = rospy.Subscriber("/audio", Float32MultiArray, self.audio_cb)

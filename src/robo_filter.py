@@ -47,7 +47,7 @@ class RobotFilter:
         self.obj_cluster_sub = rospy.Subscriber(self.object_clusters_topic, SegmentedClustersArray, self.process_clusters)
         
 
-        #rospy.spin()
+        rospy.spin()
     
     def process_clusters(self, clusters):
         cluster_frame = clusters.header.frame_id
