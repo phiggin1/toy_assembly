@@ -31,9 +31,9 @@ class AdaClient:
         rospy.loginfo(f"Server listening on port:{server_port}")
 
 
-        self.whisper_serv = rospy.Service('get_transciption', Whisper, self.Whisper)
-        self.clip_serv = rospy.Service('get_clip_probabilities', CLIP, self.CLIP)
-        self.sam_serv = rospy.Service('get_sam_segmentation', SAM, self.SAM)
+        self.whisper_serv = rospy.Service('/get_transciption', Whisper, self.Whisper)
+        self.clip_serv = rospy.Service('/get_clip_probabilities', CLIP, self.CLIP)
+        self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
         self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
 
 
@@ -43,9 +43,14 @@ class AdaClient:
         if self.debug: rospy.loginfo('Whisper req recv')
 
         audio_json = str(request.string.data)
+        context = request.context.data
 
+        context = """What objects are you going to pick up, and what object should the robot pick up?\n<red_horse_front_legs>, <yellow_horse_back_legs>, <horse_body_blue>, <horse_body_red>, <horse_body_yellow>"""
+
+        rospy.loginfo(context)
 
         msg = {"type":"whisper",
+               "context":context,
                "data":audio_json
         }
 
@@ -115,7 +120,6 @@ class AdaClient:
 
         #rospy.loginfo(f"SAM scores:{resp["scores"]}")
 
-        print(resp)
 
         masks = []
         for mask in resp["masks"]:

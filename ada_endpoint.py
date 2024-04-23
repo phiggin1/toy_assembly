@@ -59,10 +59,8 @@ class AdaEndPoint:
         self.waveglow.eval()
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tts_utils')
         
-
-        print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(0)/1024/1024/1024))
-        print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(0)/1024/1024/1024))
-        print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(0)/1024/1024/1024))
+        self.get_mem_usage(self.device
+        self.get_mem_usage(self.sam_device)
 
         print(f"Connecting to {sever_address}:{server_port}")
         context = zmq.Context()
@@ -73,6 +71,11 @@ class AdaEndPoint:
         self.sample_rate = 16000
         self.tmp_audio_filename = '/tmp/audio.mp3'
 
+    def get_mem_usage(self, device);
+        print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(device)/1024/1024/1024))
+        print("torch.cuda.memory_reserved: %fGB"%(torch.cuda.memory_reserved(device)/1024/1024/1024))
+        print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(device)/1024/1024/1024))
+
     def run(self):
         while True:
             msg = self.socket.recv_json()
@@ -82,8 +85,8 @@ class AdaEndPoint:
 
             if msg_type == "sam":
                 resp = self.process_sam(msg)
-            #elif msg_type == "clip":
-            #    resp = self.process_clip(msg)
+            elif msg_type == "clip":
+                resp = self.process_clip(msg)
             elif msg_type == "whisper":
                 resp = self.process_whisper(msg)
             elif msg_type =="tts":
@@ -152,9 +155,12 @@ class AdaEndPoint:
         audio = np.fromstring(data[1:-1], dtype=float, sep=',')
         wavfile_writer(self.tmp_audio_filename, self.sample_rate, audio)
 
+        context = data["context"]
+        print(context)
+
         #get transcription from whisper
         print('whisper start')
-        result = self.whisper_model.transcribe(self.tmp_audio_filename) 
+        result = self.whisper_model.transcribe(self.tmp_audio_filename, initial_prompt=context) 
         print('whisper end')
 
         print(result["text"])
