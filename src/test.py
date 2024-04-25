@@ -136,17 +136,12 @@ class ManualServo:
         self.zeros = 0
         running = True
         while not rospy.is_shutdown() and running:
-            self.get_input()
-            
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tostring(), self.rgb_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (5,5))
-
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tostring(), self.object_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (self.shape[0],5))
-                        
             pygame.display.update()
-            
-                
+            self.get_input()
             rate.sleep()
 
     def get_input(self):
@@ -160,21 +155,25 @@ class ManualServo:
                 for i, button in enumerate(self.camera_buttons):
                     if button.rect.left < pos[0] < button.rect.right and button.rect.top < pos[1] < button.rect.bottom:
                         print(button.name, self.camera_names[i])
+                        '''
+                        call orientation service if [0:-2]
+                        call grab/release if [-2:]
+                        '''
                 for i, button in enumerate(self.object_buttons):
                     if button.rect.left < pos[0] < button.rect.right and button.rect.top < pos[1] < button.rect.bottom:
                         print(button.name, self.object_names[i])
                         print(len(self.object_positions))
                         if button.name < len(self.object_positions):
-                            print("rospy.wait_for_service('/my_gen3_right/grab_object')")
+                            print("rospy.wait_for_service('/my_gen3_right/move_pose')")
                             pose = PoseStamped()
                             pose.header = self.header
                             pose.pose.position = self.object_positions[button.name]
                             pose.pose.orientation.w = 1.0
                             print(pose)
-                            rospy.wait_for_service('/my_gen3_right/grab_object')
+                            rospy.wait_for_service('/my_gen3_right/move_pose')
                             print("right_arm_grab")
                             try:
-                                moveit_pose = rospy.ServiceProxy('/my_gen3_right/grab_object', MoveITGrabPose)
+                                moveit_pose = rospy.ServiceProxy('/my_gen3_right/move_poseup', MoveITPose)
                                 resp = moveit_pose(pose)
                                 return resp
                             except rospy.ServiceException as e:
