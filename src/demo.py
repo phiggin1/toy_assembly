@@ -3,13 +3,16 @@
 import rospy
 import json
 from std_msgs.msg import String, Float32MultiArray
+from geometry_msgs.msg import PointStamped
 from geometry_msgs.msg import Pose, PoseStamped, PoseArray
+from sensor_msgs.msg import Image, CameraInfo
 from toy_assembly.srv import LLMText, LLMTextRequest
 from toy_assembly.srv import LLMImage, LLMImageRequest
 from toy_assembly.srv import TTS, TTSRequest, TTSResponse
 from toy_assembly.srv import Servo
 from toy_assembly.srv import MoveITPose, MoveITPoseRequest
 from toy_assembly.srv import MoveITGrabPose, MoveITGrabPoseRequest
+from toy_assembly.srv import DetectSlot, DetectSlotRequest
 from toy_assembly.msg import Transcription
 from copy import deepcopy
 
@@ -25,12 +28,15 @@ class Demo:
         self.rivr_robot_speech = rospy.Publisher('/robotspeech', Float32MultiArray, queue_size=10)
 
 
-        rospy.wait_for_service('get_text_to_speech')
-        self.tts_serv = rospy.ServiceProxy('get_text_to_speech', TTS)
+        self.slot_pub = rospy.Publisher("slot_testing", PoseArray, queue_size=10)
 
 
-        rospy.wait_for_service('llm_text')
-        self.llm_text_srv = rospy.ServiceProxy('llm_text', LLMText)
+        #rospy.wait_for_service('get_text_to_speech')
+        #self.tts_serv = rospy.ServiceProxy('get_text_to_speech', TTS)
+
+
+        #rospy.wait_for_service('llm_text')
+        #self.llm_text_srv = rospy.ServiceProxy('llm_text', LLMText)
 
 
     def get_init_robot_target(self):
@@ -67,7 +73,6 @@ class Demo:
         req.text = statement
         resp = self.llm_text_srv(req)
         text = resp.text
-       
         rospy.loginfo(f"gpt reponse:{text}")
         rospy.loginfo("===================================")
 
@@ -109,10 +114,30 @@ class Demo:
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
 
+    def detect_slot(self, location):
+        print('detect_slot')
+        cam_info = rospy.wait_for_message("/unity/camera/left/rgb/camera_info", CameraInfo)
+        print(cam_info)
+        rgb_image = rospy.wait_for_message("/unity/camera/left/rgb/image_raw", Image)
+        rospy.wait_for_service('/get_slot_location')
+        try:
+            req = DetectSlotRequest()
+            req.rgb_image=rgb_image
+            req.cam_info=cam_info
+            req.location = location
+            slot_detect = rospy.ServiceProxy('/get_slot_location', DetectSlot)
+            resp = slot_detect(req)
+
+            return resp
+        except rospy.ServiceException as e:
+            rospy.loginfo("Service call failed: %s"%e)
+
+
     def experiment(self):        
-        
+        '''
         rospy.loginfo("===================================")
         robot_asks = "What objects are you going to pick up, and what object should the robot pick up?"
+        
         req = TTSRequest()
         req.text = robot_asks
         resp = self.tts_serv(req)
@@ -120,44 +145,44 @@ class Demo:
         self.rivr_robot_speech.publish(float_audio_array)
         rospy.loginfo(f"robot asks:{robot_asks}")
         rospy.loginfo("===================================")
-        
+        '''
+
         '''
         overlayed_image = rospy.wait_for_message("/overlayed_images", Image)
         gaze_targets = rospy.wait_for_message("/gaze_targets", Float32MultiArray)
         rospy.loginfo(gaze_targets)
         '''
 
+        '''
         human_reply = rospy.wait_for_message("/transcript", Transcription)
         human = human_reply.transcription
         
         #human = "Can you pick up the yellow body, I am going to pickup the red legs."
         #human = "I was gonna pick up red lace, can pick up blue bob."
         #human = "I'm going to pick up the red links, pick up blue by the"
-
         
         rospy.loginfo(f"human:{human}")
         rospy.loginfo(f"===================================")
+        a = input("waiting...")
 
-        
         #querty GPT for response
         resp = self.get_gpt_response(human)
         rospy.loginfo(resp)
-        '''
-        h = String()
-        h.data = "red_horse_front_legs"
-        r = String()
-        r.data = "horse_body_yellow"
-        '''
-
+        
         h = String()
         h.data = resp["human"][1:-1]
         print(h.data)
         r = String()
         r.data = resp["robot"][1:-1]
         print(r.data)
+        '''
+        h = String()
+        h.data = "red_horse_front_legs"
+        r = String()
+        r.data = "horse_body_yellow"
+        
+
         rospy.loginfo(f"===================================")
-
-
 
         #publish what object the pose tracking componest should look for
         # redo this as a service possib;y
@@ -165,6 +190,8 @@ class Demo:
         for i in range(5):
             self.robot_part_pub.publish(r)
             self.human_part_pub.publish(h)
+            rospy.loginfo(r)
+            rospy.loginfo(h)
             rate.sleep()
 
         #get target location of robot part
@@ -175,6 +202,29 @@ class Demo:
         status = self.right_arm_grab(robot_part_pose)
         print(status)
 
+        '''
+        print(robot_part_pose)
+        part_position = PointStamped()
+        part_position.header = robot_part_pose.header
+        part_position.point = robot_part_pose.pose.position
+        resp = self.detect_slot(part_position)
+        slots = resp.slot_locations
+
+        slot_array = PoseArray()
+        slot_array.header.frame_id = "left_camera_link"
+        slot_array.header.stamp = rospy.Time.now()
+        for slot in slots:
+            p = Pose()
+            p.position = slot.point
+            p.orientation.w = 1.0
+            slot_array.poses.append(p)
+
+        for i in range(5):
+            self.slot_pub.publish(slot_array)
+            rate.sleep()
+        '''
+
+        '''
         rospy.loginfo(f"===================================")
         a = input("waiting...")
 
@@ -200,8 +250,8 @@ class Demo:
         rospy.loginfo("servo robot part into human part")
         status = self.servo()
         print(status)
-        
-        
+        '''
+
 if __name__ == '__main__':
     demo = Demo()
     demo.experiment()

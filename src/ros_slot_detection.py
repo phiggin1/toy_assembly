@@ -4,6 +4,7 @@ import math
 import numpy as np
 import cv2
 import rospy
+import tf
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image, CameraInfo
 from image_geometry import PinholeCameraModel
@@ -61,6 +62,7 @@ class SlotTracking:
         rospy.loginfo(f"min_area_percentage:{self.min_area_percentage}\tmax_area_percentage:{self.max_area_percentage}")
         rospy.loginfo(f"max_num_contours:{self.max_num_contours}")
 
+        self.listener = tf.TransformListener()
         self.cvbridge = CvBridge()
 
         self.detect_slot_serv = rospy.Service('get_slot_location', DetectSlot, self.detect_slot)
@@ -82,11 +84,21 @@ class SlotTracking:
         #org self.process_image(u,v,d, cv_image, cv_depth)
         #self.process_image(u,v,d, self.rgb_image_sub, cv_depth)
 
+    def transform_point(self, obj_position, target_frame):
+        t = rospy.Time.now()
+        obj_position.header.stamp = t
+        self.listener.waitForTransform(obj_position.header.frame_id, target_frame, t, rospy.Duration(4.0))
+        transformed_position = self.listener.transformPoint(target_frame, obj_position)
+        
+        return transformed_position
+    
     def detect_slot(self, req):
         rgb_image = req.rgb_image
         depth_image = req.depth_image
         cam_info = req.cam_info
         location = req.location
+
+        location = self.transform_point(location, cam_info.header.frame_id)
 
         cam_model = PinholeCameraModel()
         cam_model.fromCameraInfo(cam_info)
@@ -109,7 +121,7 @@ class SlotTracking:
 
         display_imgage = self.cvbridge.imgmsg_to_cv2(rgb_image).copy()
         cv2.circle(display_imgage,tuple((u,v)),7,purple,-1)
-        display_img(display_imgage)
+        #display_img(display_imgage)
 
         d_mm = d*1000
         # FOV = 2*arctan(x/2f) 
@@ -138,11 +150,12 @@ class SlotTracking:
         slots = []
         #org masks = self.serv(self.cvbridge.cv2_to_imgmsg(img, "bgr8"), target_x, target_y)
         resp  = self.segment_serv(rgb_image, target_x, target_y)
+        print(len(resp.masks))
         masks = resp.masks
         for (mask_count,mask) in enumerate(masks):
             mask = self.cvbridge.imgmsg_to_cv2(mask)
             imgray = np.asarray(mask*255, dtype=np.uint8)
-            display_img(imgray)
+            #display_img(imgray)
             rospy.loginfo(f"mask: {mask_count+1} of {len(masks)}")
             
             '''
@@ -186,9 +199,9 @@ class SlotTracking:
             p = cam_model.projectPixelTo3dRay(s)
             rospy.loginfo(p)
             stamped_point = PointStamped()
-            stamped_point.point.x = p[0]
-            stamped_point.point.y = p[1]
-            stamped_point.point.z = p[2]
+            stamped_point.point.x = p[0]*d
+            stamped_point.point.y = p[1]*d
+            stamped_point.point.z = p[2]*d
             stamped_point.header = rgb_image.header
             slot_locations.append(stamped_point)
 
@@ -334,7 +347,7 @@ class SlotTracking:
                 for s in slot:
                     cv2.circle(display_image,tuple((s[0],s[1])),7,purple,-1)
                     slots.append(s)
-                display_img(display_image)
+                #display_img(display_image)
 
         rospy.loginfo(f"slots:{slots}")
 
