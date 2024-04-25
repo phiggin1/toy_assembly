@@ -207,7 +207,6 @@ class GenerateTrajectory:
         rate = rospy.Rate(self.pub_rate) # 10hz
         dt = 1.0/self.pub_rate
         while (not self.satisfy_tolerance(self.angular_error, self.positional_error) and total_time < self.time_out): 
-            
             #get twist linear values from PID controllers
             '''
             t_l_x = x_pid(self.positional_error[0], dt)
@@ -220,8 +219,8 @@ class GenerateTrajectory:
             t_a_x = ang_vel_magnitude * self.ax
             t_a_y = ang_vel_magnitude * self.ay
             t_a_z = ang_vel_magnitude * self.az
-
             '''
+
             t_l_x = self.positional_error[0]
             t_l_y = self.positional_error[1]
             t_l_z = self.positional_error[2]
@@ -229,9 +228,6 @@ class GenerateTrajectory:
             t_a_y = self.angular_error*self.ay
             t_a_z = self.angular_error*self.az
             
-            
-
-
             twist = TwistStamped()
             twist.header.stamp = rospy.Time.now()
             twist.header.frame_id = "right_base_link"
@@ -267,7 +263,6 @@ class GenerateTrajectory:
 
             rate.sleep()
             
-
         if  self.timed_out:
             rospy.loginfo("Servoing timed out")
         else:

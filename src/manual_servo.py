@@ -2,7 +2,9 @@
 
 import pygame
 import rospy
+import tf
 import cv2
+import math
 import json
 from cv_bridge import CvBridge
 from std_msgs.msg import String
@@ -10,6 +12,7 @@ from sensor_msgs.msg import Image
 from geometry_msgs.msg import TwistStamped, PoseStamped
 from toy_assembly.msg import ObjectImage
 from toy_assembly.srv import MoveITPose, MoveITPoseRequest
+from toy_assembly.srv import OrientCamera
 import numpy as np
 from multiprocessing import Lock
 
@@ -33,6 +36,7 @@ def get_button_image(img, text):
     y = 5
 
     for i, line in enumerate(wrapped_text):
+        print(line)
         textsize = cv2.getTextSize(line, FONT, FONT_SCALE, FONT_THICKNESS)[0]
         gap = textsize[1]
         y = 10 + int(textsize[1]/2) + (i*gap)
@@ -46,6 +50,62 @@ class ManualServo:
         self.cvbridge = CvBridge()
 
         self.mutex = Lock()
+
+        self.right_planning_frame = 'right_base_link'
+        self.listener = tf.TransformListener()
+        pygame.init()
+        width = 640
+        height = 480
+        self.shape = (width+10,height+10)
+        print(self.shape)
+
+        self.pgscreen=pygame.display.set_mode((self.shape[0]*2+50,self.shape[1]+5+30))
+        self.pgscreen.fill((255, 255, 255))
+        pygame.display.set_caption('ManualServo')           
+        self.camera_buttons = pygame.sprite.Group()
+        self.camera_names = [
+                            ['hand_pointing_right_cam_up', [math.sqrt(2)/2, 0, 0, math.sqrt(2)/2]],
+                            ['hand_pointing_right_cam_front', [0.5, 0.5, -0.5, 0.5]],
+                            ['hand_pointing_left_cam_up', [0, math.sqrt(2)/2, math.sqrt(2)/2, 0]],
+                            ['hand_pointing_left_cam_front', [-0.5, -0.5, -0.5, -0.5]],
+                            ['hand_pointing_down_cam_right', [-1, 0, 0, 0]],
+                            ['hand_pointing_down_cam_front', [-math.sqrt(2)/2, -math.sqrt(2)/2, 0, 0]],
+                            ['hand_pointing_forward_cam_up', [0.5, 0.5, 0.5, 0.5]],
+                            ['hand_pointing_forward_cam_right', [math.sqrt(2)/2, 0, math.sqrt(2)/2, 0]],
+                            ['grab'],
+                            ['release']
+        ]
+        y = self.shape[1]+15
+        x = 5
+        place = 65
+        for name in self.camera_names:
+            button = pygame.sprite.Sprite()
+            button.name = name[0]
+            print(name)
+            print(button.name)
+            blank_image = get_button_image(np.zeros((30,120,3), np.uint8), name[0])
+            button.image = pygame.image.frombuffer(blank_image.tostring(), blank_image.shape[1::-1], "RGB")
+            button.rect = button.image.get_rect()
+            button.rect.center = (place, y)
+            place += 125
+            self.camera_buttons.add(button)
+        self.camera_buttons.draw(self.pgscreen)
+
+        self.object_buttons = pygame.sprite.Group()
+        self.object_names = range(5)
+        y = 15
+        x = self.shape[0]*2+10
+        place = 35
+        for name in self.object_names:
+            button = pygame.sprite.Sprite()
+            button.name = name
+            blank_image = get_button_image(np.zeros((23,25,3), np.uint8), str(name))
+            button.image = pygame.image.frombuffer(blank_image.tostring(), blank_image.shape[1::-1], "RGB")
+            button.rect = button.image.get_rect()
+            button.rect.center = (x, y)
+            y += place
+            self.object_buttons.add(button)
+        self.object_buttons.draw(self.pgscreen)        
 
         self.angular_vel = 0.1
         self.linear_vel = 0.5
@@ -62,7 +122,10 @@ class ManualServo:
 
         self.button_topic  = rospy.get_param("/button_topic", "/buttons")
         self.button_pub = rospy.Publisher(self.button_topic, String, queue_size=10)
-        rospy.loginfo(self.twist_topic)
+        rospy.loginfo(self.button_topic)
+
+
+
 
         while self.rgb_img is None :
             with self.mutex:
@@ -71,70 +134,18 @@ class ManualServo:
             with self.mutex:
                 rospy.sleep(.1)
 
-        self.shape = (self.rgb_img.shape[1]+10,self.rgb_img.shape[0]+10)
-        print(self.shape)
-
-        pygame.init()
-        self.pgscreen=pygame.display.set_mode((self.shape[0]*2+50,self.shape[1]+5+30))
-        self.pgscreen.fill((255, 255, 255))
-        pygame.display.set_caption('ManualServo')           
-                
-        self.camera_buttons = pygame.sprite.Group()
-        self.camera_names = [
-            "hand_pointing_down_cam_right",    
-            "hand_pointing_down_cam_front",
-            "hand_pointing_left_cam_up",
-            "hand_pointing_left_cam_front",
-            "hand_pointing_right_cam_up",
-            "hand_pointing_right_cam_front",
-            "hand_pointing_forward_cam_up ",
-            "hand_pointing_forward_cam_right",
-            "grab",
-            "release"
-        ]
-        y = self.shape[1]+15
-        x = 5
-        place = 65
-        for name in self.camera_names:
-            button = pygame.sprite.Sprite()
-            button.name = name
-            blank_image = get_button_image(np.zeros((30,120,3), np.uint8), name)
-            button.image = pygame.image.frombuffer(blank_image.tostring(), blank_image.shape[1::-1], "RGB")
-            button.rect = button.image.get_rect()
-            button.rect.center = (place, y)
-            place += 125
-            self.camera_buttons.add(button)
-        self.camera_buttons.draw(self.pgscreen)
-
-        self.object_buttons = pygame.sprite.Group()
-        self.object_names = range(10)
-        y = 15
-        x = self.shape[0]*2+10
-        place = 35
-        for name in self.object_names:
-            button = pygame.sprite.Sprite()
-            button.name = name
-            blank_image = get_button_image(np.zeros((23,25,3), np.uint8), str(name))
-            button.image = pygame.image.frombuffer(blank_image.tostring(), blank_image.shape[1::-1], "RGB")
-            button.rect = button.image.get_rect()
-            button.rect.center = (x, y)
-            y += place
-            self.object_buttons.add(button)
-        self.object_buttons.draw(self.pgscreen)
+        self.orientation =  [-math.sqrt(2)/2, -math.sqrt(2)/2, 0, 0]
 
 
-        pygame.display.update()
+
+
 
     def run(self):
         rate = rospy.Rate(30)
         self.zeros = 0
         running = True
         while not rospy.is_shutdown() and running:
-            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tostring(), self.rgb_img.shape[1::-1], "RGB")
-            self.pgscreen.blit(pg_img, (5,5))
-            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tostring(), self.object_img.shape[1::-1], "RGB")
-            self.pgscreen.blit(pg_img, (self.shape[0],5))
-            pygame.display.update()
+
             self.get_input()
             rate.sleep()
 
@@ -145,31 +156,23 @@ class ManualServo:
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 pos = pygame.mouse.get_pos()
                 for i, button in enumerate(self.camera_buttons):
-                    if button.rect.left < pos[0] < button.rect.right and button.rect.top < pos[1] < button.rect.bottom:
-                        print(button.name, self.camera_names[i])
-                        '''
-                        call orientation service if [0:-2]
-                        call grab/release if [-2:]
-                        '''
+                    if (button.rect.left < pos[0] < button.rect.right) and (button.rect.top < pos[1] < button.rect.bottom):
+                        print(button.name, self.camera_names[i], i)
+                        print(len(self.camera_buttons))
+                        if (i < (len(self.camera_buttons)-2)):
+                            self.orient_camera(self.camera_names[i][0])
+                            self.orientation = self.camera_names[i][1]
+                        elif (button.name == "grab"):
+                            self.grab()
+                        elif (button.name == "release"):
+                            self.release()
                 for i, button in enumerate(self.object_buttons):
-                    if button.rect.left < pos[0] < button.rect.right and button.rect.top < pos[1] < button.rect.bottom:
+                    if (button.rect.left < pos[0] < button.rect.right) and (button.rect.top < pos[1] < button.rect.bottom):
                         print(button.name, self.object_names[i])
-                        print(len(self.object_positions))
                         if button.name < len(self.object_positions):
-                            print("rospy.wait_for_service('/my_gen3_right/move_pose')")
-                            pose = PoseStamped()
-                            pose.header = self.header
-                            pose.pose.position = self.object_positions[button.name]
-                            pose.pose.orientation.w = 1.0
-                            print(pose)
-                            rospy.wait_for_service('/my_gen3_right/move_pose')
-                            print("right_arm_grab")
-                            try:
-                                moveit_pose = rospy.ServiceProxy('/my_gen3_right/move_poseup', MoveITPose)
-                                resp = moveit_pose(pose)
-                                return resp
-                            except rospy.ServiceException as e:
-                                rospy.loginfo("Service call failed: %s"%e)
+                            print(f"{button.name}, {self.object_positions[button.name]}")
+                            self.move_to_position(self.object_positions[button.name])
+                            
 
         '''
         Get the keys pressed for moving the end effector around
@@ -255,8 +258,6 @@ class ManualServo:
             self.zeros = 0
             cmd.twist.angular.z = self.angular_vel
 
-
-
         if not pressed:
             self.zeros += 1
 
@@ -274,18 +275,71 @@ class ManualServo:
     def image_cb(self, rgb):
         with self.mutex:
             self.rgb_img = self.cvbridge.imgmsg_to_cv2(rgb, "bgr8")
+            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tostring(), self.rgb_img.shape[1::-1], "RGB")
+            self.pgscreen.blit(pg_img, (5,5))
+            pygame.display.update()
 
     def object_image_cb(self, object_image):
         with self.mutex:
             self.header = object_image.header
             self.object_positions = object_image.object_positions
             self.object_img = self.cvbridge.imgmsg_to_cv2(object_image.image, "bgr8")
+            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tostring(), self.object_img.shape[1::-1], "RGB")
+            self.pgscreen.blit(pg_img, (self.shape[0],5))
+            pygame.display.update()
+    
+    def grab(self):
+        print("grab")
+    
+    def release(self):
+        print("release")
+
+    def orient_camera(self, pose_str):
+        print(pose_str)
+        pose_name = String()
+        pose_name.data = pose_str
+        service_name = "/my_gen3_right/rotate_object"
+        rospy.wait_for_service(service_name)
+        print(service_name)
+        try:
+            orient_camera = rospy.ServiceProxy(service_name, OrientCamera)
+            resp = orient_camera(pose_str)
+            return resp
+        except rospy.ServiceException as e:
+            rospy.loginfo("Service call failed: %s"%e)
+
+    def move_to_position(self, position):
+        pose = PoseStamped()
+        pose.header = self.header
+        pose.pose.position = position
+        pose.pose.orientation.w = 1.0
+        pose = self.transform_obj_pose(pose)
+        pose.pose.position.z += 0.2
+
+        pose.pose.orientation.x = self.orientation[0]
+        pose.pose.orientation.y = self.orientation[1]
+        pose.pose.orientation.z = self.orientation[2]
+        pose.pose.orientation.w = self.orientation[3]
+        print(pose)
+        rospy.wait_for_service('/my_gen3_right/move_pose')
+        print("right_arm_grab")
+        try:
+            moveit_pose = rospy.ServiceProxy('/my_gen3_right/move_pose', MoveITPose)
+            resp = moveit_pose(pose)
+            return resp
+        except rospy.ServiceException as e:
+            rospy.loginfo("Service call failed: %s"%e)
+
+    def transform_obj_pose(self, obj_pose):
+        t = rospy.Time.now()
+        obj_pose.header.stamp = t
+        self.listener.waitForTransform(obj_pose.header.frame_id, self.right_planning_frame, t, rospy.Duration(4.0))
+        obj_pose = self.listener.transformPose(self.right_planning_frame, obj_pose)
+        return obj_pose
 
 if __name__ == '__main__':
     move = ManualServo()
     move.run()
-
-
 
 '''
 pygame

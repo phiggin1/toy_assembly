@@ -13,6 +13,7 @@ import sensor_msgs.point_cloud2 as pc2
 from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
 from toy_assembly.srv import MoveITGrabPose, MoveITPose
+from toy_assembly.srv import OrientCamera
 import moveit_commander
 import moveit_msgs.msg
 from geometry_msgs.msg import Pose
@@ -56,7 +57,9 @@ class Right_arm:
         self.grab_object = rospy.Service('grab_object', MoveITGrabPose, self.get_object)
         self.release_object = rospy.Service('release_object', MoveITGrabPose, self.place_object)
 
-        self.rotate_object = rospy.service('rotate_object', MoveITPose, self.change_orientation)
+        #self.change_orientation(None)
+
+        self.rotate_object = rospy.Service('rotate_object', OrientCamera, self.change_orientation)
         
         rospy.spin()
 	
@@ -85,7 +88,7 @@ class Right_arm:
 
     def move_to_pose(self, request):
         object_pose = self.transform_obj_pos(request.pose)        
-        #print(object_pose)
+        print(object_pose)
         pose_goal = Pose()
         #print('timeout1')
         pose_goal.position = object_pose.pose.position
@@ -199,20 +202,21 @@ class Right_arm:
             return False    
 
     def change_orientation(self, request):
+        print("change_orientation")
         pose_goal = Pose()    
-        pose_goal.position = self.current_pose
+        pose_goal.position = self.arm_move_group.get_current_pose()
         orientationList = []
 
         # take request string and get corresponding orientation values
-        if request in self.gripper_orientation.keys():
-            orientationList = self.gripper_orientation.get(request)
+        if request.text in self.gripper_orientation.keys():
+            orientationList = self.gripper_orientation.get(request.text)
         else:
             print('Invalid orientation request')
             orientationList = self.arm_move_group.get_current_pose().orientation
 
         # set pose goal position to current position
         current_pose = self.arm_move_group.get_current_pose().pose
-        pose_goal.position = current_pose
+        pose_goal = current_pose
                  
         # set pose goal orientation to selected orientation
         pose_goal.orientation.x = orientationList[0]
