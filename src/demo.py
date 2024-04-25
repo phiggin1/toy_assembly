@@ -119,11 +119,8 @@ class Demo:
         cam_info = rospy.wait_for_message("/unity/camera/left/rgb/camera_info", CameraInfo)
         print(cam_info)
         rgb_image = rospy.wait_for_message("/unity/camera/left/rgb/image_raw", Image)
-        print('a')
         rospy.wait_for_service('/get_slot_location')
-        print('b')
         try:
-            print('c')
             req = DetectSlotRequest()
             req.rgb_image=rgb_image
             req.cam_info=cam_info
@@ -202,10 +199,10 @@ class Demo:
         
         rospy.loginfo("tell robot to grab robot part")
         print(r)
-        #status = self.right_arm_grab(robot_part_pose)
-        #print(status)
+        status = self.right_arm_grab(robot_part_pose)
+        print(status)
 
-
+        '''
         print(robot_part_pose)
         part_position = PointStamped()
         part_position.header = robot_part_pose.header
@@ -225,7 +222,7 @@ class Demo:
         for i in range(5):
             self.slot_pub.publish(slot_array)
             rate.sleep()
-
+        '''
 
         '''
         rospy.loginfo(f"===================================")
