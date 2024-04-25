@@ -38,25 +38,26 @@ class Right_arm:
         #self.horse_pose = []
         self.grabbed_object = False
 
-        self.gripper_orientation = {'right up': [sqrt(2)/2, 0, 0, sqrt(2)/2],
-                            'right front': [0.5, 0.5, -0.5, 0.5],
-                            'left up': [0, sqrt(2)/2, sqrt(2)/2, 0],
-                            'left front': [-0.5, -0.5, -0.5, -0.5],
-                            'down right': [-1, 0, 0, 0],
-                            'down front': [-sqrt(2)/2, -sqrt(2)/2, 0, 0],
-                            'forward up': [0.5, 0.5, 0.5, 0.5],
-                            'forward right' : [sqrt(2)/2, 0, sqrt(2)/2, 0]}
+        self.gripper_orientation = {'hand_pointing_right_cam_up': [math.sqrt(2)/2, 0, 0, math.sqrt(2)/2],
+                            'hand_pointing_right_cam_front': [0.5, 0.5, -0.5, 0.5],
+                            'hand_pointing_left_cam_up': [0, math.sqrt(2)/2, math.sqrt(2)/2, 0],
+                            'hand_pointing_left_cam_front': [-0.5, -0.5, -0.5, -0.5],
+                            'hand_pointing_down_cam_right': [-1, 0, 0, 0],
+                            'hand_pointing_down_cam_front': [-math.sqrt(2)/2, -math.sqrt(2)/2, 0, 0],
+                            'hand_pointing_forward_cam_up': [0.5, 0.5, 0.5, 0.5],
+                            'hand_pointing_forward_cam_right' : [math.sqrt(2)/2, 0, math.sqrt(2)/2, 0]}
 
         self.listener = tf.TransformListener()
         self.grab = rospy.Publisher('/buttons', String, queue_size=10)
         #self.release = rospy.Publisher('/buttons', String, queue_size=10)
 
-        self.move_pose = rospy.Service('move_pose', MoveITPose, self.move_pose)
+        self.move_pose = rospy.Service('move_pose', MoveITPose, self.move_to_pose)
 
         self.grab_object = rospy.Service('grab_object', MoveITGrabPose, self.get_object)
         self.release_object = rospy.Service('release_object', MoveITGrabPose, self.place_object)
 
-        self.change_orientation = rospy.service('rotate_object', MoveITPose, self.change_orientation)
+        self.rotate_object = rospy.service('rotate_object', MoveITPose, self.change_orientation)
+        
         rospy.spin()
 	
     def init_position(self):
@@ -82,7 +83,7 @@ class Right_arm:
         self.horse_pose = self.transform_obj_pos(pose)
         print(f'transformed: {self.horse_pose}')
 
-    def move_pose(self, request):
+    def move_to_pose(self, request):
         object_pose = self.transform_obj_pos(request.pose)        
         #print(object_pose)
         pose_goal = Pose()
@@ -96,8 +97,6 @@ class Right_arm:
         status = self.arm_move_group.go(pose_goal, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
-        self.current_pose = pose_goal.position
-        self.current_or = pose_goal.orientation
 
         return status
 
@@ -153,8 +152,6 @@ class Right_arm:
         self.arm_move_group.set_max_velocity_scaling_factor(0.750)
         self.arm_move_group.go(self.start_pose, wait=True) 
         self.arm_move_group.stop()
-        self.current_pose = pose_goal.position
-        self.current_or = pose_goal.orientation
 
         self.grabbed_object = status
         self.grabbed_object = status
@@ -188,8 +185,6 @@ class Right_arm:
             status = self.arm_move_group.go(pose_goal2, wait = True)
             self.arm_move_group.stop()
             self.arm_move_group.clear_pose_targets()
-            self.current_pose = pose_goal.position
-            self.current_or = pose_goal.orientation
 
             a = dict()
             a["robot"] = "right"
@@ -206,22 +201,20 @@ class Right_arm:
     def change_orientation(self, request):
         pose_goal = Pose()    
         pose_goal.position = self.current_pose
+        orientationList = []
 
-        if request == 'right':
-            orientationList = self.gripper_orientation['right up']
-        elif request == 'left':
-            orientationList = self.gripper_orientation['left up']
-        elif request == 'down':
-            orientationList = self.gripper_orientation['down front']
-        elif request == 'forward':
-            orientationList = self.gripper_orientation['forward up']
-        elif request == 'rotate':
-            pass
+        # take request string and get corresponding orientation values
+        if request in self.gripper_orientation.keys():
+            orientationList = self.gripper_orientation.get(request)
         else:
-            orientationList = self.current_or
-            
-        
-        
+            print('Invalid orientation request')
+            orientationList = self.arm_move_group.get_current_pose().orientation
+
+        # set pose goal position to current position
+        current_pose = self.arm_move_group.get_current_pose().pose
+        pose_goal.position = current_pose
+                 
+        # set pose goal orientation to selected orientation
         pose_goal.orientation.x = orientationList[0]
         pose_goal.orientation.y = orientationList[1]
         pose_goal.orientation.z = orientationList[2]
@@ -229,14 +222,12 @@ class Right_arm:
             
         self.arm_move_group.set_pose_target(pose_goal)
 
+        # move the arm according to the orientation goal and 
         status = False
         status = self.arm_move_group.go(pose_goal, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
-        self.current_pose = pose_goal.position
-        self.current_or = pose_goal.orientation
         return status
-
         
 if __name__ == '__main__':
     right_robot = Right_arm()
