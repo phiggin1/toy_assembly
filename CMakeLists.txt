@@ -75,6 +75,7 @@ add_message_files(
     MoveITPose.srv
     MoveITNamedPose.srv
     MoveITGrabPose.srv
+    OrientCamera.srv
  )
 
 ## Generate actions in the 'action' folder
