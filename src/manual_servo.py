@@ -110,6 +110,7 @@ class ManualServo:
         self.angular_vel = 0.1
         self.linear_vel = 0.5
 
+
         self.rgb_img = None
         self.rgb_image_sub = rospy.Subscriber("/unity/camera/right/rgb/image_raw", Image, self.image_cb)
 
@@ -290,9 +291,21 @@ class ManualServo:
     
     def grab(self):
         print("grab")
+        a = dict()
+        a["robot"] = "right"
+        a["action"] = "grab"
+        s = json.dumps(a)
+        self.button_pub.publish(s)
+
     
     def release(self):
         print("release")
+        a = dict()
+        a["robot"] = "right"
+        a["action"] = "released"
+        s = json.dumps(a)
+        self.button_pub.publish(s)
+
 
     def orient_camera(self, pose_str):
         print(pose_str)
