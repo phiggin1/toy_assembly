@@ -36,7 +36,7 @@ def get_button_image(img, text):
     y = 5
 
     for i, line in enumerate(wrapped_text):
-        print(line)
+        #print(line)
         textsize = cv2.getTextSize(line, FONT, FONT_SCALE, FONT_THICKNESS)[0]
         gap = textsize[1]
         y = 10 + int(textsize[1]/2) + (i*gap)
@@ -59,10 +59,14 @@ class ManualServo:
         self.shape = (width+10,height+10)
         print(self.shape)
 
+
+        self.arm_prefix = rospy.get_param("arm_prefix", default="left")
+        rospy.loginfo(self.arm_prefix)
+
         self.pgscreen=pygame.display.set_mode((self.shape[0]*2+50,self.shape[1]+5+30))
         self.pgscreen.fill((255, 255, 255))
-        pygame.display.set_caption('ManualServo')           
-        self.camera_buttons = pygame.sprite.Group()
+        pygame.display.set_caption('ManualServo')     
+
         self.camera_names = [
                             ['hand_pointing_right_cam_up', [math.sqrt(2)/2, 0, 0, math.sqrt(2)/2]],
                             ['hand_pointing_right_cam_front', [0.5, 0.5, -0.5, 0.5]],
@@ -75,37 +79,38 @@ class ManualServo:
                             ['grab'],
                             ['release']
         ]
-        y = self.shape[1]+15
-        x = 5
-        place = 65
-        for name in self.camera_names:
-            button = pygame.sprite.Sprite()
-            button.name = name[0]
-            print(name)
-            print(button.name)
-            blank_image = get_button_image(np.zeros((30,120,3), np.uint8), name[0])
-            button.image = pygame.image.frombuffer(blank_image.tostring(), blank_image.shape[1::-1], "RGB")
-            button.rect = button.image.get_rect()
-            button.rect.center = (place, y)
-            place += 125
-            self.camera_buttons.add(button)
-        self.camera_buttons.draw(self.pgscreen)
-
+      
+        self.camera_buttons = pygame.sprite.Group()
         self.object_buttons = pygame.sprite.Group()
-        self.object_names = range(5)
-        y = 15
-        x = self.shape[0]*2+10
-        place = 35
-        for name in self.object_names:
-            button = pygame.sprite.Sprite()
-            button.name = name
-            blank_image = get_button_image(np.zeros((23,25,3), np.uint8), str(name))
-            button.image = pygame.image.frombuffer(blank_image.tostring(), blank_image.shape[1::-1], "RGB")
-            button.rect = button.image.get_rect()
-            button.rect.center = (x, y)
-            y += place
-            self.object_buttons.add(button)
-        self.object_buttons.draw(self.pgscreen)        
+        if self.arm_prefix == "right":
+            y = self.shape[1]+15
+            x = 5
+            place = 65
+            for name in self.camera_names:
+                button = pygame.sprite.Sprite()
+                button.name = name[0]
+                blank_image = get_button_image(np.zeros((30,120,3), np.uint8), name[0])
+                button.image = pygame.image.frombuffer(blank_image.tobytes(), blank_image.shape[1::-1], "RGB")
+                button.rect = button.image.get_rect()
+                button.rect.center = (place, y)
+                place += 125
+                self.camera_buttons.add(button)
+            self.camera_buttons.draw(self.pgscreen)
+
+            self.object_names = range(5)
+            y = 15
+            x = self.shape[0]*2+10
+            place = 35
+            for name in self.object_names:
+                button = pygame.sprite.Sprite()
+                button.name = name
+                blank_image = get_button_image(np.zeros((23,25,3), np.uint8), str(name))
+                button.image = pygame.image.frombuffer(blank_image.tobytes(), blank_image.shape[1::-1], "RGB")
+                button.rect = button.image.get_rect()
+                button.rect.center = (x, y)
+                y += place
+                self.object_buttons.add(button)
+            self.object_buttons.draw(self.pgscreen)        
 
         self.angular_vel = 0.1
         self.linear_vel = 0.5
@@ -117,7 +122,7 @@ class ManualServo:
         self.object_img = None
         self.object_image_sub = rospy.Subscriber("/object_images", ObjectImage, self.object_image_cb)
 
-        self.twist_topic  = rospy.get_param("/twist_topic", "/my_gen3_right/servo/delta_twist_cmds")
+        self.twist_topic  = rospy.get_param("/twist_topic", "/my_gen3_"+self.arm_prefix+"/servo/delta_twist_cmds")
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
         rospy.loginfo(self.twist_topic)
 
@@ -187,7 +192,7 @@ class ManualServo:
         num7/9 (y)yaw in ee space < double check
         '''
         cmd = TwistStamped()
-        cmd.header.frame_id = "right_end_effector_link"
+        cmd.header.frame_id = self.arm_prefix+"_end_effector_link"
         key = None
         keys = pygame.key.get_pressed()
         pressed = False
@@ -276,7 +281,7 @@ class ManualServo:
     def image_cb(self, rgb):
         with self.mutex:
             self.rgb_img = self.cvbridge.imgmsg_to_cv2(rgb, "bgr8")
-            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tostring(), self.rgb_img.shape[1::-1], "RGB")
+            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tobytes(), self.rgb_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (5,5))
             pygame.display.update()
 
@@ -285,14 +290,14 @@ class ManualServo:
             self.header = object_image.header
             self.object_positions = object_image.object_positions
             self.object_img = self.cvbridge.imgmsg_to_cv2(object_image.image, "bgr8")
-            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tostring(), self.object_img.shape[1::-1], "RGB")
+            pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tobytes(), self.object_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (self.shape[0],5))
             pygame.display.update()
     
     def grab(self):
         print("grab")
         a = dict()
-        a["robot"] = "right"
+        a["robot"] = self.arm_prefix
         a["action"] = "grab"
         s = json.dumps(a)
         self.button_pub.publish(s)
@@ -301,7 +306,7 @@ class ManualServo:
     def release(self):
         print("release")
         a = dict()
-        a["robot"] = "right"
+        a["robot"] = self.arm_prefix
         a["action"] = "released"
         s = json.dumps(a)
         self.button_pub.publish(s)
