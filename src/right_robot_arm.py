@@ -29,10 +29,16 @@ class Right_arm:
         self.start_pose = [0.00062, -0.12636, -1.07251, -0.00121, -2.11940, 1.57205]
         self.init_position()	
 
-        #self.cam_info = rospy.wait_for_message('/unity/camera/right/rgb/camera_info', CameraInfo)
-        #self.cam_model = PinholeCameraModel()
-        #self.cam_model.fromCameraInfo(self.cam_info)
-        
+        self.finger_open = 0.01
+        self.finger_closed = 0.8 
+
+        self.hand_closed = [self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed]
+        self.hand_open = [self.finger_open, self.finger_open, self.finger_open, self.finger_open, self.finger_open, self.finger_open]
+
+        self.gripper_group_name = "gripper"
+        self.gripper_move_group = moveit_commander.MoveGroupCommander(self.gripper_group_name)
+        self.gripper_move_group.set_max_velocity_scaling_factor(1.0)
+
         self.horse_topic = '/object_positions'
         self.horse_pose = None  
         #self.horses = rospy.Subscriber(self.horse_topic, PoseStamped, self.get_horse_pose)
@@ -146,6 +152,12 @@ class Right_arm:
         """
         publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
         """
+
+        # close fingers
+        
+        self.gripper_move_group.go(self.hand_closed, wait=True) 
+        self.gripper_move_group.stop()
+
         a = dict()
         a["robot"] = "right"
         a["action"] = "grab"
@@ -188,6 +200,10 @@ class Right_arm:
             status = self.arm_move_group.go(pose_goal2, wait = True)
             self.arm_move_group.stop()
             self.arm_move_group.clear_pose_targets()
+
+            # open fingers
+            self.gripper_move_group.go(self.hand_open, wait=True) 
+            self.gripper_move_group.stop()
 
             a = dict()
             a["robot"] = "right"
