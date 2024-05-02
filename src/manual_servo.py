@@ -46,7 +46,7 @@ def get_button_image(img, text):
 
 class ManualServo:
     def __init__(self):    
-        rospy.init_node('manual_servo')
+        rospy.init_node('manual_servo', anonymous=True))
         self.cvbridge = CvBridge()
 
         self.mutex = Lock()
