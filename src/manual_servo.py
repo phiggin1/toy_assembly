@@ -46,7 +46,7 @@ def get_button_image(img, text):
 
 class ManualServo:
     def __init__(self):    
-        rospy.init_node('manual_servo', anonymous=True))
+        rospy.init_node('manual_servo', anonymous=True)
         self.cvbridge = CvBridge()
 
         self.mutex = Lock()
@@ -60,7 +60,7 @@ class ManualServo:
         print(self.shape)
 
 
-        self.arm_prefix = rospy.get_param("arm_prefix", default="left")
+        self.arm_prefix = rospy.get_param("arm_prefix", default="right")
         rospy.loginfo(self.arm_prefix)
 
         self.pgscreen=pygame.display.set_mode((self.shape[0]*2+50,self.shape[1]+5+30))
@@ -112,7 +112,7 @@ class ManualServo:
                 self.object_buttons.add(button)
             self.object_buttons.draw(self.pgscreen)        
 
-        self.angular_vel = 0.1
+        self.angular_vel = 0.314
         self.linear_vel = 0.5
 
 
@@ -231,28 +231,31 @@ class ManualServo:
             cmd.twist.linear.y = -self.linear_vel
 
 
+        #pitch
         if keys[pygame.K_KP8]:
             key = pygame.K_KP8
             pressed = True
             self.zeros = 0
-            cmd.twist.angular.y = self.angular_vel
+            cmd.twist.angular.x = self.angular_vel
         elif keys[pygame.K_KP2]:
             key = pygame.K_KP2
             pressed = True
             self.zeros = 0
-            cmd.twist.angular.y = -self.angular_vel
+            cmd.twist.angular.x = -self.angular_vel
         
+        #yaw
         if keys[pygame.K_KP4]:
             key = pygame.K_KP4
             pressed = True
             self.zeros = 0
-            cmd.twist.angular.x = -self.angular_vel
+            cmd.twist.angular.y = self.angular_vel
         elif keys[pygame.K_KP6]:
             key = pygame.K_KP6
             pressed = True
             self.zeros = 0
-            cmd.twist.angular.x = self.angular_vel
+            cmd.twist.angular.y = -self.angular_vel
         
+        #roll
         if keys[pygame.K_KP7]:
             key = pygame.K_KP7
             pressed = True
