@@ -130,9 +130,6 @@ class ManualServo:
         self.button_pub = rospy.Publisher(self.button_topic, String, queue_size=10)
         rospy.loginfo(self.button_topic)
 
-
-
-
         while self.rgb_img is None :
             with self.mutex:
                 rospy.sleep(.1)
@@ -141,9 +138,6 @@ class ManualServo:
                 rospy.sleep(.1)
 
         self.orientation =  [-math.sqrt(2)/2, -math.sqrt(2)/2, 0, 0]
-
-
-
 
 
     def run(self):
@@ -232,37 +226,37 @@ class ManualServo:
 
 
         #pitch
-        if keys[pygame.K_KP8]:
-            key = pygame.K_KP8
+        if keys[pygame.K_i]:
+            key = pygame.K_i
             pressed = True
             self.zeros = 0
             cmd.twist.angular.x = self.angular_vel
-        elif keys[pygame.K_KP2]:
-            key = pygame.K_KP2
+        elif keys[pygame.K_k]:
+            key = pygame.K_k
             pressed = True
             self.zeros = 0
             cmd.twist.angular.x = -self.angular_vel
         
         #yaw
-        if keys[pygame.K_KP4]:
-            key = pygame.K_KP4
+        if keys[pygame.K_j]:
+            key = pygame.K_j
             pressed = True
             self.zeros = 0
             cmd.twist.angular.y = self.angular_vel
-        elif keys[pygame.K_KP6]:
-            key = pygame.K_KP6
+        elif keys[pygame.K_l]:
+            key = pygame.K_l
             pressed = True
             self.zeros = 0
             cmd.twist.angular.y = -self.angular_vel
         
         #roll
-        if keys[pygame.K_KP7]:
-            key = pygame.K_KP7
+        if keys[pygame.K_u]:
+            key = pygame.K_u
             pressed = True
             self.zeros = 0
             cmd.twist.angular.z = -self.angular_vel
-        elif keys[pygame.K_KP9]:
-            key = pygame.K_KP9
+        elif keys[pygame.K_o]:
+            key = pygame.K_o
             pressed = True
             self.zeros = 0
             cmd.twist.angular.z = self.angular_vel
@@ -304,7 +298,6 @@ class ManualServo:
         a["action"] = "grab"
         s = json.dumps(a)
         self.button_pub.publish(s)
-
     
     def release(self):
         print("release")
@@ -313,7 +306,6 @@ class ManualServo:
         a["action"] = "released"
         s = json.dumps(a)
         self.button_pub.publish(s)
-
 
     def orient_camera(self, pose_str):
         print(pose_str)
