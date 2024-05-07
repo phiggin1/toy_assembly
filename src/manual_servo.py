@@ -60,7 +60,7 @@ class ManualServo:
         print(self.shape)
 
 
-        self.arm_prefix = rospy.get_param("arm_prefix", default="right")
+        self.arm_prefix = rospy.get_param("~arm_prefix", default="right")
         rospy.loginfo(self.arm_prefix)
 
         self.pgscreen=pygame.display.set_mode((self.shape[0]*2+50,self.shape[1]+5+30))
