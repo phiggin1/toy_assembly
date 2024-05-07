@@ -3,11 +3,10 @@
 import rospy
 import json
 import tf
-import math
+import tf2_ros
 import numpy as np
 from std_msgs.msg import String
-from geometry_msgs.msg import PointStamped, Point
-
+from geometry_msgs.msg import TransformStamped
 import tf 
 
 LEFT_ARM = "/gen3_robotiq_2f_85_left"
@@ -24,9 +23,16 @@ class DualArmTransform:
             
             self.br_left = tf.TransformBroadcaster()
             self.br_right = tf.TransformBroadcaster()
+            '''
+            self.br_left = tf2_ros.StaticTransformBroadcaster()
+            self.br_right = tf2_ros.StaticTransformBroadcaster()
+            '''
             self.transformer = tf.TransformerROS()
             self.t_old = rospy.Time.now()
             self.sub = rospy.Subscriber(self.scene_transform_topic, String, self.transform_cb)
+            
+            #msg = rospy.wait_for_message(self.scene_transform_topic, String)
+            #self.transform_cb(msg)
             
             rospy.spin()
 
@@ -90,9 +96,43 @@ class DualArmTransform:
         r_p = tf.transformations.translation_from_matrix(world_to_right)
         r_q = tf.transformations.quaternion_from_matrix(world_to_right)
 
+        '''
+        now = rospy.Time.now()
 
+        left_transform = TransformStamped()  
+        left_transform.header.stamp = now
+        left_transform.header.frame_id = "dual_arm"
+        left_transform.child_frame_id = "left_world"
+        left_transform.transform.translation.x = l_p[0]
+        left_transform.transform.translation.y = l_p[1]
+        left_transform.transform.translation.z = l_p[2]
+        left_transform.transform.rotation.x = l_q[0]
+        left_transform.transform.rotation.y = l_q[1]
+        left_transform.transform.rotation.z = l_q[2]
+        left_transform.transform.rotation.w = l_q[3]
+
+        right_transform = TransformStamped()
+        right_transform.header.stamp = now
+        right_transform.header.frame_id = "dual_arm"
+        right_transform.child_frame_id = "right_world"
+        right_transform.transform.translation.x = r_p[0]
+        right_transform.transform.translation.y = r_p[1]
+        right_transform.transform.translation.z = r_p[2]
+        right_transform.transform.rotation.x = r_q[0]
+        right_transform.transform.rotation.y = r_q[1]
+        right_transform.transform.rotation.z = r_q[2]
+        right_transform.transform.rotation.w = r_q[3]
+
+        print(left_transform)
+        print(right_transform)
+
+
+        self.br_left.sendTransform(left_transform)
+        self.br_right.sendTransform(right_transform)
+        '''
+        
         t = rospy.get_rostime()
-        if t > (self.t_old + rospy.Duration(0.05)):
+        if t > (self.t_old + rospy.Duration(0.001)):
             #rospy.loginfo((t,l_p,l_q))
             #rospy.loginfo((t,r_p,r_q))
             self.br_left.sendTransform(translation=l_p, 
@@ -106,7 +146,7 @@ class DualArmTransform:
                                   child="right_world",
                                   parent="dual_arm")
             self.t_old = t
-
-
+        
+        
 if __name__ == '__main__':
     track = DualArmTransform()
