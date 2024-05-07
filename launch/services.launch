@@ -11,7 +11,7 @@
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_left.yaml" />
   </node> 
 
-<!--
+
   <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
     <param name="threshold"  value="0.015" />
     <param name="silent_wait" value="5" />
@@ -21,6 +21,7 @@
   <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
   <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
 
+<!--
   <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" >  </node>
 
   <node name="object_track" pkg="toy_assembly" type="object_tracking.py" output="screen" >  </node>
@@ -36,8 +37,6 @@
   <node name="gen_trajectory" pkg="toy_assembly" type="demo_generate_trajectory.py" output="screen" >  </node>
 -->
 
-
-  <node name="robot_filter" pkg="toy_assembly" type="robo_filter.py" output="screen" >  </node>
   <node name="overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  </node>
 
   <arg name="minX" default="-10.0"/>
@@ -46,20 +45,36 @@
   <arg name="maxY" default="10.0"/>
   <arg name="minZ" default="-10.0"/>
   <arg name="maxZ" default="10.0"/>
-  <arg name="distance_threshold" default="0.01"/>
-  <arg name="cluster_tolerance" default="0.02"/>
-  <arg name="min_cluster_size" default="100"/>
-  <arg name="max_cluster_size" default="2500"/>
-  <arg name="input_cloud_left"  default="/unity/camera/left/depth/points"/>
-  <arg name="output_cloud_left" default="/unity/camera/left/depth/object_clusters"/>
-  <arg name="debug_output_cloud_left" default="/unity/camera/left/objects"/>
-  <node name= "object_segmentation_left" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
+  <arg name="leaf_size" default="0.005"/>
+  <arg name="down_input_cloud_left"  default="/unity/camera/left/depth/points"/>
+  <arg name="down_output_cloud_left" default="/unity/camera/left/depth/downsampled_points"/>
+  <node name= "downsample_left" pkg= "obj_segmentation" type= "segmentation_downsample" output="screen" respawn= "false">
     <param name="minX"		value="$(arg minX)"/>
     <param name="maxX"		value="$(arg maxX)"/>
     <param name="minY"		value="$(arg minY)"/>
     <param name="maxY"		value="$(arg maxY)"/>
     <param name="minZ"		value="$(arg minZ)"/>
     <param name="maxZ"		value="$(arg maxZ)"/>
+    <param name="leaf_size"		value="$(arg leaf_size)"/>
+    <param name="input_cloud" 		value="$(arg down_input_cloud_left)"/>
+    <param name="output_cloud" 		value="$(arg down_output_cloud_left)"/>
+  </node>
+
+  <arg name="filtered_output_cloud_left"  default="/unity/camera/left/depth/points_filtered"/>
+  <node name="rgbd_filter" pkg="sensor_filters" type="pointcloud2_filter_chain" output="screen">
+    <rosparam command="load" file="$(find toy_assembly)/config/left_camera_filter.yaml" />
+    <remap from="~input" to="$(arg down_output_cloud_left)" />
+    <remap from="~output" to="$(arg filtered_output_cloud_left)" />
+  </node>
+
+  <arg name="distance_threshold" default="0.01"/>
+  <arg name="cluster_tolerance" default="0.02"/>
+  <arg name="min_cluster_size" default="300"/>
+  <arg name="max_cluster_size" default="5000"/>
+  <arg name="input_cloud_left"  default="/unity/camera/left/depth/points_filtered"/>
+  <arg name="output_cloud_left" default="/unity/camera/left/depth/object_clusters"/>
+  <arg name="debug_output_cloud_left" default="/unity/camera/left/objects"/>
+  <node name= "object_segmentation_left" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
     <param name="distance_threshold"	value="$(arg distance_threshold)"/>
     <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
     <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>

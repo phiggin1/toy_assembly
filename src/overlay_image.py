@@ -34,7 +34,7 @@ class ImageSegment:
 
 
         self.rgb_image_sub = rospy.Subscriber('/unity/camera/left/rgb/image_raw', Image, self.image_cb)
-        self.obj_cluster_sub = rospy.Subscriber("/unity/camera/left/depth/filtered_object_clusters", SegmentedClustersArray, self.cluster_callback)
+        self.obj_cluster_sub = rospy.Subscriber("/unity/camera/left/depth/object_clusters", SegmentedClustersArray, self.cluster_callback)
 
         rospy.spin()
 
@@ -80,8 +80,10 @@ class ImageSegment:
                 obj["center_pix"] = center_pix
                 obj["center"] = center
                 self.objects.append(obj)
-
-                #rospy.loginfo(f"{i}, {center_pix}")
+                rospy.loginfo(f"{i}, {center_pix}")
+                print(min_x, max_x)
+                print(min_y, max_y)
+                print(min_z, max_z)
             
             self.have_objects = True
 
@@ -144,7 +146,7 @@ class ImageSegment:
         
 
 
-        rospy.loginfo(f"-----------------------")    
+        #rospy.loginfo(f"-----------------------")    
         rgb_msg = self.bridge.cv2_to_imgmsg(rgb_img, "bgr8")
         self.overlayed_images_pub.publish(rgb_msg)
 
