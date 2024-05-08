@@ -56,14 +56,14 @@ class KortexHack:
 
     def delta_twist_cmds__to_cart_cb(self, delta_twist):
         twist = TwistCommand()
-        twist.reference_frame = 0
+        twist.reference_frame = 2 #tool frame
         twist.duration = 0
 
-        twist.twist.linear_x = clamp(delta_twist.twist.linear.y, self.min_linear_vel, self.max_linear_vel)
-        twist.twist.linear_y = clamp(delta_twist.twist.linear.x, self.min_linear_vel, self.max_linear_vel)
-        twist.twist.linear_z = clamp(-delta_twist.twist.linear.z, self.min_linear_vel, self.max_linear_vel)
+        twist.twist.linear_x = clamp(delta_twist.twist.linear.x, self.min_linear_vel, self.max_linear_vel)
+        twist.twist.linear_y = clamp(delta_twist.twist.linear.y, self.min_linear_vel, self.max_linear_vel)
+        twist.twist.linear_z = clamp(delta_twist.twist.linear.z, self.min_linear_vel, self.max_linear_vel)
 
-        twist.twist.angular_x = clamp(-delta_twist.twist.angular.x, self.min_angular_vel, self.max_angular_vel)
+        twist.twist.angular_x = clamp(delta_twist.twist.angular.x, self.min_angular_vel, self.max_angular_vel)
         twist.twist.angular_y = clamp(delta_twist.twist.angular.y, self.min_angular_vel, self.max_angular_vel)
         twist.twist.angular_z = clamp(delta_twist.twist.angular.z, self.min_angular_vel, self.max_angular_vel)
 
