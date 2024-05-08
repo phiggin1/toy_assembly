@@ -23,7 +23,7 @@ class Left_arm:
     def __init__(self):
         rospy.init_node("leftArm")
 
-        self.start_pose = [-0.88708, -0.01635, -2.04250, -2.17897, 1.67276, 2.33558]
+        self.start_pose = [-0.88, -0.01, -2.04, -2.17, 1.67, 2.33]
         self.goal_tolerance = 0.01
         self.init_position()
 

@@ -26,7 +26,7 @@ class Right_arm:
     def __init__(self):
         rospy.init_node("rightArm")
 
-        self.start_pose = [0.00062, -0.12636, -1.07251, -0.00121, -2.11940, 1.57205]
+        self.start_pose = [0.0, 0.0, -1.0, 0.0, -2.0, 1.57]
         self.init_position()	
 
         self.finger_open = 0.01

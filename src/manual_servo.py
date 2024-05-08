@@ -60,8 +60,17 @@ class ManualServo:
         print(self.shape)
 
 
+        self.real = rospy.get_param("~real", default="false")
         self.arm_prefix = rospy.get_param("~arm_prefix", default="right")
-        rospy.loginfo(self.arm_prefix)
+        rospy.loginfo(f"arm: {self.arm_prefix}")
+        rospy.loginfo(f"real: {self.real}")
+        if self.real:
+            rgb_topic = "/right_camera/color/image_raw"
+        else:
+            rgb_topic = "/unity/camera/right/rgb/image_raw"
+        rospy.loginfo(f"rgb_topic: {rgb_topic}")
+
+
 
         self.pgscreen=pygame.display.set_mode((self.shape[0]*2+50,self.shape[1]+5+30))
         self.pgscreen.fill((255, 255, 255))
@@ -112,12 +121,12 @@ class ManualServo:
                 self.object_buttons.add(button)
             self.object_buttons.draw(self.pgscreen)        
 
-        self.angular_vel = 0.314
-        self.linear_vel = 0.5
+        self.angular_vel = 0.1
+        self.linear_vel = 0.2
 
 
         self.rgb_img = None
-        self.rgb_image_sub = rospy.Subscriber("/unity/camera/right/rgb/image_raw", Image, self.image_cb)
+        self.rgb_image_sub = rospy.Subscriber(rgb_topic, Image, self.image_cb)
 
         self.object_img = None
         self.object_image_sub = rospy.Subscriber("/object_images", ObjectImage, self.object_image_cb)
@@ -278,6 +287,7 @@ class ManualServo:
     def image_cb(self, rgb):
         with self.mutex:
             self.rgb_img = self.cvbridge.imgmsg_to_cv2(rgb, "bgr8")
+            self.rgb_img = cv2.resize(self.rgb_img, (640, 480))
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tobytes(), self.rgb_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (5,5))
             pygame.display.update()
@@ -287,6 +297,7 @@ class ManualServo:
             self.header = object_image.header
             self.object_positions = object_image.object_positions
             self.object_img = self.cvbridge.imgmsg_to_cv2(object_image.image, "bgr8")
+            self.object_img = cv2.resize(self.object_img, (640, 480))
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tobytes(), self.object_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (self.shape[0],5))
             pygame.display.update()

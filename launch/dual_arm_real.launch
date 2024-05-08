@@ -1,0 +1,45 @@
+<launch>
+<!--
+rosrun tf static_transform_publisher 0.0 0.8 0.0 0.0 0.0 0.0 rightbase_link leftbase_link 50
+
+roslaunch kortex_driver iral_kortex_driver.launch prefix:=right ip_address:=192.168.1.10
+roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=right device:=192.168.1.10
+
+roslaunch kortex_driver iral_kortex_driver.launch prefix:=left ip_address:=192.168.1.11
+roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.168.1.11
+-->
+
+<arg name="left_robot_name" default="my_gen3_left"/>
+<arg name="left_prefix" default="left_"/>
+<arg name="left_ip" default="192.168.1.11"/>
+  
+<arg name="right_robot_name" default="my_gen3_right"/>
+<arg name="right_prefix" default="right_"/>
+<arg name="right_ip" default="192.168.1.10"/>
+
+<!-- left arm driver + vision -->
+  <include file="$(find toy_assembly)/launch/iral_kortex_driver.launch">
+    <arg name="robot_name" value="$(arg left_robot_name)"/>
+    <arg name="prefix" value="$(arg left_prefix)"/>
+    <arg name="ip_address" value="$(arg left_ip)"/>
+  </include>
+  <include file="$(find toy_assembly)/launch/iral_kinova_vision_rgbd.launch">
+    <arg name="prefix" value="$(arg left_prefix)"/>
+    <arg name="device" value="$(arg left_ip)"/>
+  </include>
+  
+<!-- right arm driver + vision -->
+  <include file="$(find toy_assembly)/launch/iral_kortex_driver.launch">
+    <arg name="robot_name" value="$(arg right_robot_name)"/>
+    <arg name="prefix" value="$(arg right_prefix)"/>
+    <arg name="ip_address" value="$(arg right_ip)"/>
+  </include>
+  <include file="$(find toy_assembly)/launch/iral_kinova_vision_rgbd.launch">
+    <arg name="prefix" value="$(arg right_prefix)"/>
+    <arg name="device" value="$(arg right_ip)"/>
+  </include>
+
+  
+  <node name="dual_arm_transform" pkg="tf" type="static_transform_publisher" output="screen" args="-0.005 0.8 0.0 0.0 0.0 0.0 right_base_link left_base_link 50"/>
+  
+</launch>
