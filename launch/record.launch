@@ -1,8 +1,17 @@
 <launch>
  
- <node pkg="rosbag" type="record" name="toy_record
- "
+ <node pkg="rosbag" type="record" name="toy_record"
        args="record 
+       /left_camera/color/camera_info
+       /left_camera/color/image_raw
+       /left_camera/depth_registered/points
+       /left_camera/depth_registered/sw_registered/camera_info
+       /left_camera/depth_registered/sw_registered/image_rect
+       /right_camera/color/camera_info
+       /right_camera/color/image_raw
+       /right_camera/depth_registered/points
+       /right_camera/depth_registered/sw_registered/camera_info
+       /right_camera/depth_registered/sw_registered/image_rect
        /unity/camera/left/depth/camera_info
        /unity/camera/left/depth/image_raw
        /unity/camera/left/depth/points
@@ -19,7 +28,8 @@
        /my_gen3_right/joint_states  
        /scene/transform
        /audio
-       /buttons"      />
+       /buttons"
+/>
 
 
 </launch>
