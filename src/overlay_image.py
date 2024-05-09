@@ -92,10 +92,10 @@ class ImageSegment:
                 obj["center_pix"] = center_pix
                 obj["center"] = center
                 self.objects.append(obj)
-                rospy.loginfo(f"{i}, {center_pix}")
-                print(min_x, max_x)
-                print(min_y, max_y)
-                print(min_z, max_z)
+                #rospy.loginfo(f"{i}, {center_pix}")
+                #print(min_x, max_x)
+                #print(min_y, max_y)
+                #print(min_z, max_z)
             
             self.have_objects = True
 
