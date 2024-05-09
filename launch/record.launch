@@ -1,0 +1,25 @@
+<launch>
+ 
+ <node pkg="rosbag" type="record" name="toy_record
+ "
+       args="record 
+       /unity/camera/left/depth/camera_info
+       /unity/camera/left/depth/image_raw
+       /unity/camera/left/depth/points
+       /unity/camera/left/rgb/camera_info
+       /unity/camera/left/rgb/image_raw
+       /unity/camera/right/depth/camera_info
+       /unity/camera/right/depth/image_raw
+       /unity/camera/right/depth/points
+       /unity/camera/right/rgb/camera_info
+       /unity/camera/right/rgb/image_raw
+       /tf
+       /tf_static
+       /my_gen3_left/joint_states
+       /my_gen3_right/joint_states  
+       /scene/transform
+       /audio
+       /buttons"      />
+
+
+</launch>

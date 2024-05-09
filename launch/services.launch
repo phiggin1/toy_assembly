@@ -10,8 +10,16 @@
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_left">
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_left.yaml" />
   </node> 
+  <group ns="my_gen3_left">
+    <node name="left_arm" pkg="toy_assembly" type="left_robot_arm.py" output="screen" />
+  </group>
+ 
+  
+  <group ns="my_gen3_right">
+    <node name="right_arm" pkg="toy_assembly" type="right_robot_arm.py" output="screen" />
+  </group>
 
-
+<!--
   <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
     <param name="threshold"  value="0.015" />
     <param name="silent_wait" value="5" />
@@ -21,7 +29,7 @@
   <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
   <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
 
-<!--
+
   <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" >  </node>
 
   <node name="object_track" pkg="toy_assembly" type="object_tracking.py" output="screen" >  </node>
