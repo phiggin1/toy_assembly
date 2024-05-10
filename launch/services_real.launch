@@ -32,7 +32,8 @@
     <param name="real"  value="True" />
   </node>
 
-
+  <node name="audio_recorder" pkg="toy_assembly" type="audio_recorder.py" output="screen" >  </node>
+  
 <!--
   <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
     <param name="threshold"  value="0.015" />
@@ -40,7 +41,7 @@
     <param name="max_duration"  value="15" />
     <param name="debug"  value="True" />
   </node>
-  <node name="audio_recorder" pkg="toy_assembly" type="audio_recorder.py" output="screen" >  </node>
+
   <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
   <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
   -->
