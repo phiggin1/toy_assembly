@@ -14,6 +14,9 @@ from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
 from toy_assembly.srv import MoveITGrabPose, MoveITPose
 from toy_assembly.srv import OrientCamera
+
+from std_srvs.srv import Trigger 
+
 import moveit_commander
 import moveit_msgs.msg
 from geometry_msgs.msg import Pose
@@ -26,11 +29,11 @@ class Right_arm:
     def __init__(self):
         rospy.init_node("rightArm")
 
-        self.start_pose = [0.00062, -0.12636, -1.07251, -0.00121, -2.11940, 1.57205]
+        self.start_pose = [0.0, 0.0, -1.0, 0.0, -2.0, 1.57]
         self.init_position()	
 
         self.finger_open = 0.01
-        self.finger_closed = 0.8 
+        self.finger_closed = 0.735 
 
         self.hand_closed = [self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed]
         self.hand_open = [self.finger_open, self.finger_open, self.finger_open, self.finger_open, self.finger_open, self.finger_open]
@@ -63,6 +66,9 @@ class Right_arm:
         self.grab_object = rospy.Service('grab_object', MoveITGrabPose, self.get_object)
         self.release_object = rospy.Service('release_object', MoveITGrabPose, self.place_object)
 
+        self.open_hand = rospy.Service('open_hand', Trigger, self.open_gipper)
+        self.close_hand = rospy.Service('close_hand', Trigger, self.close_gipper)
+
         #self.change_orientation(None)
 
         self.rotate_object = rospy.Service('rotate_object', OrientCamera, self.change_orientation)
@@ -77,6 +83,9 @@ class Right_arm:
         self.arm_group_name = "arm"
         self.arm_move_group = moveit_commander.MoveGroupCommander(self.arm_group_name)
         self.planning_frame = "right_base_link"
+
+        self.gripper_group_name = "arm"
+        self.gripper_move_group = moveit_commander.MoveGroupCommander(self.gripper_group_name)
 
         self.arm_move_group.set_max_velocity_scaling_factor(0.750)
         #self.arm_move_group.set_goal_position_tolerance(self.goal_tolerance)
@@ -154,25 +163,50 @@ class Right_arm:
         """
 
         # close fingers
-        
-        self.gripper_move_group.go(self.hand_closed, wait=True) 
-        self.gripper_move_group.stop()
-
-        a = dict()
-        a["robot"] = "right"
-        a["action"] = "grab"
-        s = json.dumps(a)
-        self.grab.publish(s)
+        self.close_gipper()
 
         self.arm_move_group.set_max_velocity_scaling_factor(0.750)
         self.arm_move_group.go(self.start_pose, wait=True) 
         self.arm_move_group.stop()
 
         self.grabbed_object = status
-        self.grabbed_object = status
         return status
         
+
+    def close_gipper(self, req):
+        """
+        publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
+        """
+
+        # close fingers
+        a = dict()
+        a["robot"] = "right"
+        a["action"] = "grab"
+        s = json.dumps(a)
+        self.grab.publish(s)
         
+        self.gripper_move_group.go(self.hand_closed, wait=True) 
+        self.gripper_move_group.stop()
+
+        
+    def open_gipper(self, req):
+        """
+        publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
+        """
+
+        # close fingers
+        a = dict()
+        a["robot"] = "right"
+        a["action"] = "release"
+        s = json.dumps(a)
+        self.grab.publish(s)
+
+        
+        status = self.gripper_move_group.go(self.hand_open, wait=True) 
+        self.gripper_move_group.stop()
+
+        
+
     def transform_obj_pos(self, obj_pos):
         t = rospy.Time.now()
         obj_pos.header.stamp = t
@@ -191,7 +225,7 @@ class Right_arm:
             #print(quat)
             pose_goal.orientation.x = quat[0]
             pose_goal.orientation.y = quat[1]
-            pose_goal.orientation.z += 0.1
+            pose_goal.orientation.z = quat[2]
             pose_goal.orientation.w = quat[3]
                
             self.arm_move_group.set_pose_target(pose_goal)

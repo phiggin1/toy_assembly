@@ -16,6 +16,8 @@ from toy_assembly.srv import OrientCamera
 import numpy as np
 from multiprocessing import Lock
 
+from std_srvs.srv import Trigger 
+
 FONT = cv2.FONT_HERSHEY_SIMPLEX
 FONT_SCALE = 0.45
 FONT_COLOR = (255,255,255)
@@ -60,8 +62,33 @@ class ManualServo:
         print(self.shape)
 
 
-        self.arm_prefix = rospy.get_param("arm_prefix", default="right")
-        rospy.loginfo(self.arm_prefix)
+        self.real = rospy.get_param("~real", default="false")
+        self.arm_prefix = rospy.get_param("~arm_prefix", default="right")
+        rospy.loginfo(f"arm: {self.arm_prefix}")
+        rospy.loginfo(f"real: {self.real}")
+        if self.real:
+            rgb_topic = "/right_camera/color/image_raw"
+        else:
+            rgb_topic = "/unity/camera/right/rgb/image_raw"
+        rospy.loginfo(f"rgb_topic: {rgb_topic}")
+
+
+        if self.real:
+            object_image_topic = "/left_camera/color/image_raw"
+            #object_image_topic = "/object_images"
+        else:
+            object_image_topic = "/unity/camera/left/rgb/image_raw"
+            #object_image_topic = "/object_images"
+        rospy.loginfo(f"object_image_topic: {object_image_topic}")
+
+
+        self.rgb_img = None
+        self.rgb_image_sub = rospy.Subscriber(rgb_topic, Image, self.image_cb)
+
+        self.object_img = None
+        #self.object_image_sub = rospy.Subscriber(object_image_topic, ObjectImage, self.object_image_cb)
+        self.object_image_sub = rospy.Subscriber(object_image_topic, Image, self.object_image_cb)
+
 
         self.pgscreen=pygame.display.set_mode((self.shape[0]*2+50,self.shape[1]+5+30))
         self.pgscreen.fill((255, 255, 255))
@@ -96,7 +123,7 @@ class ManualServo:
                 place += 125
                 self.camera_buttons.add(button)
             self.camera_buttons.draw(self.pgscreen)
-
+            '''
             self.object_names = range(5)
             y = 15
             x = self.shape[0]*2+10
@@ -110,17 +137,11 @@ class ManualServo:
                 button.rect.center = (x, y)
                 y += place
                 self.object_buttons.add(button)
-            self.object_buttons.draw(self.pgscreen)        
+            self.object_buttons.draw(self.pgscreen)
+            '''        
 
-        self.angular_vel = 0.314
-        self.linear_vel = 0.5
-
-
-        self.rgb_img = None
-        self.rgb_image_sub = rospy.Subscriber("/unity/camera/right/rgb/image_raw", Image, self.image_cb)
-
-        self.object_img = None
-        self.object_image_sub = rospy.Subscriber("/object_images", ObjectImage, self.object_image_cb)
+        self.angular_vel = 0.1
+        self.linear_vel = 0.2
 
         self.twist_topic  = rospy.get_param("/twist_topic", "/my_gen3_"+self.arm_prefix+"/servo/delta_twist_cmds")
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
@@ -130,9 +151,6 @@ class ManualServo:
         self.button_pub = rospy.Publisher(self.button_topic, String, queue_size=10)
         rospy.loginfo(self.button_topic)
 
-
-
-
         while self.rgb_img is None :
             with self.mutex:
                 rospy.sleep(.1)
@@ -141,9 +159,6 @@ class ManualServo:
                 rospy.sleep(.1)
 
         self.orientation =  [-math.sqrt(2)/2, -math.sqrt(2)/2, 0, 0]
-
-
-
 
 
     def run(self):
@@ -232,37 +247,37 @@ class ManualServo:
 
 
         #pitch
-        if keys[pygame.K_KP8]:
-            key = pygame.K_KP8
+        if keys[pygame.K_i]:
+            key = pygame.K_i
             pressed = True
             self.zeros = 0
             cmd.twist.angular.x = self.angular_vel
-        elif keys[pygame.K_KP2]:
-            key = pygame.K_KP2
+        elif keys[pygame.K_k]:
+            key = pygame.K_k
             pressed = True
             self.zeros = 0
             cmd.twist.angular.x = -self.angular_vel
         
         #yaw
-        if keys[pygame.K_KP4]:
-            key = pygame.K_KP4
+        if keys[pygame.K_j]:
+            key = pygame.K_j
             pressed = True
             self.zeros = 0
             cmd.twist.angular.y = self.angular_vel
-        elif keys[pygame.K_KP6]:
-            key = pygame.K_KP6
+        elif keys[pygame.K_l]:
+            key = pygame.K_l
             pressed = True
             self.zeros = 0
             cmd.twist.angular.y = -self.angular_vel
         
         #roll
-        if keys[pygame.K_KP7]:
-            key = pygame.K_KP7
+        if keys[pygame.K_u]:
+            key = pygame.K_u
             pressed = True
             self.zeros = 0
             cmd.twist.angular.z = -self.angular_vel
-        elif keys[pygame.K_KP9]:
-            key = pygame.K_KP9
+        elif keys[pygame.K_o]:
+            key = pygame.K_o
             pressed = True
             self.zeros = 0
             cmd.twist.angular.z = self.angular_vel
@@ -284,6 +299,7 @@ class ManualServo:
     def image_cb(self, rgb):
         with self.mutex:
             self.rgb_img = self.cvbridge.imgmsg_to_cv2(rgb, "bgr8")
+            self.rgb_img = cv2.resize(self.rgb_img, (640, 480))
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tobytes(), self.rgb_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (5,5))
             pygame.display.update()
@@ -291,29 +307,45 @@ class ManualServo:
     def object_image_cb(self, object_image):
         with self.mutex:
             self.header = object_image.header
+            '''
             self.object_positions = object_image.object_positions
             self.object_img = self.cvbridge.imgmsg_to_cv2(object_image.image, "bgr8")
+            '''
+            self.object_img = self.cvbridge.imgmsg_to_cv2(object_image, "bgr8")
+
+            self.object_img = cv2.resize(self.object_img, (640, 480))
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tobytes(), self.object_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (self.shape[0],5))
             pygame.display.update()
     
     def grab(self):
-        print("grab")
-        a = dict()
-        a["robot"] = self.arm_prefix
-        a["action"] = "grab"
-        s = json.dumps(a)
-        self.button_pub.publish(s)
-
+        service_name = "/my_gen3_right/close_hand"
+        rospy.wait_for_service(service_name)
+        print(service_name)
+        try:
+            close_hand = rospy.ServiceProxy(service_name, Trigger)
+            resp = close_hand()
+            return resp
+        except rospy.ServiceException as e:
+            rospy.loginfo("Service call failed: %s"%e)
     
     def release(self):
+        service_name = "/my_gen3_right/open_hand"
+        rospy.wait_for_service(service_name)
+        print(service_name)
+        try:
+            open_hand = rospy.ServiceProxy(service_name, Trigger)
+            resp = open_hand()
+            return resp
+        except rospy.ServiceException as e:
+            rospy.loginfo("Service call failed: %s"%e)
+
         print("release")
         a = dict()
         a["robot"] = self.arm_prefix
         a["action"] = "released"
         s = json.dumps(a)
         self.button_pub.publish(s)
-
 
     def orient_camera(self, pose_str):
         print(pose_str)
@@ -343,7 +375,7 @@ class ManualServo:
         pose.pose.orientation.w = self.orientation[3]
         print(pose)
         rospy.wait_for_service('/my_gen3_right/move_pose')
-        print("right_arm_grab")
+        print("'/my_gen3_right/move_pose'")
         try:
             moveit_pose = rospy.ServiceProxy('/my_gen3_right/move_pose', MoveITPose)
             resp = moveit_pose(pose)

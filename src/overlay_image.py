@@ -19,11 +19,23 @@ class ImageSegment:
     def __init__(self):
         rospy.init_node('image_overlay', anonymous=True)
         self.bridge = CvBridge()
+        self.real = rospy.get_param("~real", default="false")
+
+        rospy.loginfo(self.real)
+
+        if self.real:
+            cam_info_topic = "/left_camera/color/camera_info"
+            rgb_image_topic = "/left_camera/color/image_raw"
+            obj_cluster_topic = "/left_camera/depth_registered/object_clusters"
+        else:
+            cam_info_topic = "/unity/camera/left/rgb/camera_info"
+            rgb_image_topic = "/unity/camera/left/rgb/image_raw"
+            obj_cluster_topic = "/unity/camera/left/depth/object_clusters"
 
         self.mutex = Lock()
         self.objects = []
 
-        self.rgb_cam_info = rospy.wait_for_message("/unity/camera/left/rgb/camera_info", CameraInfo, timeout=None)
+        self.rgb_cam_info = rospy.wait_for_message(cam_info_topic, CameraInfo, timeout=None)
         self.cam_model = image_geometry.PinholeCameraModel()
         self.cam_model.fromCameraInfo(self.rgb_cam_info)
 
@@ -33,8 +45,8 @@ class ImageSegment:
         self.object_images_pub = rospy.Publisher('/object_images', ObjectImage, queue_size=10)
 
 
-        self.rgb_image_sub = rospy.Subscriber('/unity/camera/left/rgb/image_raw', Image, self.image_cb)
-        self.obj_cluster_sub = rospy.Subscriber("/unity/camera/left/depth/filtered_object_clusters", SegmentedClustersArray, self.cluster_callback)
+        self.rgb_image_sub = rospy.Subscriber(rgb_image_topic, Image, self.image_cb)
+        self.obj_cluster_sub = rospy.Subscriber(obj_cluster_topic, SegmentedClustersArray, self.cluster_callback)
 
         rospy.spin()
 
@@ -80,15 +92,18 @@ class ImageSegment:
                 obj["center_pix"] = center_pix
                 obj["center"] = center
                 self.objects.append(obj)
-
                 #rospy.loginfo(f"{i}, {center_pix}")
+                #print(min_x, max_x)
+                #print(min_y, max_y)
+                #print(min_z, max_z)
             
             self.have_objects = True
 
 
 
     def image_cb(self, rgb_ros_image):
-        rgb_img = np.asarray(self.bridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="passthrough"))
+        rgb_img = self.bridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="passthrough")
+        rgb_img = rgb_img.copy()
 
         with self.mutex:
             if len(self.objects) < 1:
@@ -144,7 +159,7 @@ class ImageSegment:
         
 
 
-        rospy.loginfo(f"-----------------------")    
+        #rospy.loginfo(f"-----------------------")    
         rgb_msg = self.bridge.cv2_to_imgmsg(rgb_img, "bgr8")
         self.overlayed_images_pub.publish(rgb_msg)
 
