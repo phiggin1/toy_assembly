@@ -138,13 +138,13 @@ class DualArmTransform:
             self.br_left.sendTransform(translation=l_p, 
                                   rotation=l_q,
                                   time=t,
-                                  child="left_world",
-                                  parent="dual_arm")
+                                  child="left_base_link",
+                                  parent="world")
             self.br_right.sendTransform(translation=r_p, 
                                   rotation=r_q,
                                   time=t,
-                                  child="right_world",
-                                  parent="dual_arm")
+                                  child="right_base_link",
+                                  parent="world")
             self.t_old = t
         
         

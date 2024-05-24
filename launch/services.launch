@@ -6,6 +6,9 @@
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_right">
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_right.yaml" />
   </node> 
+  <group ns="my_gen3_right">
+    <node name="right_arm" pkg="toy_assembly" type="right_robot_arm.py" output="screen" />
+  </group>
      
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_left">
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_left.yaml" />
@@ -14,12 +17,32 @@
     <node name="left_arm" pkg="toy_assembly" type="left_robot_arm.py" output="screen" />
   </group>
  
-  
-  <group ns="my_gen3_right">
-    <node name="right_arm" pkg="toy_assembly" type="right_robot_arm.py" output="screen" />
-  </group>
+
+  <include file="$(find toy_assembly)/launch/pcl_segment.launch" > 
+    <arg name="arm" value="left"/>
+  </include>
+
+
+  <include file="$(find toy_assembly)/launch/pcl_segment.launch" > 
+    <arg name="arm" value="right"/>
+  </include>
+
+  <arg name="right_x0" default="0"/>
+  <arg name="right_y0" default="-0.4"/>
+  <arg name="right_z0" default="0"/>
+  <arg name="left_x0" default="-0.005"/>
+  <arg name="left_y0" default="0.4"/>
+  <arg name="left_z0" default="0"/>
+
+  <node name="dual_arm_transform_right" pkg="tf" type="static_transform_publisher" output="screen" args="$(arg right_x0) $(arg right_y0) $(arg right_z0) 0.0 0.0 0.0 world right_base_link  50"/>
+  <node name="dual_arm_transform_left" pkg="tf" type="static_transform_publisher" output="screen" args="$(arg left_x0) $(arg left_y0) $(arg left_z0) 0.0 0.0 0.0 world left_base_link  50"/>
+
+
 
 <!--
+    <node name="overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  
+    <arg name="real" value="false"/>
+  </node>
   <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
     <param name="threshold"  value="0.015" />
     <param name="silent_wait" value="5" />
@@ -43,72 +66,8 @@
   <node name="robot_part_tracking" pkg="toy_assembly" type="robot_part_tracking.py" output="screen" >  </node>
   <node name="human_part_tracking" pkg="toy_assembly" type="human_part_tracking.py" output="screen" >  </node>
   <node name="gen_trajectory" pkg="toy_assembly" type="demo_generate_trajectory.py" output="screen" >  </node>
+
+
 -->
-
-  <node name="overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  </node>
-
-  <arg name="minX" default="-10.0"/>
-  <arg name="maxX" default="10.0"/>
-  <arg name="minY" default="-10.0"/>
-  <arg name="maxY" default="10.0"/>
-  <arg name="minZ" default="-10.0"/>
-  <arg name="maxZ" default="10.0"/>
-  <arg name="leaf_size" default="0.005"/>
-  <arg name="down_input_cloud_left"  default="/unity/camera/left/depth/points"/>
-  <arg name="down_output_cloud_left" default="/unity/camera/left/depth/downsampled_points"/>
-  <node name= "downsample_left" pkg= "obj_segmentation" type= "segmentation_downsample" output="screen" respawn= "false">
-    <param name="minX"		value="$(arg minX)"/>
-    <param name="maxX"		value="$(arg maxX)"/>
-    <param name="minY"		value="$(arg minY)"/>
-    <param name="maxY"		value="$(arg maxY)"/>
-    <param name="minZ"		value="$(arg minZ)"/>
-    <param name="maxZ"		value="$(arg maxZ)"/>
-    <param name="leaf_size"		value="$(arg leaf_size)"/>
-    <param name="input_cloud" 		value="$(arg down_input_cloud_left)"/>
-    <param name="output_cloud" 		value="$(arg down_output_cloud_left)"/>
-  </node>
-
-  <arg name="filtered_output_cloud_left"  default="/unity/camera/left/depth/points_filtered"/>
-  <node name="rgbd_filter" pkg="sensor_filters" type="pointcloud2_filter_chain" output="screen">
-    <rosparam command="load" file="$(find toy_assembly)/config/left_camera_filter.yaml" />
-    <remap from="~input" to="$(arg down_output_cloud_left)" />
-    <remap from="~output" to="$(arg filtered_output_cloud_left)" />
-  </node>
-
-  <arg name="distance_threshold" default="0.01"/>
-  <arg name="cluster_tolerance" default="0.02"/>
-  <arg name="min_cluster_size" default="300"/>
-  <arg name="max_cluster_size" default="5000"/>
-  <arg name="input_cloud_left"  default="/unity/camera/left/depth/points_filtered"/>
-  <arg name="output_cloud_left" default="/unity/camera/left/depth/object_clusters"/>
-  <arg name="debug_output_cloud_left" default="/unity/camera/left/objects"/>
-  <node name= "object_segmentation_left" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
-    <param name="distance_threshold"	value="$(arg distance_threshold)"/>
-    <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
-    <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>
-    <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
-    <param name="input_cloud" 		value="$(arg input_cloud_left)"/>
-    <param name="output_cloud" 		value="$(arg output_cloud_left)"/>
-    <param name="debug_output_cloud" 		value="$(arg debug_output_cloud_left)"/>
-  </node>
-
-  <arg name="input_cloud_right"  default="/unity/camera/right/depth/points"/>
-  <arg name="output_cloud_right" default="/unity/camera/right/depth/object_clusters"/>
-  <arg name="debug_output_cloud_right" default="/unity/camera/right/objects/"/>
-  <node name= "object_segmentation_right" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
-    <param name="minX"		value="$(arg minX)"/>
-    <param name="maxX"		value="$(arg maxX)"/>
-    <param name="minY"		value="$(arg minY)"/>
-    <param name="maxY"		value="$(arg maxY)"/>
-    <param name="minZ"		value="$(arg minZ)"/>
-    <param name="maxZ"		value="$(arg maxZ)"/>
-    <param name="distance_threshold"	value="$(arg distance_threshold)"/>
-    <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
-    <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>
-    <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
-    <param name="input_cloud" 		value="$(arg input_cloud_right)"/>
-    <param name="output_cloud" 		value="$(arg output_cloud_right)"/>
-    <param name="debug_output_cloud" 		value="$(arg debug_output_cloud_right)"/>
-  </node>
 
 </launch>

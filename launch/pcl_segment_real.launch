@@ -1,0 +1,57 @@
+<launch>
+
+  <arg name="arm" default="left"/>
+
+  <arg name="minX" default="-1.0"/>
+  <arg name="maxX" default="1.0"/>
+  <arg name="minY" default="-1.0"/>
+  <arg name="maxY" default="1.0"/>
+  <arg name="minZ" default="-1.0"/>
+  <arg name="maxZ" default="1.0"/>
+  <arg name="leaf_size" default="0.005"/>
+
+  <arg name="distance_threshold" default="0.04"/>
+
+  <arg name="cluster_tolerance" default="0.03"/>
+  <arg name="min_cluster_size" default="30"/>
+  <arg name="max_cluster_size" default="500"/>
+
+  <arg name="down_input_cloud"  default="/$(arg arm)_camera/depth_registered/points"/>
+  <arg name="down_output_cloud" default="/$(arg arm)_camera/depth_registered/downsampled_points"/>
+
+  <arg name="filtered_output_cloud"  default="/$(arg arm)_camera/depth_registered/points_filtered"/>
+
+  <arg name="input_cloud"  default="$(arg down_output_cloud)"/>
+  <arg name="output_cloud" default="/$(arg arm)_camera/depth_registered/object_clusters"/>
+  <arg name="debug_output_cloud" default="/$(arg arm)_camera/depth_registered/objects"/>
+
+  <node name= "$(arg arm)_downsample" pkg= "obj_segmentation" type= "segmentation_downsample" output="screen" respawn= "false">
+    <param name="minX"		value="$(arg minX)"/>
+    <param name="maxX"		value="$(arg maxX)"/>
+    <param name="minY"		value="$(arg minY)"/>
+    <param name="maxY"		value="$(arg maxY)"/>
+    <param name="minZ"		value="$(arg minZ)"/>
+    <param name="maxZ"		value="$(arg maxZ)"/>
+    <param name="leaf_size"		value="$(arg leaf_size)"/>
+    <param name="input_cloud" 		value="$(arg down_input_cloud)"/>
+    <param name="output_cloud" 		value="$(arg down_output_cloud)"/>
+  </node>
+
+  <node name="$(arg arm)_rgbd_filter" pkg="sensor_filters" type="pointcloud2_filter_chain" output="screen">
+    <rosparam command="load" file="$(find toy_assembly)/config/left_camera_filter.yaml" />
+    <remap from="~input" to="$(arg down_output_cloud)" />
+    <remap from="~output" to="$(arg filtered_output_cloud)" />
+  </node>
+
+  <node name= "$(arg arm)_object_segmentation" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
+    <param name="distance_threshold"	value="$(arg distance_threshold)"/>
+    <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
+    <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>
+    <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
+    <param name="input_cloud" 		value="$(arg input_cloud)"/>
+    <param name="output_cloud" 		value="$(arg output_cloud)"/>
+    <param name="debug_output_cloud" 		value="$(arg debug_output_cloud)"/>
+  </node>
+<!---->
+
+</launch>

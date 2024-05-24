@@ -2,7 +2,7 @@
     <!-- Arguments -->
     <!-- Start the GUIs -->
     <arg name="start_gazebo" default="true"/>
-    <arg name="gazebo_gui"   default ="false"/>
+    <arg name="gazebo_gui"   default ="true"/>
     <arg name="start_rviz" default="false"/>
     
     <!-- Arm type -->
@@ -20,6 +20,8 @@
     <arg name="debug" default="false" />
     <arg name="paused" default="true"/>
 
+
+
     <!-- Start Gazebo -->
     <include file="$(find kortex_gazebo)/launch/start_gazebo.launch" if="$(arg start_gazebo)">
             <arg name="gui" value="$(arg gazebo_gui)"/>
@@ -30,33 +32,34 @@
     
     <!-- Initial position in Gazebo -->
     <arg name="right_x0" default="0"/>
-    <arg name="right_y0" default="0.4"/>
+    <arg name="right_y0" default="-0.4"/>
     <arg name="right_z0" default="0"/>
     <arg name="right_robot_name" default="my_$(arg arm)_right"/>
     <arg name="right_prefix" default="right_"/>
 
     <!-- Initial position in Gazebo -->
-    <arg name="left_x0" default="-0.4"/>
-    <arg name="left_y0" default="-0.4"/>
+    <arg name="left_x0" default="-0.005"/>
+    <arg name="left_y0" default="0.4"/>
     <arg name="left_z0" default="0"/>
     <arg name="left_robot_name" default="my_$(arg arm)_left"/>
     <arg name="left_prefix" default="left_"/>
 
-  <include file="$(find toy_assembly)/launch/iral_spawn_arm.launch" >   <!-- Initial position in Gazebo -->
+   
+  <include file="$(find toy_assembly)/launch/iral_spawn_arm.launch" >   
     <arg name="x0" value="$(arg left_x0)"/>
     <arg name="y0" value="$(arg left_y0)"/>
     <arg name="z0" value="$(arg left_z0)"/>
     <arg name="arm" value="$(arg arm)"/>
-    <arg name="dof" value="$(arg dof)"/> <!-- Number of degrees of freedom of the arm -->
-    <arg name="vision" value="$(arg vision)"/> <!-- True if the arm has a Vision module -->
+    <arg name="dof" value="$(arg dof)"/> 
+    <arg name="vision" value="$(arg vision)"/>
     <arg name="gripper" value="$(arg gripper)" />
     <arg name="robot_name" value="$(arg left_robot_name)"/>
     <arg name="prefix" value="$(arg left_prefix)"/>
-    <arg name="cyclic_data_publish_rate" value="$(arg cyclic_data_publish_rate)"/> <!--Hz-->
-    <arg name="start_delay_seconds" value="$(arg start_delay_seconds)"/> <!--Hz-->
+    <arg name="cyclic_data_publish_rate" value="$(arg cyclic_data_publish_rate)"/>
+    <arg name="start_delay_seconds" value="$(arg start_delay_seconds)"/> 
     <arg name="start_rviz" value="$(arg start_rviz)"/>
   </include>
-<!-- -->
+
 
   <include file="$(find toy_assembly)/launch/iral_spawn_arm.launch" >   
     <arg name="x0" value="$(arg right_x0)"/>
@@ -71,8 +74,11 @@
     <arg name="cyclic_data_publish_rate" value="$(arg cyclic_data_publish_rate)"/> 
     <arg name="start_delay_seconds" value="$(arg start_delay_seconds)"/> 
   </include>
-
   
-  <node name="dual_arm_transform" pkg="toy_assembly" type="dual_arm_transform.py" output="screen" >  </node>
+  <node name="dual_arm_transform" pkg="toy_assembly" type="dual_arm_transform.py" output="screen" />
   
+  <!--
+  <node name="dual_arm_transform_right" pkg="tf" type="static_transform_publisher" output="screen" args="$(arg right_x0) $(arg right_y0) $(arg right_z0) 0.0 0.0 0.0 world right_base_link  50"/>
+  <node name="dual_arm_transform_left" pkg="tf" type="static_transform_publisher" output="screen" args="$(arg left_x0) $(arg left_y0) $(arg left_z0) 0.0 0.0 0.0 world left_base_link  50"/>
+-->
 </launch>

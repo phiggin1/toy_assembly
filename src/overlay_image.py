@@ -54,7 +54,7 @@ class ImageSegment:
         with self.mutex:
             self.objects = []
             for i, pc in enumerate(obj_clusters.clusters):
-                #print("obj %d" % i)
+                print("obj %d" % i)
                 min_x = 1000.0
                 min_y = 1000.0
                 min_z = 1000.0
@@ -92,7 +92,7 @@ class ImageSegment:
                 obj["center_pix"] = center_pix
                 obj["center"] = center
                 self.objects.append(obj)
-                #rospy.loginfo(f"{i}, {center_pix}")
+                rospy.loginfo(f"{i}, {center_pix}")
                 #print(min_x, max_x)
                 #print(min_y, max_y)
                 #print(min_z, max_z)

@@ -7,26 +7,27 @@
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_right">
     <rosparam command="load" file="$(find toy_assembly)/config/real/servo-config-gen3_right.yaml" />
   </node> 
-     
-  <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_left">
-    <rosparam command="load" file="$(find toy_assembly)/config/real/servo-config-gen3_left.yaml" />
-  </node> 
- 
-
-
-  <group ns="my_gen3_left">
-    <node name="left_arm" pkg="toy_assembly" type="left_robot_arm.py" output="screen" />
-  </group>
-  <node name="kortex_hack_left" pkg="toy_assembly" type="kortex_hack.py" output="screen" >
-    <param name="prefix"  value="left" />  
-  </node>
-  
   <group ns="my_gen3_right">
     <node name="right_arm" pkg="toy_assembly" type="right_robot_arm.py" output="screen" />
   </group>
   <node name="kortex_hack_right" pkg="toy_assembly" type="kortex_hack.py" output="screen" >
     <param name="prefix"  value="right" />
   </node>
+
+  <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_left">
+    <rosparam command="load" file="$(find toy_assembly)/config/real/servo-config-gen3_left.yaml" />
+  </node> 
+   <group ns="my_gen3_left">
+    <node name="left_arm" pkg="toy_assembly" type="left_robot_arm.py" output="screen" />
+  </group>
+  <node name="kortex_hack_left" pkg="toy_assembly" type="kortex_hack.py" output="screen" >
+    <param name="prefix"  value="left" />  
+  </node>
+
+
+
+  
+
 
   <node name="overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  
     <param name="real"  value="True" />
@@ -64,9 +65,17 @@
   <node name="gen_trajectory" pkg="toy_assembly" type="demo_generate_trajectory.py" output="screen" >  </node>
 -->
 
+  <include file="$(find toy_assembly)/launch/pcl_segment_real.launch" > 
+    <arg name="arm" value="left"/>
+  </include>
 
+<!--
+  <include file="$(find toy_assembly)/launch/pcl_segment_real.launch" > 
+    <arg name="arm" value="right"/>
+  </include>
+-->
 
-
+<!--
 
   <arg name="minX" default="-1.0"/>
   <arg name="maxX" default="1.0"/>
@@ -113,5 +122,6 @@
     <param name="debug_output_cloud" 		value="$(arg debug_output_cloud_left)"/>
   </node>
  
- 
+ -->
+
 </launch>
