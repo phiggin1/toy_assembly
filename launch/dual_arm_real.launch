@@ -27,7 +27,7 @@ roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.
     <arg name="prefix" value="$(arg left_prefix)"/>
     <arg name="device" value="$(arg left_ip)"/>
   </include>
-  
+
 <!-- right arm driver + vision -->
   <include file="$(find toy_assembly)/launch/iral_kortex_driver.launch">
     <arg name="robot_name" value="$(arg right_robot_name)"/>
@@ -40,6 +40,7 @@ roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.
   </include>
 
   
+<!-- publish fixed transfrom between arms -->
   <node name="dual_arm_transform" pkg="tf" type="static_transform_publisher" output="screen" args="-0.005 0.8 0.0 0.0 0.0 0.0 right_base_link left_base_link 50"/>
   
 </launch>

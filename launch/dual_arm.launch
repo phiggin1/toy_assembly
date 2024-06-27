@@ -75,10 +75,8 @@
     <arg name="start_delay_seconds" value="$(arg start_delay_seconds)"/> 
   </include>
   
-  <node name="dual_arm_transform" pkg="toy_assembly" type="dual_arm_transform.py" output="screen" />
-  
-  <!--
+
   <node name="dual_arm_transform_right" pkg="tf" type="static_transform_publisher" output="screen" args="$(arg right_x0) $(arg right_y0) $(arg right_z0) 0.0 0.0 0.0 world right_base_link  50"/>
   <node name="dual_arm_transform_left" pkg="tf" type="static_transform_publisher" output="screen" args="$(arg left_x0) $(arg left_y0) $(arg left_z0) 0.0 0.0 0.0 world left_base_link  50"/>
--->
+
 </launch>

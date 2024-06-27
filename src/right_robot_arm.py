@@ -28,8 +28,11 @@ import json
 class Right_arm:
     def __init__(self):
         rospy.init_node("rightArm")
+        #org right starting pose
+        #self.start_pose = [0.0, 0.0, -1.0, 0.0, -2.0, 1.57]
 
-        self.start_pose = [0.0, 0.0, -1.0, 0.0, -2.0, 1.57]
+
+        self.start_pose = [0.0, 0.0, -1.57, 0.0, -1.57, 0.0]
         self.init_position()	
 
         self.finger_open = 0.01

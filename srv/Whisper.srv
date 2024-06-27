@@ -1,4 +1,5 @@
 std_msgs/String string
 std_msgs/String context
+int32 sample_rate
 ---
 string transcription

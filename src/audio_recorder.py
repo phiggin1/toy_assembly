@@ -32,7 +32,7 @@ while not rospy.is_shutdown():
     #get the float array
     float_array = np.fromstring(audio, dtype=np.float32)
     
-    print(float_array.shape)
+    rospy.loginfo(float_array.shape)
 
     float_array_msg = Float32MultiArray()
     float_array_msg.data = float_array

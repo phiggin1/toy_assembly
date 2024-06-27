@@ -7,8 +7,8 @@
   <arg name="minY" default="-1.0"/>
   <arg name="maxY" default="1.0"/>
   <arg name="minZ" default="-1.0"/>
-  <arg name="maxZ" default="1.0"/>
-  <arg name="leaf_size" default="0.005"/>
+  <arg name="maxZ" default="2.0"/>
+  <arg name="leaf_size" default="0.01"/>
 
   <arg name="distance_threshold" default="0.04"/>
 
@@ -42,7 +42,7 @@
     <remap from="~input" to="$(arg down_output_cloud)" />
     <remap from="~output" to="$(arg filtered_output_cloud)" />
   </node>
-
+<!--
   <node name= "$(arg arm)_object_segmentation" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
     <param name="distance_threshold"	value="$(arg distance_threshold)"/>
     <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
@@ -52,6 +52,6 @@
     <param name="output_cloud" 		value="$(arg output_cloud)"/>
     <param name="debug_output_cloud" 		value="$(arg debug_output_cloud)"/>
   </node>
-<!---->
+-->
 
 </launch>

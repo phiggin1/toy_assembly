@@ -14,6 +14,9 @@ from std_msgs.msg import Float32MultiArray
 from std_msgs.msg import MultiArrayDimension
 from multiprocessing import Lock
 
+import os
+import soundfile as sf
+
 class AdaClient:
     def __init__(self):
         rospy.init_node('ada_services')
@@ -30,27 +33,32 @@ class AdaClient:
         self.socket.bind("tcp://*:%s" % server_port)
         rospy.loginfo(f"Server listening on port:{server_port}")
 
-
         self.whisper_serv = rospy.Service('/get_transciption', Whisper, self.Whisper)
         self.clip_serv = rospy.Service('/get_clip_probabilities', CLIP, self.CLIP)
         self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
         self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
-
-
+        
         rospy.spin()
 
     def Whisper(self, request):
         if self.debug: rospy.loginfo('Whisper req recv')
+        sample_rate = request.sample_rate
+
+        now = rospy.Time.now().nsecs
+        tmp_audio_filename = os.path.join("/home/rivr/audio_test", f"{now}.wav")
+        audio = np.fromstring(request.string.data[1:-1], dtype=float, sep=',')
+
+        sf.write(tmp_audio_filename, audio, sample_rate)
 
         audio_json = str(request.string.data)
-        context = request.context.data
-
-        context = """What objects are you going to pick up, and what object should the robot pick up?\n<red_horse_front_legs>, <yellow_horse_back_legs>, <horse_body_blue>, <horse_body_red>, <horse_body_yellow>"""
-
-        rospy.loginfo(context)
+        context = ""
+        #context = request.context.data
+        #context = """What objects are you going to pick up, and what object should the robot pick up?\n<red_horse_front_legs>, <yellow_horse_back_legs>, <horse_body_blue>, <horse_body_red>, <horse_body_yellow>"""
+        #rospy.loginfo(f"context: {context}")
 
         msg = {"type":"whisper",
                "context":context,
+               "sample_rate":sample_rate,
                "data":audio_json
         }
 
@@ -61,7 +69,7 @@ class AdaClient:
         if self.debug: rospy.loginfo('Whisper recv from ada')
         print(resp)
         transcription = resp["text"]
-        rospy.loginfo(f"Whsiper transcription:{transcription}")
+        rospy.loginfo(f"Whisper transcription: '{transcription}'")
 
         response = WhisperResponse()
         response.transcription = transcription
