@@ -13,15 +13,15 @@ class GPTServ:
         rospy.init_node('gpt_service_node')
         
         
-        key_filename = "/home/phiggin1/ai.key"
+        key_filename = rospy.get_param("~key_file", "/home/phiggin1/ai.key")
         with open(key_filename, "rb") as key_file:
             key = key_file.read().decode("utf-8")
+            
         self.client = OpenAI(
             api_key = key,
         )
 
         self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
-        self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
         rospy.spin()
 
     def get_prompt_llm(self, statement):
@@ -55,9 +55,7 @@ class GPTServ:
 
         return messages
 
-    def chat_complete(self, statement):
-        print(statement)
-        messages = self.get_prompt(statement)
+    def chat_complete(self, messages):
         
         start_time = time.time_ns()
         print(f"{start_time/10**9} :\tSending query")
@@ -74,36 +72,30 @@ class GPTServ:
         print(f"latency: {(end_time-start_time)/(10**9)}")
         
         text = response.choices[0].message.content
-
-        '''
-        text = """Sure! Here is the dictionary with the objects we should pick up:
-
-{
-  "robot": "<horse_body_yellow>",
-  "human": "<red_horse_front_legs>"
-}"""'''
         
         print(text)
+
         return text
 
+    def encode_image(self, image):
+
+        encoded_image = base64.b64encode(image_file.read()).decode("utf-8")
     
-    def LLMText(self, req):
-        statement = req.text
-        text = self.chat_complete(statement)
-
-        resp = LLMTextResponse()
-        resp.text = text
-
-        return resp
-
     def LLMImage(self, req):
         statement = req.text
-        text = self.chat_complete(statement)
+        state = req.state
+        encoded_image = encode_image(req.image)
+
+        messages = self.get_prompt_llm(statement, encoded_image, state)
+
+        text = self.chat_complete(messages)
 
         resp = LLMTextResponse()
         resp.text = text
 
         return resp
+
+
 
 if __name__ == '__main__':
     gpt = GPTServ()

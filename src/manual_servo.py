@@ -143,7 +143,7 @@ class ManualServo:
         self.angular_vel = 0.2
         self.linear_vel = 0.5
 
-        self.twist_topic  = rospy.get_param("/twist_topic", "/my_gen3_"+self.arm_prefix+"/servo/delta_twist_cmds")
+        self.twist_topic  = rospy.get_param("/twist_topic", "/my_gen3_"+self.arm_prefix+"/workspace/delta_twist_cmds")
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
         rospy.loginfo(self.twist_topic)
 
@@ -209,6 +209,7 @@ class ManualServo:
         '''
         cmd = TwistStamped()
         cmd.header.frame_id = self.arm_prefix+"_end_effector_link"
+        #cmd.header.frame_id = self.arm_prefix+"_base_link"
         key = None
         keys = pygame.key.get_pressed()
         pressed = False

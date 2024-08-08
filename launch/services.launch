@@ -2,78 +2,75 @@
   <arg name="/use_sim_time" default="true"/>
   <arg name="debug" default="true"/>
 
-  <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
-    <param name="threshold"  value="0.01" />
-    <param name="silent_wait" value="3" />
-    <param name="max_duration"  value="15" />
-    <param name="debug"  value="$(arg debug)" />
-  </node>
-  <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" > </node>
-  <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
-<!--
-  <node name="llm" pkg="toy_assembly" type="llm_test2.py" output="screen" >  </node>
--->
-
+  <!-- Nodes for Right arm (servoing and control) -->
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_right">
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_right.yaml" />
   </node> 
   <group ns="my_gen3_right">
     <node name="right_arm" pkg="toy_assembly" type="right_robot_arm.py" output="screen" />
-  </group>
-     
+  </group> 
+
+  <!-- Nodes for Left arm (servoing and control) -->
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_left">
     <rosparam command="load" file="$(find toy_assembly)/config/servo-config-gen3_left.yaml" />
   </node> 
   <group ns="my_gen3_left">
     <node name="left_arm" pkg="toy_assembly" type="left_robot_arm.py" output="screen" />
   </group>
- 
-<!--
+
+  <node name="audio_manager" pkg="toy_assembly" type="audio.py" output="screen" >
+    <param name="threshold"  value="0.0135" />
+    <param name="silent_wait" value="2" />
+    <param name="max_duration"  value="30" />
+    <param name="debug"  value="$(arg debug)" />
+  </node>
+  <node name="transcribe" pkg="toy_assembly" type="transcribe.py" output="screen" ></node>
+
+  <node name="status" pkg="toy_assembly" type="status.py" output="screen" > </node>
+  <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" > </node>
+  <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
+
+
+
+  <arg name="arm" default="left"/>
+  <arg name="minX" default="-0.25"/>
+  <arg name="maxX" default=" 0.25"/>
+  <arg name="minY" default="-0.350"/>
+  <arg name="maxY" default=" 0.350"/>
+  <arg name="minZ" default=" 0.0"/>
+  <arg name="maxZ" default=" 1.25"/>
   <include file="$(find toy_assembly)/launch/pcl_segment.launch" > 
-    <arg name="arm" value="left"/>
-  </include>
-  <include file="$(find toy_assembly)/launch/pcl_segment.launch" > 
-    <arg name="arm" value="right"/>
+    <arg name="arm" value="left"/> 
+    <arg name="minX" value="$(arg minX)"/>
+    <arg name="maxX" value="$(arg maxX)"/>
+    <arg name="minY" value="$(arg minY)"/>
+    <arg name="maxY" value="$(arg maxY)"/>
+    <arg name="minZ" value="$(arg minZ)"/>
+    <arg name="maxZ" value="$(arg maxZ)"/>
   </include>
 
-  <include file="$(find pointcloud_concatenate)/launch/concat.launch" > 
-    <arg name="target_frame" default="left_camera_link" />
-    <param name="hz" value=".5" />
-    <arg name="cloud_in1" value="/unity/camera/right/depth/points_filtered" />
-    <arg name="cloud_in2" value="/unity/camera/left/depth/points_filtered" />
-    <arg name="cloud_out" value="cloud_concatenated" />
-  </include>
-    
-  <arg name="input_cloud" 		default="cloud_concatenated"/>
-  <arg name="output_cloud" 		default="output_cloud"/>
-  <arg name="debug_output_cloud" 		default="debug_output_cloud"/>
+  <arg name="input_cloud"        default="/unity/camera/left/depth/points_filtered"/>
+  <arg name="output_cloud"       default="/unity/camera/left/depth/object_clusters"/>  
+  <arg name="debug_output_cloud" default="/unity/camera/left/depth/objects"/>  
 
   <arg name="distance_threshold" default="0.04"/>
-  <arg name="cluster_tolerance" default="0.03"/>
-  <arg name="min_cluster_size" default="30"/>
-  <arg name="max_cluster_size" default="500"/>
+  <arg name="cluster_tolerance"  default="0.03"/>
+  <arg name="min_cluster_size"   default="30"/>
+  <arg name="max_cluster_size"   default="1000"/>
   <node name= "object_segmentation" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
-    <param name="distance_threshold"	value="$(arg distance_threshold)"/>
-    <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
-    <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>
-    <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
-    <param name="input_cloud" 		value="$(arg input_cloud)"/>
-    <param name="output_cloud" 		value="$(arg output_cloud)"/>
-    <param name="debug_output_cloud" 		value="$(arg debug_output_cloud)"/>
-  </node>
- 
-
-
-
-  <node name="right_overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  
-    <arg name="real" value="false"/>
-    <arg name="arm" value="right"/>
+    <param name="distance_threshold" value="$(arg distance_threshold)"/>
+    <param name="cluster_tolerance"	 value="$(arg cluster_tolerance)"/>
+    <param name="min_cluster_size"	 value="$(arg min_cluster_size)"/>
+    <param name="max_cluster_size"	 value="$(arg max_cluster_size)"/>
+    <param name="input_cloud" 		   value="$(arg input_cloud)"/>
+    <param name="output_cloud"       value="$(arg output_cloud)"/>
+    <param name="debug_output_cloud" value="$(arg debug_output_cloud)"/>
   </node>
   <node name="left_overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  
-    <arg name="real" value="false"/>
-    <arg name="arm" value="left"/>
+    <param name="real" value="false"/>
+    <param name="arm" value="left"/>
   </node>
--->
+<!-- -->
 
 <!--
   <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" >  </node>
@@ -83,13 +80,6 @@
   <node name="gaze" pkg="toy_assembly" type="gaze.py" output="screen" >  </node>
   <node name="gaze_target" pkg="toy_assembly" type="gaze_target.py" output="screen" >  </node>
   <node name="bayesgaze" pkg="toy_assembly" type="bayesgaze.py" output="screen" >  </node>
-
-  <node name="slot_detect" pkg="toy_assembly" type="ros_slot_detection.py" output="screen" >  </node>
-
-  <node name="robot_part_tracking" pkg="toy_assembly" type="robot_part_tracking.py" output="screen" >  </node>
-  <node name="human_part_tracking" pkg="toy_assembly" type="human_part_tracking.py" output="screen" >  </node>
-  <node name="gen_trajectory" pkg="toy_assembly" type="demo_generate_trajectory.py" output="screen" >  </node>
-
 
 -->
 

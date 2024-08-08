@@ -40,19 +40,20 @@ class AudioSpeechToText:
         self.snd_started = False
         self.audio_clip = []
 
-        #self.robot_statments = rospy.Subscriber("robot_spp")
+        #self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
 
-        rospy.wait_for_service('get_transciption')        
-        self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
-        self.audio_subscriber = rospy.Subscriber("/audio", RivrAudio, self.audio_cb)
+        self.utterance_publisher = rospy.Publisher("/utterance", RivrAudio, queue_size=10)
         self.transript_publisher = rospy.Publisher("/transcript", Transcription, queue_size=10)
+        self.status_pub = rospy.Publisher("/status", String, queue_size=10)
 
+        self.audio_subscriber = rospy.Subscriber("/audio", RivrAudio, self.audio_cb)
+        print(self.audio_subscriber )
         rospy.spin()
     
     def audio_cb(self, msg):
-        float_array = msg.data
+        float_array = list(msg.data)
         self.sample_rate = msg.sample_rate
-        #if self.debug: rospy.loginfo(f"msg recv, max volumn:{max(float_array)}")
+        if self.debug: rospy.loginfo(f"msg recv, max volumn:{max(float_array)}, sample_rate:{self.sample_rate}")
         self.process_audio(float_array)
     
     def process_audio(self, data):
@@ -63,57 +64,37 @@ class AudioSpeechToText:
         if not silent and not self.snd_started:
             self.snd_started = True
             self.num_silent = 0
-            self.audio_clip = []
+            self.audio_clip = self.prev
+            rospy.loginfo("LISTENING")
+            self.status_pub.publish("LISTENING")
         elif silent and self.snd_started:
             self.num_silent += 1
         elif not silent and self.snd_started:
             self.num_silent = 0           
             if self.debug: rospy.loginfo(f"num_silent:{self.num_silent}")
 
-
         if self.snd_started:
             self.audio_clip.extend(data)
 
         if self.snd_started and self.num_silent > self.silent_wait:     #enough quite time that they stopped speaking
             if self.debug: rospy.loginfo(f"got audio clip, num_silent:{self.num_silent}")
-            self.get_transcription(self.audio_clip)
-            self.snd_started = False
-            self.num_silent = 0
-            self.audio_clip = []
-        elif len(self.audio_clip)>(self.sample_rate*self.max_duration) and self.snd_started:    #hit the maxiumum clip duration
+            self.get_utterence()
+        elif self.snd_started and len(self.audio_clip)>(self.sample_rate*self.max_duration) :    #hit the maxiumum clip duration
             if self.debug: rospy.loginfo("max clip length")
-            self.get_transcription(self.audio_clip)
-            self.snd_started = False
-            self.num_silent = 0
-            self.audio_clip = []
+            self.get_utterence()
 
-    def get_transcription(self, audio):
-            request  = WhisperRequest()
-            audio_data = json.dumps(audio)
-            request.string.data = audio_data
-            request.sample_rate = self.sample_rate
+        self.prev = data
 
-            now = rospy.Time.now()
-            duration = len(audio)/self.sample_rate
+    def get_utterence(self):
+        self.status_pub.publish("THINKING")
+        utterance = RivrAudio()
+        utterance.sample_rate = self.sample_rate
+        utterance.data = self.audio_clip
+        self.utterance_publisher.publish(utterance)
 
-            #log audio file
-            audio = np.fromstring(audio_data[1:-1], dtype=float, sep=',')
-    
-            transcript = self.whisper_serv(request)
-            rospy.loginfo(f"transcription: '{transcript.transcription}'")
-            #publish full audio message (wavbytes and text)
-
-            t = Transcription()
-            t.audio_recieved = now
-            t.duration = duration
-            t.transcription = transcript.transcription
-            #t.audio = audio_data
-            self.transript_publisher.publish(t)
-            
-
-            self.snd_started = False
-            self.num_silent = 0
-            self.audio_clip = []
+        self.snd_started = False
+        self.num_silent = 0
+        self.audio_clip = []
 
 
 if __name__ == '__main__':

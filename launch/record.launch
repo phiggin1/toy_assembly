@@ -28,6 +28,7 @@
        /my_gen3_right/joint_states  
        /scene/transform
        /audio
+       /transcript
        /buttons"
 />
 <!--
