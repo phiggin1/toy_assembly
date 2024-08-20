@@ -2,16 +2,12 @@
 
 import zmq
 import json
-from multiprocessing import Lock
 from copy import deepcopy
-
 import rospy
 import tf
 from cv_bridge import CvBridge
 from toy_assembly.msg import Transcription, ObjectImage
-from toy_assembly.srv import TTS, TTSResponse
 from toy_assembly.srv import LLMImage, LLMImageRequest
-from toy_assembly.srv import LLMText, LLMTextRequest
 from toy_assembly.srv import MoveITPose
 from geometry_msgs.msg import TwistStamped, PoseStamped, PointStamped
 from std_srvs.srv import Trigger 
@@ -30,6 +26,13 @@ class AssemblyClient:
         rospy.init_node('toy_assembly_main')
         self.cvbridge = CvBridge()
         self.listener = tf.TransformListener()
+
+        self.real = rospy.get_param("~real", True)
+
+        self.num_msgs = 20
+        self.rate = rospy.Rate(20)
+        self.speed = 0.1
+        self.angular_speed = 1.0
 
         self.state = "LOW_LEVEL"
         self.check = False
@@ -82,8 +85,6 @@ class AssemblyClient:
         rospy.loginfo("sending to gpt")
 
         overlay_topic = "/left_object_images"
-        #overlay_topic = "/left_camera/color/overlay_raw"
-
         obj_img = rospy.wait_for_message(overlay_topic, ObjectImage)
         frame = obj_img.header.frame_id
         image = obj_img.image
@@ -102,8 +103,25 @@ class AssemblyClient:
         req.objects = objects
         req.check = self.check
         req.image = image
-        correct = False
 
+        rospy.loginfo(f"init: {req.text}, {req.objects}, {req.check}")
+
+        resp = self.llm_text_srv(req)
+        #Should do some error checking
+        # in future
+        json_dict = extract_json(resp.text)
+        rospy.loginfo(f"init\n{json_dict}")
+        obj = json_dict["object"]
+        indx = objects.index(obj)
+        self.target_position = opject_positions[indx]
+        print(self.target_position)
+        self.indicate(self.target_position)
+        self.grab(self.target_position)
+        #Reset the state
+        self.state = "LOW_LEVEL"
+
+        '''
+        correct = False
         if not self.check:
             rospy.loginfo(f"init: {req.text}, {req.objects}, {req.check}")
             resp = self.llm_text_srv(req)
@@ -141,6 +159,7 @@ class AssemblyClient:
             self.indicate(self.target_position)
             self.robot_speech_pub.publish("This one?")
             self.check = True
+        '''
 
     def low_level(self, text):
         action = self.send_ada(text)
@@ -150,8 +169,8 @@ class AssemblyClient:
             return
 
         if "PICKUP" in action:
-            #self.state = "HIGH_LEVEL"
-            #self.high_level(text)            
+            self.state = "HIGH_LEVEL"
+            self.high_level(text)            
             rospy.loginfo("TESTING")
         else:   
             rospy.loginfo(f"state: {self.state}")
@@ -191,8 +210,6 @@ class AssemblyClient:
         return action
 
     def ee_move(self, action):
-        speed = 0.1
-        angular_speed = 1.0
 
         #Servo in EE base_link frame
         move = False
@@ -207,56 +224,56 @@ class AssemblyClient:
 
         if "PITCH_UP" in action:
             rospy.loginfo("PITCH_UP")
-            pitch =-angular_speed
+            pitch =-self.angular_speed
             move = True
         elif "PITCH_DOWN" in action:
             rospy.loginfo("PITCH_DOWN")
-            pitch = angular_speed
+            pitch = self.angular_speed
             move = True
 
         if  "ROLL_LEFT" in action:
             rospy.loginfo("ROLL_LEFT")
-            roll =-angular_speed
+            roll =-self.angular_speed
             move = True
         elif "ROLL_RIGHT" in action:
             rospy.loginfo("ROLL_RIGHT")
-            roll = angular_speed
+            roll = self.angular_speed
             move = True
         
         if "YAW_LEFT" in action:
             rospy.loginfo("YAW_LEFT")
-            yaw =-angular_speed
+            yaw =-self.angular_speed
             move = True
         elif "YAW_RIGHT" in action:
             rospy.loginfo("YAW_RIGHT")
-            yaw = angular_speed
+            yaw = self.angular_speed
             move = True
     
         if "MOVE_FORWARD" in action:
             rospy.loginfo("MOVE_FORWARD")
-            x = speed
+            x = self.speed
             move = True
         elif "MOVE_BACKWARD" in action:
             rospy.loginfo("MOVE_BACKWARD")
-            x =-speed
+            x =-self.speed
             move = True
 
         if "MOVE_RIGHT" in action:
             rospy.loginfo("MOVE_RIGHT")
-            y =-speed
+            y =-self.speed
             move = True
         elif "MOVE_LEFT" in action:
             rospy.loginfo("MOVE_LEFT")
-            y = speed
+            y = self.speed
             move = True
         
         if "MOVE_UP" in action:
             rospy.loginfo("MOVE_UP")
-            z = speed
+            z = self.speed
             move = True
         elif "MOVE_DOWN" in action:
             rospy.loginfo("MOVE_DOWN")
-            z =-speed
+            z =-self.speed
             move = True
         
         if move:
@@ -280,10 +297,7 @@ class AssemblyClient:
         angular_cmd.twist.angular.y = yaw
         angular_cmd.twist.angular.z = roll
 
-        rospy.loginfo(f"{x}, {y}, {z}, {roll}, {pitch}, {yaw}")
-
-        num_msgs = 20
-        rate = rospy.Rate(20)
+        rospy.loginfo(f"\ntranslate x: {x}, y: {y}, z:{z} \nrotate: roll: {roll}, pitch: {pitch}, yaw: {yaw}")
 
         #splitting up rotation from translation for now
         # try and add in transform from ee frame to base
@@ -292,24 +306,24 @@ class AssemblyClient:
         # rotation in ee frame compared to base
 
         if (x != 0.0 or y != 0.0 or z != 0.0):
-            rospy.loginfo("translate")
-            for i in range(num_msgs):
+            rospy.loginfo(f"translate")
+            for i in range(self.num_msgs):
                 linear_cmd.header.stamp = rospy.Time.now()
                 self.cart_vel_pub.publish(linear_cmd)
-                rate.sleep()
+                self.rate.sleep()
 
         self.send_zero_twist_cmd()
 
         if (roll != 0.0 or pitch != 0.0 or yaw != 0.0):
-            rospy.loginfo("rotate")
-            for i in range(num_msgs):
+            rospy.loginfo(f"rotate")
+            for i in range(self.num_msgs):
                 angular_cmd.header.stamp = rospy.Time.now()
                 self.cart_vel_pub.publish(angular_cmd)
-                rate.sleep()
+                self.rate.sleep()
 
         self.send_zero_twist_cmd()
 
-    def send_zero_twist_cmd():
+    def send_zero_twist_cmd(self):
         zero_cmd = TwistStamped()
         zero_cmd.header.frame_id ="right_end_effector_link"
         zero_cmd.twist.linear.x = 0
@@ -322,7 +336,7 @@ class AssemblyClient:
         for i in range(4):
             zero_cmd.header.stamp = rospy.Time.now()
             self.cart_vel_pub.publish(zero_cmd)
-            rate.sleep()
+            self.rate.sleep()
 
     def indicate(self, position):
         rospy.loginfo(f"indicate:{position.header.frame_id} {position.point.x}, {position.point.y}, {position.point.z}")
@@ -344,9 +358,9 @@ class AssemblyClient:
         final_pose.pose.position = deepcopy(position.point)
         final_pose.pose.orientation.x = -1
         final_pose.pose.orientation.w = 0
-        final_pose.pose.position.z -= 0.025
+        final_pose.pose.position.z -= 0.03
 
-        min_safe_height = 0.085
+        min_safe_height = 0.065
         final_pose.pose.position.z = max(min_safe_height, final_pose.pose.position.z)
 
         self.open()

@@ -136,6 +136,7 @@ class Right_arm:
         ee_position = self.arm_move_group.get_current_pose().pose.position
         
 
+
         l_x = twist.twist.linear.x
         l_y = twist.twist.linear.y
         l_z = twist.twist.linear.z
@@ -144,24 +145,46 @@ class Right_arm:
         a_y = twist.twist.angular.y
         a_z = twist.twist.angular.z
         
+        rospy.loginfo(f"ee pos.z: {ee_position.z} l_z:{l_z}")
+
         if self.check_collision() and l_y > 0:
-            rospy.loginfo(f"arms collisiont {l_y}")
+            rospy.loginfo(f"arms collision: {l_y}")
             l_y = 0.0
+
         if ee_position.x > 0.6 and l_x > 0:
             rospy.loginfo(f"too far forward, {l_x}, {ee_position.x}")
             l_x = 0.0
-        if ee_position.z < 0.1 and l_z < 0:
+
+        if ee_position.z < 0.05 and l_z < 0:
             rospy.loginfo(f"too low, {l_z}, {ee_position.z}")
-            l_z = 0
+            l_z = 0.0
+        elif ee_position.z < 0.15 and l_z < 0:
+            l_z = 0.3*l_z
+            rospy.loginfo(f"nearing table slowing down low, {l_z}, {ee_position.z}")
+        elif ee_position.z < 0.3 and l_z < 0:
+            l_z = 0.6*l_z
+            rospy.loginfo(f"getting low slowing down, {l_z}, {ee_position.z}")
+
+
+        rospy.loginfo(f"after ee pos.z: {ee_position.z} l_z:{l_z}")
 
         new_twist = TwistStamped()
-        new_twist.header = twist.header
+        new_twist.header.frame_id = twist.header.frame_id
+        new_twist.header.seq = twist.header.seq
+        new_twist.header.stamp = rospy.Time.now()
         new_twist.twist.linear.x = l_x
         new_twist.twist.linear.y = l_y
         new_twist.twist.linear.z = l_z
         new_twist.twist.angular.x = a_x
         new_twist.twist.angular.y = a_y
         new_twist.twist.angular.z = a_z
+
+        '''
+        rospy.loginfo(f"right arm controller \n twist: {twist.header.frame_id}")
+        rospy.loginfo(f"right arm controller \n new_twist: {new_twist.header.frame_id}")
+        rospy.loginfo(f"right arm controller \n twist: {twist.twist}")
+        rospy.loginfo(f"right arm controller \n new_twist: {new_twist.twist}")
+        '''
 
         self.twist_pub.publish(new_twist)
 
@@ -179,25 +202,33 @@ class Right_arm:
         print(f"planning frame:{self.planning_frame}")
 
         rospy.sleep(2)
+        
         table_pose = PoseStamped()
-        table_pose.header.frame_id = "base_link"
+        table_pose.header.frame_id = "world"
         table_pose.pose.position.x = 0.0
         table_pose.pose.position.y = 0.0
-        table_pose.pose.position.z = 0.13
+        table_pose.pose.position.z = -0.5
         table_pose.pose.orientation.w = 1.0
-        table_name = "table"
-        self.scene.add_box(table_name, table_pose, size=(5.0, 5.0, 1.0))
-        print(table_name, self.wait_for_scene_update(table_name, 4))
-
+        self.scene.add_box("table", table_pose, size=(2.0, 3.0, 1.0))
+        print("table", self.wait_for_scene_update("table", 4))
+        
         person_pose = PoseStamped()
-        person_pose.header.frame_id = "base_link"
-        person_pose.pose.position.x = 1.6
-        person_pose.pose.position.y = 0.0
+        person_pose.header.frame_id = "world"
+        person_pose.pose.position.x = 1.75
+        person_pose.pose.position.y = 0.4
         person_pose.pose.position.z = 0.0
         person_pose.pose.orientation.w = 1.0
-        person_name = "person"
-        self.scene.add_box(person_name, person_pose, size=(1.0, 5.0, 5.0))
-        print(person_name, self.wait_for_scene_update(person_name, 4))
+        self.scene.add_box("person", person_pose, size=(0.5, 3.0, 2.0))
+        print("person", self.wait_for_scene_update("person", 4))
+        
+        other_arm_pose = PoseStamped()
+        other_arm_pose.header.frame_id = "world"
+        other_arm_pose.pose.position.x = 0.0
+        other_arm_pose.pose.position.y = 0.4
+        other_arm_pose.pose.position.z = 0.4125
+        other_arm_pose.pose.orientation.w = 1.0
+        self.scene.add_box("other_arm", other_arm_pose, size=(0.85, 0.85, 0.85))
+        print("other_arm", self.wait_for_scene_update("other_arm", 4))
 
         self.gripper_group_name = "arm"
         self.gripper_move_group = moveit_commander.MoveGroupCommander(self.gripper_group_name)

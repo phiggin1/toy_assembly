@@ -26,7 +26,9 @@
   </node>
   <node name="transcribe" pkg="toy_assembly" type="transcribe.py" output="screen" ></node>
 
+   
   <node name="status" pkg="toy_assembly" type="status.py" output="screen" > </node>
+  
   <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" > </node>
   <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
 

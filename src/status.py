@@ -4,8 +4,9 @@ import json
 import rospy
 from std_msgs.msg import String
 from toy_assembly.msg import Transcription
-
-
+import numpy as np
+import cv2
+import matplotlib.pyplot as plt
 
 class Status:
     def __init__(self):
@@ -40,6 +41,34 @@ class Status:
                     msg_text["human"] = self.human_text
             else:
                 msg_text["human"] = ""
+
+            #BGR color
+            if self.status == "LISTENING":
+                #yellow
+                color = (33, 222, 255)
+            elif self.status == "THINKING":
+                #red
+                color = (0, 0, 255)
+            else:
+                #green
+                color = (0, 255, 0)
+                
+            thickness = 2
+            status_img = np.zeros((480, 640, 3))
+            start_point = (5,5)
+            end_point = (635, 65)
+            cv2.rectangle(status_img, start_point, end_point, color, -1)
+            
+            font = cv2.FONT_HERSHEY_DUPLEX 
+            org = (50, 50)
+            fontScale = 1.5
+            cv2.putText(status_img, self.status, org, font, fontScale, (255,255,255), thickness, cv2.LINE_AA)
+  
+            b,g,r = cv2.split(status_img)
+            frame_rgb = cv2.merge((r,g,b))
+            plt.imshow(frame_rgb)
+            plt.axis('off')            
+            plt.show()
 
             msg = String()
             msg.data = json.dumps(msg_text)

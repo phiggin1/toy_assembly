@@ -53,7 +53,7 @@ class AudioSpeechToText:
     def audio_cb(self, msg):
         float_array = list(msg.data)
         self.sample_rate = msg.sample_rate
-        if self.debug: rospy.loginfo(f"msg recv, max volumn:{max(float_array)}, sample_rate:{self.sample_rate}")
+        #if self.debug: rospy.loginfo(f"msg recv, max volumn:{max(float_array)}, sample_rate:{self.sample_rate}")
         self.process_audio(float_array)
     
     def process_audio(self, data):

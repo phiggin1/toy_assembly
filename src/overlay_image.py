@@ -32,7 +32,7 @@ class ImageSegment:
 
         if self.real:
             cam_info_topic = f"/{self.arm}_camera/color/camera_info"
-            rgb_image_topic = f"/{self.arm}_camera/color/image_raw"
+            rgb_image_topic = f"/{self.arm}_camera/color/image_rect_color"
             output_image_topic = f"/{self.arm}_camera/color/overlay_raw"
             obj_cluster_topic = f"/{self.arm}_camera/depth_registered/object_clusters"
         else:

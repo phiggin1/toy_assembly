@@ -1,27 +1,15 @@
 #!/usr/bin/env python3
 
-import zmq
-import numpy as np
 import io
 import cv2
 import time
 from copy import deepcopy
-
 from openai import OpenAI
-import json
 import base64
-from multiprocessing import Lock
 import rospy
 import tf
 from cv_bridge import CvBridge
-from geometry_msgs.msg import TwistStamped, PoseStamped, PointStamped
-from std_msgs.msg import String
-from toy_assembly.msg import Transcription
-from toy_assembly.msg import ObjectImage
-from toy_assembly.srv import MoveITPose
-from toy_assembly.srv import TTS, TTSResponse
-from toy_assembly.srv import LLMText, LLMTextRequest, LLMTextResponse
-from toy_assembly.srv import LLMImage, LLMImageRequest, LLMImageResponse
+from toy_assembly.srv import LLMImage
 
 class LLMClient:
     def __init__(self):
