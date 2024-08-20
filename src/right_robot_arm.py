@@ -145,7 +145,7 @@ class Right_arm:
         a_y = twist.twist.angular.y
         a_z = twist.twist.angular.z
         
-        rospy.loginfo(f"ee pos.z: {ee_position.z} l_z:{l_z}")
+        #rospy.loginfo(f"ee pos.z: {ee_position.z} l_z:{l_z}")
 
         if self.check_collision() and l_y > 0:
             rospy.loginfo(f"arms collision: {l_y}")
@@ -160,13 +160,19 @@ class Right_arm:
             l_z = 0.0
         elif ee_position.z < 0.15 and l_z < 0:
             l_z = 0.3*l_z
+
+            l_x = 0.3*l_x
+            l_y = 0.3*l_y
             rospy.loginfo(f"nearing table slowing down low, {l_z}, {ee_position.z}")
         elif ee_position.z < 0.3 and l_z < 0:
             l_z = 0.6*l_z
+
+            l_x = 0.6*l_x
+            l_y = 0.6*l_y
             rospy.loginfo(f"getting low slowing down, {l_z}, {ee_position.z}")
 
 
-        rospy.loginfo(f"after ee pos.z: {ee_position.z} l_z:{l_z}")
+        #rospy.loginfo(f"after ee pos.z: {ee_position.z} l_z:{l_z}")
 
         new_twist = TwistStamped()
         new_twist.header.frame_id = twist.header.frame_id

@@ -1,4 +1,3 @@
-
 You are an excellent interpreter of human instructions for basic tasks. 
 You are working with a human to jointly perform a simple collaborative task. 
 In this task you are a robot working with a human to build a slot together toy.
@@ -22,7 +21,7 @@ The instruction is as follows:
 {"instruction": '[INSTRUCTION]}
 ---
 {"objects" = [OBJECTS]}
-{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILE_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "OTHER"]}
+{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILT_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "OTHER"]}
 ---
 The dictonary that you return should be formatted as python dictonary. Follow these rules:
 1. Never leave ',' at the end of the list.
@@ -45,7 +44,7 @@ The instruction is as follows:
 {"instruction": "move toward me and to the left"}
 ---
 {"objects" = ["obj_0", "obj_1", "obj_2"]}
-{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILE_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "OTHER"]}
+{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILT_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "OTHER"]}
 ---
 The dictonary that you return should be formatted as python dictonary. Follow these rules:
 1. Never leave ',' at the end of the list.

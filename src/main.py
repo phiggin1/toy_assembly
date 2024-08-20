@@ -64,12 +64,11 @@ class AssemblyClient:
             self.text_cb(transcription)
 
     def text_cb(self, transcript):
+        if self.debug: rospy.loginfo("========================================================") 
         rospy.loginfo("THINKING")
         self.status_pub.publish("THINKING")
-
-        if self.debug: rospy.loginfo("========================================================") 
-        if self.debug: rospy.loginfo(f"{transcript}")
         if self.debug: rospy.loginfo(f"state: {self.state}")
+        if self.debug: rospy.loginfo(f"{transcript}")
 
         transcript =  transcript.transcription
         if self.state == "HIGH_LEVEL":
@@ -82,8 +81,6 @@ class AssemblyClient:
         if self.debug: rospy.loginfo("--------------------------------------------------------") 
 
     def high_level(self, text):
-        rospy.loginfo("sending to gpt")
-
         overlay_topic = "/left_object_images"
         obj_img = rospy.wait_for_message(overlay_topic, ObjectImage)
         frame = obj_img.header.frame_id
@@ -104,62 +101,22 @@ class AssemblyClient:
         req.check = self.check
         req.image = image
 
-        rospy.loginfo(f"init: {req.text}, {req.objects}, {req.check}")
-
         resp = self.llm_text_srv(req)
         #Should do some error checking
         # in future
         json_dict = extract_json(resp.text)
         rospy.loginfo(f"init\n{json_dict}")
-        obj = json_dict["object"]
-        indx = objects.index(obj)
-        self.target_position = opject_positions[indx]
-        print(self.target_position)
-        self.indicate(self.target_position)
-        self.grab(self.target_position)
-        #Reset the state
-        self.state = "LOW_LEVEL"
 
-        '''
-        correct = False
-        if not self.check:
-            rospy.loginfo(f"init: {req.text}, {req.objects}, {req.check}")
-            resp = self.llm_text_srv(req)
-            #Should do some error checking
-            # in future
-            json_dict = extract_json(resp.text)
-            rospy.loginfo(f"init\n{json_dict}")
-            obj = json_dict["object"]
-            indx = objects.index(obj)
-            self.target_position = opject_positions[indx]
-            print(self.target_position)
+        action = None
+        if "action" in json_dict:
+            action = json_dict["action"]
         else:
-            rospy.loginfo(f"check: {req.text}, {req.objects}, {req.check}")
-            resp = self.llm_check_srv(req)
-            #Should do some error checking
-            # in future
-            json_dict = extract_json(resp.text)
-            rospy.loginfo(f"check\n{json_dict}")
-            if json_dict["correct"] == "True":
-                correct = True
-    
-        rospy.loginfo(correct)
-        rospy.loginfo("------")
+            return
 
-        if correct:
-            print(self.target_position)
-            self.grab(self.target_position)
-            #Reset the state
-            self.check = False
-            self.state = "LOW_LEVEL"
-        else:
-            obj = json_dict["object"]
-            indx = objects.index(obj)
-            self.target_position = opject_positions[indx]
-            self.indicate(self.target_position)
-            self.robot_speech_pub.publish("This one?")
-            self.check = True
-        '''
+        if "PICKUP" in action:
+            self.pickup(json_dict)
+        else:   
+            self.ee_move(action)
 
     def low_level(self, text):
         action = self.send_ada(text)
@@ -187,8 +144,6 @@ class AssemblyClient:
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
 
-        if self.debug: rospy.loginfo('LLM  recv from ada') 
-
         if "error" in resp:
             rospy.loginfo(resp["error"])
             return None
@@ -208,6 +163,17 @@ class AssemblyClient:
             action = json_dict["action"]
 
         return action
+    
+    def pickup(self, json_dict, objects, opject_positions):
+        self.open()
+        obj = json_dict["object"]
+        indx = objects.index(obj)
+        self.target_position = opject_positions[indx]
+        print(self.target_position)
+        self.indicate(self.target_position)
+        self.grab(self.target_position)
+        #Reset the state
+        self.state = "LOW_LEVEL"
 
     def ee_move(self, action):
 
@@ -340,7 +306,7 @@ class AssemblyClient:
 
     def indicate(self, position):
         rospy.loginfo(f"indicate:{position.header.frame_id} {position.point.x}, {position.point.y}, {position.point.z}")
-        self.open()
+        #self.open()
         stamped_pose = PoseStamped()
         stamped_pose.header = position.header
         stamped_pose.pose.position = deepcopy(position.point)
@@ -349,7 +315,7 @@ class AssemblyClient:
         stamped_pose.pose.position.z += 0.125
         self.debug_pose_pub.publish(stamped_pose)
         self.right_arm_move_to_pose(stamped_pose)
-        self.close()
+        #self.close()
 
     def grab(self, position):
         rospy.loginfo(f"grab:{position.header.frame_id} {position.point.x}, {position.point.y}, {position.point.z}")
@@ -401,7 +367,6 @@ class AssemblyClient:
     def close(self):
         service_name = "/my_gen3_right/close_hand"
         rospy.wait_for_service(service_name)
-        print(service_name)
         try:
             close_hand = rospy.ServiceProxy(service_name, Trigger)
             resp = close_hand()
@@ -412,7 +377,6 @@ class AssemblyClient:
     def open(self):
         service_name = "/my_gen3_right/open_hand"
         rospy.wait_for_service(service_name)
-        print(service_name)
         try:
             open_hand = rospy.ServiceProxy(service_name, Trigger)
             resp = open_hand()

@@ -39,7 +39,7 @@ class AudioSpeechToText:
         self.num_silent = 0
         self.snd_started = False
         self.audio_clip = []
-
+        self.prev = []
         #self.whisper_serv = rospy.ServiceProxy('get_transciption', Whisper)
 
         self.utterance_publisher = rospy.Publisher("/utterance", RivrAudio, queue_size=10)
@@ -65,13 +65,12 @@ class AudioSpeechToText:
             self.snd_started = True
             self.num_silent = 0
             self.audio_clip = self.prev
-            rospy.loginfo("LISTENING")
             self.status_pub.publish("LISTENING")
         elif silent and self.snd_started:
             self.num_silent += 1
         elif not silent and self.snd_started:
             self.num_silent = 0           
-            if self.debug: rospy.loginfo(f"num_silent:{self.num_silent}")
+            #if self.debug: rospy.loginfo(f"num_silent:{self.num_silent}")
 
         if self.snd_started:
             self.audio_clip.extend(data)

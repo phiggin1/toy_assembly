@@ -87,7 +87,8 @@ Understood?
 """
         prompt = """
 Start working. 
-For a given statement determine which object the human is refering to.
+For a given statement determine what action the robot should take.
+If the "PICKUP" action is chosen there must be a "object" key in the returned dictonary with the object from the list below as the value.
 Return only a single object from the list of objects provided.
 Resume using the following instruction and the objects in the provided image.
 
@@ -96,12 +97,13 @@ The instruction is as follows:
 ---
 {"instruction": '[INSTRUCTION]}
 ---
-"objects" = [OBJECTS]
+{"objects" = [OBJECTS]}
+{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILT_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "OTHER"]}
 ---
 The dictonary that you return should be formatted as python dictonary. Follow these rules:
 1. Never leave ',' at the end of the list.
 2. All keys of the dictionary should be double-quoted.
-3. Insert ``` at the beginning and the end of the dicti
+3. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
 """
         instruction = deepcopy(prompt)
         if instruction.find('[INSTRUCTION]') != -1:
