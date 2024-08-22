@@ -15,7 +15,7 @@ class AudioStreamer:
         CHANNELS = 1 
         RATE = 48000
         CHUNK = 1024
-        publish_rate = 4
+        publish_rate = 2
 
         print(f"rate: {RATE}hz, format: {FORMAT}, publish rate:{publish_rate}hz")
 
@@ -47,7 +47,7 @@ class AudioStreamer:
             
             if t > next_publish:
                 #publish
-                rospy.loginfo(f"shape: {buffer.shape}, max: {np.max(buffer)}")
+                #rospy.loginfo(f"shape: {buffer.shape}, max: {np.max(buffer)}")
                 audio_msg.data = buffer
                 self.pub.publish(audio_msg)
                 next_publish = t + rospy.Duration(dt)
