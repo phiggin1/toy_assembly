@@ -20,7 +20,7 @@
 
   <node name="audio_manager" pkg="toy_assembly" type="audio.py" output="screen" >
     <param name="threshold"  value="0.0135" />
-    <param name="silent_wait" value="2" />
+    <param name="silent_wait" value="1" />
     <param name="max_duration"  value="30" />
     <param name="debug"  value="$(arg debug)" />
   </node>

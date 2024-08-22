@@ -114,7 +114,7 @@ class AssemblyClient:
             return
 
         if "PICKUP" in action:
-            self.pickup(json_dict)
+            self.pickup(json_dict, objects, opject_positions)
         else:   
             self.ee_move(action)
 
