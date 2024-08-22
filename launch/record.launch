@@ -1,27 +1,33 @@
 <launch>
- 
+ <arg name="prefix" default="0"/>
+
+  <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  </node>
+
+
  <node pkg="rosbag" type="record" name="toy_record"
        args="record 
+       -o $(arg prefix)
+       
        /left_camera/color/camera_info
        /left_camera/color/image_raw
-
        /left_camera/depth_registered/sw_registered/camera_info
        /left_camera/depth_registered/sw_registered/image_rect
+
        /right_camera/color/camera_info
        /right_camera/color/image_raw
-
        /right_camera/depth_registered/sw_registered/camera_info
        /right_camera/depth_registered/sw_registered/image_rect
+
        /unity/camera/left/depth/camera_info
        /unity/camera/left/depth/image_raw
-
        /unity/camera/left/rgb/camera_info
        /unity/camera/left/rgb/image_raw
+
        /unity/camera/right/depth/camera_info
        /unity/camera/right/depth/image_raw
-
        /unity/camera/right/rgb/camera_info
        /unity/camera/right/rgb/image_raw
+
        /tf
        /tf_static
        /my_gen3_left/joint_states
