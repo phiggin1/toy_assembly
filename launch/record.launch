@@ -7,19 +7,32 @@
        <node name="left_joint_states_throttler" type="throttle" pkg="topic_tools" args="messages /my_gen3_left/joint_states 30 /my_gen3_left/joint_states_throttled" />
        <node name="right_joint_states_throttler" type="throttle" pkg="topic_tools" args="messages /my_gen3_right/joint_states 30 /my_gen3_left/joint_states_throttled" />
 
+
+       <node name="left_camera_color_info_throttler" type="throttle" pkg="topic_tools" args="messages /left_camera/color/camera_info 30 /left_camera/color/camera_info_throttled" />
+       <node name="left_camera_color_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/color/image_raw   30 /left_camera/color/image_raw_throttled" />
+       <node name="left_camera_depth_info_throttler" type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/camera_info 30  /left_camera/depth_registered/sw_registered/camera_info_throttled" />
+       <node name="left_camera_depth_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/image_rect   30 /left_camera/depth_registered/sw_registered/image_rect_throttled" />
+
+       <node name="right_camera_color_info_throttler" type="throttle" pkg="topic_tools" args="messages /right_camera/color/camera_info 30 /right_camera/color/camera_info_throttled" />
+       <node name="right_camera_color_throttler"      type="throttle" pkg="topic_tools" args="messages /right_camera/color/image_raw   30 /right_camera/color/image_raw_throttled" />
+       <node name="right_camera_depth_info_throttler" type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/camera_info 30  /right_camera/depth_registered/sw_registered/camera_infov" />
+       <node name="right_camera_depth_throttler"      type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/image_rect   30 /right_camera/depth_registered/sw_registered/image_rect_throttled" />
+
+
+
        <node pkg="rosbag" type="record" name="toy_record"
               args="record 
               -o $(arg prefix)
 
-              /left_camera/color/camera_info
-              /left_camera/color/image_raw
-              /left_camera/depth_registered/sw_registered/camera_info
-              /left_camera/depth_registered/sw_registered/image_rect
+              /left_camera/color/camera_info_throttled
+              /left_camera/color/image_raw_throttled
+              /left_camera/depth_registered/sw_registered/camera_info_throttled
+              /left_camera/depth_registered/sw_registered/image_rect_throttled
 
-              /right_camera/color/camera_info
-              /right_camera/color/image_raw
-              /right_camera/depth_registered/sw_registered/camera_info
-              /right_camera/depth_registered/sw_registered/image_rect
+              /right_camera/color/camera_info_throttled
+              /right_camera/color/image_raw_throttled
+              /right_camera/depth_registered/sw_registered/camera_info_throttled
+              /right_camera/depth_registered/sw_registered/image_rect_throttled
 
               /unity/camera/left/depth/camera_info
               /unity/camera/left/depth/image_raw
