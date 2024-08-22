@@ -1,40 +1,44 @@
 <launch>
- 
- <node pkg="rosbag" type="record" name="toy_record"
-       args="record 
-       /left_camera/color/camera_info
-       /left_camera/color/image_raw
+       <arg name="prefix" default="0"/>
 
-       /left_camera/depth_registered/sw_registered/camera_info
-       /left_camera/depth_registered/sw_registered/image_rect
-       /right_camera/color/camera_info
-       /right_camera/color/image_raw
+       <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  </node>
 
-       /right_camera/depth_registered/sw_registered/camera_info
-       /right_camera/depth_registered/sw_registered/image_rect
-       /unity/camera/left/depth/camera_info
-       /unity/camera/left/depth/image_raw
+       <node name="tf_throttler" type="throttle" pkg="topic_tools" args="messages /tf 100 /tf_throttled" />
+       <node name="left_joint_states_throttler" type="throttle" pkg="topic_tools" args="messages /my_gen3_left/joint_states 30 /my_gen3_left/joint_states_throttled" />
+       <node name="right_joint_states_throttler" type="throttle" pkg="topic_tools" args="messages /my_gen3_right/joint_states 30 /my_gen3_left/joint_states_throttled" />
 
-       /unity/camera/left/rgb/camera_info
-       /unity/camera/left/rgb/image_raw
-       /unity/camera/right/depth/camera_info
-       /unity/camera/right/depth/image_raw
+       <node pkg="rosbag" type="record" name="toy_record"
+              args="record 
+              -o $(arg prefix)
 
-       /unity/camera/right/rgb/camera_info
-       /unity/camera/right/rgb/image_raw
-       /tf
-       /tf_static
-       /my_gen3_left/joint_states
-       /my_gen3_right/joint_states  
-       /scene/transform
-       /audio
-       /buttons"
-/>
-<!--
-       /left_camera/depth_registered/points
-       /right_camera/depth_registered/points
-       /unity/camera/left/depth/points
-       /unity/camera/right/depth/points
--->
+              /left_camera/color/camera_info
+              /left_camera/color/image_raw
+              /left_camera/depth_registered/sw_registered/camera_info
+              /left_camera/depth_registered/sw_registered/image_rect
+
+              /right_camera/color/camera_info
+              /right_camera/color/image_raw
+              /right_camera/depth_registered/sw_registered/camera_info
+              /right_camera/depth_registered/sw_registered/image_rect
+
+              /unity/camera/left/depth/camera_info
+              /unity/camera/left/depth/image_raw
+              /unity/camera/left/rgb/camera_info
+              /unity/camera/left/rgb/image_raw
+
+              /unity/camera/right/depth/camera_info
+              /unity/camera/right/depth/image_raw
+              /unity/camera/right/rgb/camera_info
+              /unity/camera/right/rgb/image_raw
+
+              /tf_throttled
+              /tf_static
+              /my_gen3_left/joint_states_throttled
+              /my_gen3_right/joint_states_throttled
+              /scene/transform
+              /audio
+              /transcript
+              /buttons"
+       />
 
 </launch>

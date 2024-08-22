@@ -35,6 +35,9 @@ class SlotTracking:
     def __init__(self):
         rospy.init_node('SlotTracking', anonymous=True)
                 
+        self.listener = tf.TransformListener()
+        self.cvbridge = CvBridge()
+        
         '''
         self.cam_info_topic =    rospy.get_param("cam_info_topic",  "/unity/camera/rgb/camera_info")
         self.rgb_image_topic =   rospy.get_param("rgb_image_topic",     "/unity/camera/rgb/image_raw")
@@ -62,11 +65,10 @@ class SlotTracking:
         rospy.loginfo(f"min_area_percentage:{self.min_area_percentage}\tmax_area_percentage:{self.max_area_percentage}")
         rospy.loginfo(f"max_num_contours:{self.max_num_contours}")
 
-        self.listener = tf.TransformListener()
-        self.cvbridge = CvBridge()
+
+        self.segment_serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
 
         self.detect_slot_serv = rospy.Service('get_slot_location', DetectSlot, self.detect_slot)
-        self.segment_serv = rospy.ServiceProxy('get_sam_segmentation', SAM)
 
         rospy.spin()
 

@@ -28,15 +28,16 @@ class AdaClient:
         self.debug = rospy.get_param("~debug", True)
         server_port = rospy.get_param("~port", "8888")
 
+        
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.bind("tcp://*:%s" % server_port)
         rospy.loginfo(f"Server listening on port:{server_port}")
-
+        
         self.whisper_serv = rospy.Service('/get_transciption', Whisper, self.Whisper)
-        self.clip_serv = rospy.Service('/get_clip_probabilities', CLIP, self.CLIP)
-        self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
-        self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
+        #self.clip_serv = rospy.Service('/get_clip_probabilities', CLIP, self.CLIP)
+        #self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
+        #self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
         
         rospy.spin()
 
@@ -47,14 +48,12 @@ class AdaClient:
         now = rospy.Time.now().nsecs
         tmp_audio_filename = os.path.join("/home/rivr/audio_test", f"{now}.wav")
         audio = np.fromstring(request.string.data[1:-1], dtype=float, sep=',')
-
+        print(sample_rate)
         sf.write(tmp_audio_filename, audio, sample_rate)
 
         audio_json = str(request.string.data)
         context = ""
-        #context = request.context.data
-        #context = """What objects are you going to pick up, and what object should the robot pick up?\n<red_horse_front_legs>, <yellow_horse_back_legs>, <horse_body_blue>, <horse_body_red>, <horse_body_yellow>"""
-        #rospy.loginfo(f"context: {context}")
+
 
         msg = {"type":"whisper",
                "context":context,
@@ -67,8 +66,11 @@ class AdaClient:
             resp = self.socket.recv_json()
 
         if self.debug: rospy.loginfo('Whisper recv from ada')
-        print(resp)
+        
+
+        #print(resp)
         transcription = resp["text"]
+        
         rospy.loginfo(f"Whisper transcription: '{transcription}'")
 
         response = WhisperResponse()

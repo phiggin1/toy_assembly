@@ -19,11 +19,11 @@ class KortexHack:
         self.arm = rospy.get_param("~prefix", default="right")
         rospy.loginfo(self.arm)
 
-        self.servo_sub = rospy.Subscriber('/my_gen3_'+self.arm+'/servo/delta_twist_cmds', TwistStamped, self.delta_twist_cmds__to_cart_cb)
-        self.cart_vel_pub = rospy.Publisher('/my_gen3_'+self.arm+'/in/cartesian_velocity', TwistCommand, queue_size=10)
+        #self.servo_sub = rospy.Subscriber('/my_gen3_'+self.arm+'/servo/delta_twist_cmds', TwistStamped, self.delta_twist_cmds__to_cart_cb)
+        #self.cart_vel_pub = rospy.Publisher('/my_gen3_'+self.arm+'/in/cartesian_velocity', TwistCommand, queue_size=10)
 
-        #self.servo_sub = rospy.Subscriber('//my_gen3_'+self.arm+'/'+self.arm+'_gen3_joint_trajectory_controller/command', JointTrajectory, self.joint_command_cb)
-        #self.joint_vel_pub = rospy.Publisher('/my_gen3_'+self.arm+'/in/joint_velocity', Base_JointSpeeds, queue_size=10)
+        self.servo_sub = rospy.Subscriber('/my_gen3_'+self.arm+'/'+self.arm+'_gen3_joint_trajectory_controller/command', JointTrajectory, self.joint_command_cb)
+        self.joint_vel_pub = rospy.Publisher('/my_gen3_'+self.arm+'/in/joint_velocity', Base_JointSpeeds, queue_size=10)
 
         self.min_linear_vel = -0.1
         self.max_linear_vel =  0.1

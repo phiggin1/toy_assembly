@@ -23,25 +23,24 @@ class ImageSegment:
         
         self.listener = tf.TransformListener()
 
-        self.real = rospy.get_param("real", default=False)
-        self.arm = rospy.get_param("arm", default="left")
+        self.real = rospy.get_param("~real", default=False)
+        self.arm = rospy.get_param("~arm", default="left")
 
 
-        rospy.loginfo(self.real)
-        rospy.loginfo(self.arm)
+        rospy.loginfo(f"real world:{self.real}")
+        rospy.loginfo(f"arm: {self.arm}")
 
         if self.real:
             cam_info_topic = f"/{self.arm}_camera/color/camera_info"
-            rgb_image_topic = f"/{self.arm}_camera/color/image_raw"
+            rgb_image_topic = f"/{self.arm}_camera/color/image_rect_color"
             output_image_topic = f"/{self.arm}_camera/color/overlay_raw"
-            #obj_cluster_topic = f"/{self.arm}_camera/depth_registered/object_clusters"
+            obj_cluster_topic = f"/{self.arm}_camera/depth_registered/object_clusters"
         else:
             cam_info_topic = f"/unity/camera/{self.arm}/rgb/camera_info"
             rgb_image_topic = f"/unity/camera/{self.arm}/rgb/image_raw"
             output_image_topic = f"/unity/camera/{self.arm}/rgb/overlay_raw"
-            #obj_cluster_topic = f"/unity/camera/{self.arm}/depth/object_clusters"
+            obj_cluster_topic = f"/unity/camera/{self.arm}/depth/object_clusters"
 
-        obj_cluster_topic = "output_cloud"
 
         rospy.loginfo(cam_info_topic)
         rospy.loginfo(rgb_image_topic)
@@ -152,7 +151,7 @@ class ImageSegment:
 
 
     def image_cb(self, rgb_ros_image):
-        rgb_img = self.bridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="passthrough")
+        rgb_img = self.bridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="bgr8")
         rgb_img = rgb_img.copy()
 
         with self.mutex:

@@ -2,8 +2,7 @@
 
   <arg name="/use_sim_time" default="false"/>
 
-
-
+  <!-- Nodes for Right arm (servoing and control) -->
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_right">
     <rosparam command="load" file="$(find toy_assembly)/config/real/servo-config-gen3_right.yaml" />
   </node> 
@@ -14,6 +13,7 @@
     <param name="prefix"  value="right" />
   </node>
 
+  <!-- Nodes for Left arm (servoing and control) -->
   <node name="servo_server" pkg="moveit_servo" type="servo_server" output="screen" ns="my_gen3_left">
     <rosparam command="load" file="$(find toy_assembly)/config/real/servo-config-gen3_left.yaml" />
   </node> 
@@ -23,74 +23,51 @@
   <node name="kortex_hack_left" pkg="toy_assembly" type="kortex_hack.py" output="screen" >
     <param name="prefix"  value="left" />  
   </node>
+ 
 
-  <node name="transcribe" pkg="toy_assembly" type="audio.py" output="screen" >
-    <param name="threshold"  value="0.05" />
-    <param name="silent_wait" value="3" />
-    <param name="max_duration"  value="15" />
+  <!-- listen to an audio stream and break it up into utterences -->
+  <node name="audio_manager" pkg="toy_assembly" type="audio.py" output="screen" >
+    <param name="threshold"  value="0.1" />
+    <param name="silent_wait" value="2" />
+    <param name="max_duration"  value="30" />
+    <param name="debug"  value="True" />
+  </node>
+  <!-- listen for utterances and get a transcription -->
+  <node name="transcribe" pkg="toy_assembly" type="transcribe.py" output="screen" >
     <param name="debug"  value="True" />
   </node>
   <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
-  
-<!--
-  <node name="audio_recorder" pkg="toy_assembly" type="audio_recorder.py" output="screen" >  </node>
+<!-- 
   <node name="robot_speech" pkg="toy_assembly" type="robot_speech.py" output="screen" >  </node>
 -->
 
+<!-- detecting objects on a table and adding a boundingt box overlay to an image -->
+  <arg name="debug" default="true"/>
+  <arg name="minX" default="-0.25"/>
+  <arg name="maxX" default=" 0.25"/>
+  <arg name="minY" default="-0.350"/>
+  <arg name="maxY" default=" 0.350"/>
+  <arg name="minZ" default=" 0.0"/>
+  <arg name="maxZ" default=" 1.25"/>
 
-  
-<!--
-  <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" >  </node>
-
-  <node name="object_track" pkg="toy_assembly" type="object_tracking.py" output="screen" >  </node>
-  <node name="head_track" pkg="toy_assembly" type="rivr_head_tracking.py" output="screen" >  </node>
-  <node name="gaze" pkg="toy_assembly" type="gaze.py" output="screen" >  </node>
-  <node name="gaze_target" pkg="toy_assembly" type="gaze_target.py" output="screen" >  </node>
-  <node name="bayesgaze" pkg="toy_assembly" type="bayesgaze.py" output="screen" >  </node>
-
-  <node name="slot_detect" pkg="toy_assembly" type="ros_slot_detection.py" output="screen" >  </node>
-
-  <node name="robot_part_tracking" pkg="toy_assembly" type="robot_part_tracking.py" output="screen" >  </node>
-  <node name="human_part_tracking" pkg="toy_assembly" type="human_part_tracking.py" output="screen" >  </node>
-  <node name="gen_trajectory" pkg="toy_assembly" type="demo_generate_trajectory.py" output="screen" >  </node>
--->
-
-
+  <arg name="distance_threshold" default="0.03"/>
+  <arg name="cluster_tolerance" default="0.03"/>
+  <arg name="min_cluster_size" default="10"/>
+  <arg name="max_cluster_size" default="5000"/>
+    
   <include file="$(find toy_assembly)/launch/pcl_segment_real.launch" > 
     <arg name="arm" value="left"/>
+    <arg name="minX"		value="$(arg minX)"/>
+    <arg name="maxX"		value="$(arg maxX)"/>
+    <arg name="minY"		value="$(arg minY)"/>
+    <arg name="maxY"		value="$(arg maxY)"/>
+    <arg name="minZ"		value="$(arg minZ)"/>
+    <arg name="maxZ"		value="$(arg maxZ)"/>
+    <arg name="distance_threshold" value="$(arg distance_threshold)"/>
+    <arg name="cluster_tolerance"  value="$(arg cluster_tolerance)"/>
+    <arg name="min_cluster_size"   value="$(arg min_cluster_size)"/>
+    <arg name="max_cluster_size"   value="$(arg max_cluster_size)"/>
   </include>
-  <include file="$(find toy_assembly)/launch/pcl_segment_real.launch" > 
-    <arg name="arm" value="right"/>
-  </include>
-  <include file="$(find pointcloud_concatenate)/launch/concat.launch" > 
-    <arg name="target_frame" default="left_camera_link" />
-    <param name="hz" value=".25" />
-    <arg name="cloud_in1" value="/left_camera/depth_registered/points" />
-    <arg name="cloud_in2" value="/right_camera/depth_registered/points" />
-    <arg name="cloud_out" value="cloud_concatenated" />
-  </include>
-    
-  <arg name="input_cloud" 		default="cloud_concatenated"/>
-  <arg name="output_cloud" 		default="output_cloud"/>
-  <arg name="debug_output_cloud" 		default="debug_output_cloud"/>
-
-  <arg name="distance_threshold" default="0.04"/>
-  <arg name="cluster_tolerance" default="0.03"/>
-  <arg name="min_cluster_size" default="30"/>
-  <arg name="max_cluster_size" default="500"/>
-  <node name= "object_segmentation" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
-    <param name="distance_threshold"	value="$(arg distance_threshold)"/>
-    <param name="cluster_tolerance"	value="$(arg cluster_tolerance)"/>
-    <param name="min_cluster_size"	value="$(arg min_cluster_size)"/>
-    <param name="max_cluster_size"	value="$(arg max_cluster_size)"/>
-    <param name="input_cloud" 		value="$(arg input_cloud)"/>
-    <param name="output_cloud" 		value="$(arg output_cloud)"/>
-    <param name="debug_output_cloud" 		value="$(arg debug_output_cloud)"/>
-  </node>
-
-  <node name="overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  
-    <param name="real"  value="True" />
-  </node>
 
 
 </launch>

@@ -1,7 +1,6 @@
 <launch>
 
   <arg name="arm" default="left"/>
-
   <arg name="minX" default="-1.0"/>
   <arg name="maxX" default="1.0"/>
   <arg name="minY" default="-1.0"/>
@@ -11,16 +10,13 @@
   <arg name="leaf_size" default="0.005"/>
 
   <arg name="distance_threshold" default="0.04"/>
-
   <arg name="cluster_tolerance" default="0.03"/>
   <arg name="min_cluster_size" default="30"/>
   <arg name="max_cluster_size" default="500"/>
 
   <arg name="down_input_cloud"  default="/unity/camera/$(arg arm)/depth/points"/>
   <arg name="down_output_cloud" default="/unity/camera/$(arg arm)/depth/downsampled_points"/>
-  
   <arg name="filtered_output_cloud"  default="/unity/camera/$(arg arm)/depth/points_filtered"/>
-
 
   <node name= "$(arg arm)_downsample" pkg= "obj_segmentation" type= "segmentation_downsample" output="screen" respawn= "false">
     <param name="minX"		value="$(arg minX)"/>

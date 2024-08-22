@@ -16,7 +16,6 @@ class LLMClient:
     def __init__(self):
         rospy.init_node('LLM_testing')
 
-        self.mutex = Lock()
         self.debug = rospy.get_param("~debug", True)
         server_port = rospy.get_param("~port", "8877")
 
@@ -26,18 +25,14 @@ class LLMClient:
         rospy.loginfo(f"Server listening on port:{server_port}")
 
         self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
-        
       
         self.twist_topic  = "/my_gen3_right/servo/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
         rospy.loginfo(self.twist_topic)
 
-        self.button_topic  = "/buttons"
-        self.button_pub = rospy.Publisher(self.button_topic, String, queue_size=10)
-        rospy.loginfo(self.button_topic)
-        
 
-        text_sub = rospy.Subscriber("/transcript", Transcription, self.text_cb)
+        '''
+        self.text_sub = rospy.Subscriber("/transcript", Transcription, self.text_cb)
         rospy.spin()
         '''
         while True:
@@ -45,21 +40,18 @@ class LLMClient:
             text = input()
             t.transcription = text
             self.text_cb(t)
-        '''
+        
+    def send_ada(self, text):
 
-
-    def text_cb(self, transcript):
-        transcript =  transcript.transcription
-        #rospy.loginfo(f"Got transcript:'{transcript}'")
-        text = transcript
         msg = {"type":"llm",
                "text":text
         }
-        if self.debug: rospy.loginfo("LLM sending to ada")
+
+        if self.debug: rospy.loginfo("============================") 
+        if self.debug: print(f"LLM sending to ada\ntext:{text}")
         
-        with self.mutex:
-            self.socket.send_json(msg)
-            resp = self.socket.recv_json()
+        self.socket.send_json(msg)
+        resp = self.socket.recv_json()
 
         if self.debug: rospy.loginfo('LLM  recv from ada') 
 
@@ -74,31 +66,33 @@ class LLMClient:
         b = text.find('}')+1
         text_json = text[a:b]
         json_dict = json.loads(text_json)
-        print(json_dict)
 
         action = None
         if "action" in json_dict:
             action = json_dict["action"]
+
+        return action
+
+    def text_cb(self, transcript):
+        transcript =  transcript.transcription
+
+        action = self.send_ada(transcript)
+
         print(f"action: - {action} - ")
-        print(f"type:{type(action)}")
-        if isinstance(action, str):
-            action_list = action.split(',')
-            if len(action_list) > 1:
-                action = action_list
-            else:
-                action = [action]
+
+        if "PICKUP" in action:
+            self.send_gpt(transcript)
+        else:
+            self.ee_move(action)
+            
+    def send_gpt(self, transcript):
+        rospy.loginfo(f"pickup transcript:{transcript}")
 
 
-        question = None
-        if question in json_dict:
-            question = json_dict["question"]
-            print(f"question:{question}")
-            self.robot_speech_pub.publish(question)
-            return
-
+    def ee_move(self, action):
         speed = 0.1
         angular_speed = 1.0
-      
+
         #Servo in EE base_link frame
         move = False
         x = 0.0
@@ -107,7 +101,7 @@ class LLMClient:
         roll = 0.0
         yaw = 0.0
         pitch = 0.0
-        
+
         if "PITCH_UP" in action:
             rospy.loginfo("PITCH_UP")
             pitch =-angular_speed
@@ -117,11 +111,11 @@ class LLMClient:
             pitch = angular_speed
             move = True
 
-        if  "ROLL_LEFT" in action:
+        if  "ROTATE_LEFT" in action:
             rospy.loginfo("ROLL_LEFT")
             roll =-angular_speed
             move = True
-        elif "ROLL_RIGHT" in action:
+        elif "ROTATE_RIGHT" in action:
             rospy.loginfo("ROLL_RIGHT")
             roll = angular_speed
             move = True
@@ -134,8 +128,7 @@ class LLMClient:
             rospy.loginfo("YAW_RIGHT")
             yaw = angular_speed
             move = True
-        
-
+    
         if "MOVE_FORWARD" in action:
             rospy.loginfo("MOVE_FORWARD")
             x = speed
@@ -166,11 +159,10 @@ class LLMClient:
         if move:
             self.move(x,y,z, roll, pitch, yaw)
 
-
         if "CLOSE_HAND" in action:
             self.grab()
         if "OPEN_HAND" in action:
-            self.release()
+            self.release()            
 
     def move(self, x, y, z, roll, pitch, yaw):
         cmd = TwistStamped()
@@ -182,10 +174,13 @@ class LLMClient:
         cmd.twist.angular.x = roll
         cmd.twist.angular.y = pitch
         cmd.twist.angular.z = yaw
-        print(cmd)
-        msgs = 50
-        rate = rospy.Rate(30)
-        for i in range(100):
+
+        print(cmd.header.frame_id)
+        print(x,y,z,roll,pitch,yaw)
+
+        num_msgs = 50
+        rate = rospy.Rate(100)
+        for i in range(num_msgs):
             cmd.header.stamp = rospy.Time.now()
             self.cart_vel_pub.publish(cmd)
             rate.sleep()
@@ -221,13 +216,6 @@ class LLMClient:
             return resp
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
-
-        print("release")
-        a = dict()
-        a["robot"] = "right"
-        a["action"] = "released"
-        s = json.dumps(a)
-        self.button_pub.publish(s)
 
 if __name__ == '__main__':
     llm = LLMClient()
