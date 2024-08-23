@@ -54,12 +54,11 @@ class LLMClient:
     
     def call_gpt_check(self, req):
         text = req.text
-        check = req.check
         image = req.image
         objects = req.objects
 
         if self.debug: rospy.loginfo("============================")
-        if self.debug: rospy.loginfo(f"call_gpt_check transcript:{text}, check:{check}, objects:{objects}")
+        if self.debug: rospy.loginfo(f"call_gpt_check transcript:{text}, objects:{objects}")
 
         self.get_check_prompt(text, image, objects)
         ans = self.chat_complete(self.messages)
@@ -200,17 +199,12 @@ The dictonary that you return should be formatted as python dictonary. Follow th
         print(n_msgs)
 
         print("=================")
-        if n_msgs > 2:
-            correct = input("Correct (y/n): ")
-            if correct == "y":
-                correct = True
-            else:
-                correct = False
-            obj = input(f"Object # (0-2): ")
-            answer = f"""'''{{"correct":"{correct}","object":"obj_{obj}"}}'''"""
-        else:
-            obj = input("Object # (0,1,2): ")
-            answer = f"""'''{{"object":"obj_{obj}"}}'''"""
+
+        action = input("action: ")
+        obj = input(f"Object # (0-2): ")
+        answer = f"""'''{{"action":"{action}","object":"obj_{obj}"}}'''"""
+        rospy.loginfo(answer)
+
         print("=================")
 
         return answer

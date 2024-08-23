@@ -61,6 +61,12 @@ class AssemblyClient:
         
         while not rospy.is_shutdown():
             transcription = rospy.wait_for_message("/transcript", Transcription)
+            '''
+            self.state = "HIGH_LEVEL"
+            text = input("command: ")
+            transcription = Transcription()
+            transcription.transcription = text
+            '''
             self.text_cb(transcription)
 
     def text_cb(self, transcript):
@@ -128,7 +134,6 @@ class AssemblyClient:
         if "PICKUP" in action:
             self.state = "HIGH_LEVEL"
             self.high_level(text)            
-            rospy.loginfo("TESTING")
         else:   
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"
@@ -326,7 +331,7 @@ class AssemblyClient:
         final_pose.pose.orientation.w = 0
         final_pose.pose.position.z -= 0.03
 
-        min_safe_height = 0.065
+        min_safe_height = 0.07
         final_pose.pose.position.z = max(min_safe_height, final_pose.pose.position.z)
 
         self.open()

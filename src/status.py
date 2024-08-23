@@ -49,7 +49,7 @@ class Status:
             else:
                 msg_text["human"] = ""
 
-            rospy.loginfo(msg_text)
+            #rospy.loginfo(msg_text)
 
             if self.real:
                 self.display_status(msg_text["status"] , msg_text["human"])
