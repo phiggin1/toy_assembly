@@ -22,7 +22,15 @@ class Status:
         self.human_text = None
         self.last_human_text = None
         self.status = "WAITING"
-
+        self.coords = [
+            (int((1/6)*640),90),
+            (int((2/6)*640),90),
+            (int((3/6)*640),90),
+            (int((4/6)*640),90),
+            (int((5/6)*640),90),
+        ]
+        self.size = [4,8,16,8,4]
+        
         self.display_pub = rospy.Publisher("/display", String, queue_size=10)
 
         self.sub = rospy.Subscriber("status", String, self.status_cb)
@@ -30,7 +38,9 @@ class Status:
         self.tts_sub = rospy.Subscriber("text_to_speech", String, self.robot_speech_cb)
 
         self.rate = rospy.Rate(5) # 5hz
+        i = 4
         while not rospy.is_shutdown():
+            self.status = "THINKING"
             msg_text = {
                 "status":self.status
             }
@@ -50,7 +60,7 @@ class Status:
                 msg_text["human"] = ""
 
             #rospy.loginfo(msg_text)
-
+            
             if self.real:
                 self.display_status(msg_text["status"] , msg_text["human"])
 
@@ -58,10 +68,12 @@ class Status:
             msg.data = json.dumps(msg_text)
             self.display_pub.publish(msg)
 
+            i -= 1
+            i = i % 5
             self.rate.sleep()
 
 
-    def display_status(self, status, human_text):
+    def display_status(self, status, human_text, j):
         #BGR color
         if status == "THINKING":
             #red
@@ -85,18 +97,27 @@ class Status:
         
         font = cv2.FONT_HERSHEY_DUPLEX 
         org = (50, 50)
-        fontScale = 1.5
-        cv2.putText(status_img, status, org, font, fontScale, (255,255,255), thickness, cv2.LINE_AA)
+        fontScaleHeader = 1.5
+        fontScaleBody = 0.75
+        cv2.putText(status_img, status, org, font, fontScaleHeader, (255,255,255), thickness, cv2.LINE_AA)
         
         wrapped_text = textwrap.wrap(human_text, width=36)
         for (i, line) in enumerate(wrapped_text):
-            textsize = cv2.getTextSize(line, font, fontScale, thickness)[0]
+            textsize = cv2.getTextSize(line, font, fontScaleBody, thickness)[0]
             gap = textsize[1] + 5
-            y= int((200 + textsize[1]) / 2) + i * gap
-            cv2.putText(status_img, line, (5, y) , font, fontScale, (255,255,255), thickness, cv2.LINE_AA)
-        
+            y = int((200 + textsize[1]) / 2) + i * gap
+            cv2.putText(status_img, line, (5, y) , font, fontScaleBody, (255,255,255), thickness, cv2.LINE_AA)
+
+        if True:#status == "THINKING":
+            new_size = self.size[j:len(self.size)] + self.size[0:j]
+            for i in range(5):
+                cv2.circle(status_img, self.coords[i], new_size[i], (255,255,2455), -1)
+
         cv2.imshow("status", status_img)   
         cv2.waitKey(delay = 1)
+
+
+
 
 
     def transcript_cb(self, msg):
