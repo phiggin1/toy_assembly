@@ -1,0 +1,70 @@
+<launch>
+  <param name="use_sim_time" value="true"/>
+
+  <node pkg="nodelet" type="nodelet" args="manager" name="record_player_manager" output="screen">  </node>
+
+  <!-- builds pointcloud from the color and depth images -->
+  <node pkg="nodelet" type="nodelet" name="cloudify_left" args="load depth_image_proc/point_cloud_xyzrgb record_player_manager ">
+    <remap from="depth_registered/image_rect" to="/unity/camera/left/depth/image_raw"/> 
+    <remap from="rgb/image_rect_color"  to="/unity/camera/left/rgb/image_raw"/> 
+    <remap from="rgb/camera_info" to="/unity/camera/left/rgb/camera_info"/>
+    <remap from="depth_registered/points" to="/unity/camera/left/depth/points"/> 
+  </node>
+
+  
+  <group ns="my_gen3_left">
+    <param name="robot_description" command="cat $(find toy_assembly)/gen3_left.urdf" />
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" >
+      <remap from="joint_states" to="joint_states_throttled" />
+    </node>
+  </group>
+
+  <group ns="my_gen3_right">
+    <param name="robot_description" command="cat $(find toy_assembly)/gen3_right.urdf" />>
+    <node pkg="robot_state_publisher" type="robot_state_publisher" name="robot_state_publisher" >
+      <remap from="joint_states" to="joint_states_throttled" />
+    </node>
+  </group>
+
+  <!-- detecting objects on a table and adding a bounding box overlay to an image -->
+
+  <arg name="arm" default="left"/>
+  <arg name="minX" default="-0.25"/>
+  <arg name="maxX" default=" 0.25"/>
+  <arg name="minY" default="-0.350"/>
+  <arg name="maxY" default=" 0.350"/>
+  <arg name="minZ" default=" 0.0"/>
+  <arg name="maxZ" default=" 1.25"/>
+  <include file="$(find toy_assembly)/launch/pcl_segment.launch" > 
+    <arg name="arm" value="left"/> 
+    <arg name="minX" value="$(arg minX)"/>
+    <arg name="maxX" value="$(arg maxX)"/>
+    <arg name="minY" value="$(arg minY)"/>
+    <arg name="maxY" value="$(arg maxY)"/>
+    <arg name="minZ" value="$(arg minZ)"/>
+    <arg name="maxZ" value="$(arg maxZ)"/>
+  </include>
+
+  <arg name="input_cloud"        default="/unity/camera/left/depth/points_filtered"/>
+  <arg name="output_cloud"       default="/unity/camera/left/depth/object_clusters"/>  
+  <arg name="debug_output_cloud" default="/unity/camera/left/depth/objects"/>  
+
+  <arg name="distance_threshold" default="0.04"/>
+  <arg name="cluster_tolerance"  default="0.03"/>
+  <arg name="min_cluster_size"   default="30"/>
+  <arg name="max_cluster_size"   default="1000"/>
+  <node name= "object_segmentation" pkg= "obj_segmentation" type= "segmentation" output="screen" respawn= "false">
+    <param name="distance_threshold" value="$(arg distance_threshold)"/>
+    <param name="cluster_tolerance"	 value="$(arg cluster_tolerance)"/>
+    <param name="min_cluster_size"	 value="$(arg min_cluster_size)"/>
+    <param name="max_cluster_size"	 value="$(arg max_cluster_size)"/>
+    <param name="input_cloud" 		   value="$(arg input_cloud)"/>
+    <param name="output_cloud"       value="$(arg output_cloud)"/>
+    <param name="debug_output_cloud" value="$(arg debug_output_cloud)"/>
+  </node>
+  <node name="left_overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  
+    <param name="real" value="false"/>
+    <param name="arm" value="left"/>
+  </node>
+
+</launch>

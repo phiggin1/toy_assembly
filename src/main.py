@@ -17,9 +17,11 @@ def extract_json(text):
     a = text.find('{')
     b = text.find('}')+1
     text_json = text[a:b]
-    json_dict = json.loads(text_json)
-
-    return json_dict
+    try:
+        json_dict = json.loads(text_json)
+        return json_dict
+    except:
+        return None
 
 class AssemblyClient:
     def __init__(self):
@@ -44,22 +46,34 @@ class AssemblyClient:
         self.socket.bind("tcp://*:%s" % server_port)
         rospy.loginfo(f"Server listening on port:{server_port}")
 
-        self.llm_text_srv = rospy.ServiceProxy('gpt_servcice', LLMImage)
-        self.llm_check_srv = rospy.ServiceProxy('gpt_servcice_check', LLMImage)
-        self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
-      
-        self.debug_pose_pub = rospy.Publisher('/0debug_pose', PoseStamped, queue_size=10)
+        move_service_name = "/my_gen3_right/move_pose"
+        rospy.wait_for_service(move_service_name)
+        self.moveit_pose = rospy.ServiceProxy(move_service_name, MoveITPose)
 
+        open_service_name = "/my_gen3_right/open_hand"
+        rospy.wait_for_service(open_service_name)
+        self.open_hand = rospy.ServiceProxy(open_service_name, Trigger)
+
+        close_service_name = "/my_gen3_right/close_hand"
+        rospy.wait_for_service(close_service_name)
+        self.close_hand = rospy.ServiceProxy(close_service_name, Trigger)
+
+        self.llm_text_srv = rospy.ServiceProxy('/gpt_servcice', LLMImage)
+
+        self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
+        self.debug_pose_pub = rospy.Publisher('/0debug_pose', PoseStamped, queue_size=10)
         self.status_pub = rospy.Publisher("/status", String, queue_size=10)
 
         self.twist_topic  = "/my_gen3_right/workspace/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
+        
         rospy.loginfo(self.twist_topic)
 
         #self.text_sub = rospy.Subscriber("/transcript", Transcription, self.text_cb)
         #rospy.spin()
         
         while not rospy.is_shutdown():
+            
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             self.state = "HIGH_LEVEL"
@@ -77,6 +91,10 @@ class AssemblyClient:
         if self.debug: rospy.loginfo(f"{transcript}")
 
         transcript =  transcript.transcription
+        #self.high_level(transcript)
+        #self.low_level(transcript)
+        #return
+    
         if self.state == "HIGH_LEVEL":
             self.high_level(transcript)
         else:
@@ -88,7 +106,16 @@ class AssemblyClient:
 
     def high_level(self, text):
         overlay_topic = "/left_object_images"
-        obj_img = rospy.wait_for_message(overlay_topic, ObjectImage)
+        rospy.loginfo("waiting for objects")
+
+        try:        
+            obj_img = rospy.wait_for_message(overlay_topic, ObjectImage, timeout=10)
+        except:
+            rospy.loginfo("object waiting timed out")
+            self.state = "LOW_LEVEL"
+            return
+        
+        rospy.loginfo("recved objects")
         frame = obj_img.header.frame_id
         image = obj_img.image
         opject_positions = obj_img.object_positions
@@ -113,10 +140,15 @@ class AssemblyClient:
         json_dict = extract_json(resp.text)
         rospy.loginfo(f"init\n{json_dict}")
 
+        if json_dict is None:
+            self.state = "LOW_LEVEL"
+            return None
+
         action = None
         if "action" in json_dict:
             action = json_dict["action"]
         else:
+            self.state = "LOW_LEVEL"
             return
 
         if "PICKUP" in action:
@@ -124,16 +156,23 @@ class AssemblyClient:
         else:   
             self.ee_move(action)
 
+        self.state = "LOW_LEVEL"
+
     def low_level(self, text):
         action = self.send_ada(text)
         rospy.loginfo(f"low level action:\n\t {action}")
 
-        if action is None:
+        if action is None or len(action)<1:
+            self.state = "HIGH_LEVEL"
+            self.high_level(text)  
             return
-
+    
         if "PICKUP" in action:
             self.state = "HIGH_LEVEL"
-            self.high_level(text)            
+            self.high_level(text)  
+        elif "OTHER" in action:
+            self.state = "HIGH_LEVEL"
+            self.high_level(text)   
         else:   
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"
@@ -153,20 +192,24 @@ class AssemblyClient:
             rospy.loginfo(resp["error"])
             return None
 
-        text = resp["text"]
-        rospy.loginfo(f"response:\n{text}\n ---")
+        text_resp = resp["text"]
+        rospy.loginfo(f"response:\n{text_resp}\n ---")
         
         try:
-            json_dict = extract_json(text)
+            json_dict = extract_json(text_resp)
         except  Exception as inst:
             rospy.loginfo(inst)
             return None
 
         rospy.loginfo(json_dict)
+
+        if json_dict is None:
+            return None
+        
         action = None
         if "action" in json_dict:
             action = json_dict["action"]
-
+    
         return action
     
     def pickup(self, json_dict, objects, opject_positions):
@@ -180,8 +223,7 @@ class AssemblyClient:
         #Reset the state
         self.state = "LOW_LEVEL"
 
-    def ee_move(self, action):
-
+    def ee_move(self, actions):
         #Servo in EE base_link frame
         move = False
         x = 0.0
@@ -191,69 +233,90 @@ class AssemblyClient:
         yaw = 0.0
         pitch = 0.0
 
-        rospy.loginfo(f"ee move: {action}")
+        rospy.loginfo(f"ee move: {actions}")
 
-        if "PITCH_UP" in action:
-            rospy.loginfo("PITCH_UP")
-            pitch =-self.angular_speed
-            move = True
-        elif "PITCH_DOWN" in action:
-            rospy.loginfo("PITCH_DOWN")
-            pitch = self.angular_speed
-            move = True
+        for action in actions:
+            if ("PITCH_UP" in action or "PITCH_DOWN" in action or "ROLL_LEFT" in action or "ROLL_RIGHT" in action or "YAW_LEFT" in action or "YAW_RIGHT" in action or 
+                "MOVE_FORWARD" in action or "MOVE_BACKWARD" in action or "MOVE_RIGHT" in action or "MOVE_LEFT" in action or "MOVE_UP" in action or "MOVE_DOWN" in action):
+                if "PITCH_UP" in action:
+                    rospy.loginfo("PITCH_UP")
+                    pitch =-self.angular_speed
+                    move = True
+                elif "PITCH_DOWN" in action:
+                    rospy.loginfo("PITCH_DOWN")
+                    pitch = self.angular_speed
+                    move = True
 
-        if  "ROLL_LEFT" in action:
-            rospy.loginfo("ROLL_LEFT")
-            roll =-self.angular_speed
-            move = True
-        elif "ROLL_RIGHT" in action:
-            rospy.loginfo("ROLL_RIGHT")
-            roll = self.angular_speed
-            move = True
-        
-        if "YAW_LEFT" in action:
-            rospy.loginfo("YAW_LEFT")
-            yaw =-self.angular_speed
-            move = True
-        elif "YAW_RIGHT" in action:
-            rospy.loginfo("YAW_RIGHT")
-            yaw = self.angular_speed
-            move = True
-    
-        if "MOVE_FORWARD" in action:
-            rospy.loginfo("MOVE_FORWARD")
-            x = self.speed
-            move = True
-        elif "MOVE_BACKWARD" in action:
-            rospy.loginfo("MOVE_BACKWARD")
-            x =-self.speed
-            move = True
+                if  "ROLL_LEFT" in action:
+                    rospy.loginfo("ROLL_LEFT")
+                    roll =-self.angular_speed
+                    move = True
+                elif "ROLL_RIGHT" in action:
+                    rospy.loginfo("ROLL_RIGHT")
+                    roll = self.angular_speed
+                    move = True
+                
+                if "YAW_LEFT" in action:
+                    rospy.loginfo("YAW_LEFT")
+                    yaw =-self.angular_speed
+                    move = True
+                elif "YAW_RIGHT" in action:
+                    rospy.loginfo("YAW_RIGHT")
+                    yaw = self.angular_speed
+                    move = True
+            
+                if "MOVE_FORWARD" in action:
+                    rospy.loginfo("MOVE_FORWARD")
+                    x = self.speed
+                    move = True
+                elif "MOVE_BACKWARD" in action:
+                    rospy.loginfo("MOVE_BACKWARD")
+                    x =-self.speed
+                    move = True
 
-        if "MOVE_RIGHT" in action:
-            rospy.loginfo("MOVE_RIGHT")
-            y =-self.speed
-            move = True
-        elif "MOVE_LEFT" in action:
-            rospy.loginfo("MOVE_LEFT")
-            y = self.speed
-            move = True
-        
-        if "MOVE_UP" in action:
-            rospy.loginfo("MOVE_UP")
-            z = self.speed
-            move = True
-        elif "MOVE_DOWN" in action:
-            rospy.loginfo("MOVE_DOWN")
-            z =-self.speed
-            move = True
-        
+                if "MOVE_RIGHT" in action:
+                    rospy.loginfo("MOVE_RIGHT")
+                    y =-self.speed
+                    move = True
+                elif "MOVE_LEFT" in action:
+                    rospy.loginfo("MOVE_LEFT")
+                    y = self.speed
+                    move = True
+                
+                if "MOVE_UP" in action:
+                    rospy.loginfo("MOVE_UP")
+                    z = self.speed
+                    move = True
+                elif "MOVE_DOWN" in action:
+                    rospy.loginfo("MOVE_DOWN")
+                    z =-self.speed
+                    move = True
+            else:
+                if "CLOSE_HAND" in action:
+                    if move:
+                        self.send_command(x,y,z, roll, pitch, yaw)
+                        move = False
+                        x = 0.0
+                        y = 0.0
+                        z = 0.0
+                        roll = 0.0
+                        yaw = 0.0
+                        pitch = 0.0
+                    self.close()
+                if "OPEN_HAND" in action:
+                    if move:
+                        self.send_command(x,y,z, roll, pitch, yaw)
+                        move = False
+                        x = 0.0
+                        y = 0.0
+                        z = 0.0
+                        roll = 0.0
+                        yaw = 0.0
+                        pitch = 0.0
+                    self.open()  
         if move:
             self.send_command(x,y,z, roll, pitch, yaw)
-
-        if "CLOSE_HAND" in action:
-            self.close()
-        if "OPEN_HAND" in action:
-            self.open()            
+            move = False
 
     def send_command(self, x, y, z, roll, pitch, yaw):
         linear_cmd = TwistStamped()
@@ -329,9 +392,10 @@ class AssemblyClient:
         final_pose.pose.position = deepcopy(position.point)
         final_pose.pose.orientation.x = -1
         final_pose.pose.orientation.w = 0
-        final_pose.pose.position.z -= 0.03
+        final_pose.pose.position.z -= 0.05
+        final_pose.pose.position.x += 0.01
 
-        min_safe_height = 0.07
+        min_safe_height = 0.0675
         final_pose.pose.position.z = max(min_safe_height, final_pose.pose.position.z)
 
         self.open()
@@ -350,9 +414,9 @@ class AssemblyClient:
 
         init_pose = PoseStamped()
         init_pose.header.frame_id = "world"
-        init_pose.pose.position.x =  0.3
+        init_pose.pose.position.x =  0.35
         init_pose.pose.position.y = -0.4
-        init_pose.pose.position.z =  0.4
+        init_pose.pose.position.z =  0.2
         init_pose.pose.orientation.x = -1.0
         init_pose.pose.orientation.y =  0.0
         init_pose.pose.orientation.z =  0.0
@@ -360,34 +424,28 @@ class AssemblyClient:
         self.right_arm_move_to_pose(init_pose)
 
     def right_arm_move_to_pose(self, pose):
-        rospy.wait_for_service('/my_gen3_right/move_pose')
-        print("right_arm_move_to_pose")
         try:
-            moveit_pose = rospy.ServiceProxy('/my_gen3_right/move_pose', MoveITPose)
-            resp = moveit_pose(pose)
+            resp = self.moveit_pose(pose)
             return resp
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
+            return False
 
     def close(self):
-        service_name = "/my_gen3_right/close_hand"
-        rospy.wait_for_service(service_name)
         try:
-            close_hand = rospy.ServiceProxy(service_name, Trigger)
-            resp = close_hand()
+            resp = self.close_hand()
             return resp
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
+            return False
     
     def open(self):
-        service_name = "/my_gen3_right/open_hand"
-        rospy.wait_for_service(service_name)
         try:
-            open_hand = rospy.ServiceProxy(service_name, Trigger)
-            resp = open_hand()
+            resp = self.open_hand()
             return resp
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
+            return False
 
     def transform_positions(self, positions, org_frame, new_frame):
         t = rospy.Time.now()

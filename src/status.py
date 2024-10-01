@@ -40,7 +40,6 @@ class Status:
         self.rate = rospy.Rate(5) # 5hz
         i = 4
         while not rospy.is_shutdown():
-            self.status = "THINKING"
             msg_text = {
                 "status":self.status
             }

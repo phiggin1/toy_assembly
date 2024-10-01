@@ -33,6 +33,13 @@
     <node name="decompress_rgb_right" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/right/rgb raw out:=/unity/camera/right/rgb/image_raw" >
         <param name="use_sim_time" value="$(arg use_sim_time)"/>
     </node>
+    <!-- addes noise to color and depth images -->
+    <node name="right_effects" pkg="rivr_ros" type="sensor_effects.py" output="screen" >  
+        <param name="rgb_topic" value="/unity/camera/right/rgb/image_raw"/>
+        <param name="out_rgb_topic" value="/unity/camera/effects/right/rgb/image_raw"/>
+        <param name="depth_topic" value="/unity/camera/right/depth/image_raw"/>
+        <param name="out_depth_topic" value="/unity/camera/effects/right/depth/image_raw"/>
+    </node>
     <!-- builds pointcloud from the color and depth images -->
     <node pkg="nodelet" type="nodelet" name="cloudify_right" args="load depth_image_proc/point_cloud_xyzrgb record_player_manager ">
         <remap from="depth_registered/image_rect" to="/unity/camera/right/depth/image_raw"/> 
@@ -45,7 +52,13 @@
     <node name="decompress_rgb_left" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/left/rgb raw out:=/unity/camera/left/rgb/image_raw" >
         <param name="use_sim_time" value="$(arg use_sim_time)"/>
     </node>
-
+    <!-- addes noise to color and depth images -->
+    <node name="left_effects" pkg="rivr_ros" type="sensor_effects.py" output="screen" >  
+        <param name="rgb_topic" value="/unity/camera/left/rgb/image_raw"/>
+        <param name="out_rgb_topic" value="/unity/camera/effects/right/rgb/image_raw"/>
+        <param name="depth_topic" value="/unity/camera/left/depth/image_raw"/>
+        <param name="out_depth_topic" value="/unity/camera/effects/left/depth/image_raw"/>
+    </node>
     <!-- builds pointcloud from the color and depth images -->
     <node pkg="nodelet" type="nodelet" name="cloudify_left" args="load depth_image_proc/point_cloud_xyzrgb record_player_manager ">
         <remap from="depth_registered/image_rect" to="/unity/camera/left/depth/image_raw"/> 
@@ -54,5 +67,4 @@
         <remap from="depth_registered/points" to="/unity/camera/left/depth/points"/> 
         <param name="use_sim_time" value="$(arg use_sim_time)"/>
     </node>
-
 </launch>

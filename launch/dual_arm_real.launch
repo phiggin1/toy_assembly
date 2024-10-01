@@ -9,14 +9,14 @@ roslaunch kortex_driver iral_kortex_driver.launch prefix:=left ip_address:=192.1
 roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.168.1.11
 -->
 
-  <arg name="right_x0" default="0"/>
-  <arg name="right_y0" default="-0.4"/>
-  <arg name="right_z0" default="0"/>
+<arg name="right_x0" default="0"/>
+<arg name="right_y0" default="-0.4"/>
+<arg name="right_z0" default="0"/>
 
 
-  <arg name="left_x0" default="-0.05"/>
-  <arg name="left_y0" default="0.4"/>
-  <arg name="left_z0" default="0"/>
+<arg name="left_x0" default="-0.0375"/>
+<arg name="left_y0" default="0.375"/>
+<arg name="left_z0" default="0"/>
 
 <arg name="/use_sim_time" default="false"/>
 

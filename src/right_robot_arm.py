@@ -34,6 +34,8 @@ class Right_arm:
         #org right starting pose
         #self.start_pose = [0.0, 0.0, -1.0, 0.0, -2.0, 1.57]
 
+        self.real = rospy.get_param("~real", True)
+
         self.arm = "right"
         self.other_arm = "left"
         self.base_frame = "world"
@@ -65,11 +67,15 @@ class Right_arm:
             "right": right_frames
         }
 
-        self.start_pose = [0.0, 0.0, -1.57, 0.0, -1.57, 0.0]
+        #self.start_pose = [0.0, 0.0, -1.57, 0.0, -1.57, 0.0]
+        self.start_pose = [0.0, 0.33, -1.96, 0.0, -0.90, 0.0]
         self.init_position()	
 
         self.finger_open = 0.01
-        self.finger_closed = 0.75
+        if self.real:
+            self.finger_closed = 0.78
+        else:
+            self.finger_closed = 0.75
 
         self.hand_closed = [self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed, self.finger_closed]
         self.hand_open = [self.finger_open, self.finger_open, self.finger_open, self.finger_open, self.finger_open, self.finger_open]
@@ -212,7 +218,7 @@ class Right_arm:
         table_pose = PoseStamped()
         table_pose.header.frame_id = "world"
         table_pose.pose.position.x = 0.0
-        table_pose.pose.position.y = 0.0
+        table_pose.pose.position.y = 0.4
         table_pose.pose.position.z = -0.5
         table_pose.pose.orientation.w = 1.0
         self.scene.add_box("table", table_pose, size=(2.0, 3.0, 1.0))
@@ -220,7 +226,7 @@ class Right_arm:
         
         person_pose = PoseStamped()
         person_pose.header.frame_id = "world"
-        person_pose.pose.position.x = 1.75
+        person_pose.pose.position.x = 1.0
         person_pose.pose.position.y = 0.4
         person_pose.pose.position.z = 0.0
         person_pose.pose.orientation.w = 1.0
@@ -343,15 +349,22 @@ class Right_arm:
         """
         publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
         """
+
+
+        self.gripper_move_group.set_max_velocity_scaling_factor(0.1)
         status = self.gripper_move_group.go(self.hand_closed, wait=True) 
         self.gripper_move_group.stop()
+        self.gripper_move_group.set_max_velocity_scaling_factor(1.0)
 
+        
         # close fingers
         a = dict()
         a["robot"] = "right"
         a["action"] = "grab"
         s = json.dumps(a)
         self.grab.publish(s)
+        
+
 
         resp = Trigger._response_class()
         resp.success = status
