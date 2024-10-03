@@ -83,7 +83,7 @@ class AdaEndPoint:
           ["OPEN_HAND", "Opens the robots hand, lets go of any held object."], 
           ["CLOSE_HAND", "Close the robots hand, grab objects between the robots fingers"],
           
-          ["PICKUP", "Move the arm to pick up an object"],
+          ["PICK_UP", "Move the arm to pick up an object"],
 
           ["MOVE_TO", "Move the are to a given location"],
           
@@ -190,7 +190,15 @@ The dictionary that you return should be formatted as python dictionary. Follow 
         self.chat.append({'role': 'user', 'content': prompt})
 
         conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
-        
+
+        print(type(conversations))
+        print(len(conversations))
+        ''' 
+        if num_tokens > 4096:
+          sys = self.chat.pop(0)
+          tmp = [sys]
+          self.chat = tmp.append(self.chat[2:])
+        '''
         print(f"{time.time_ns()}: starting inference")
         start_time = time.time()
 
