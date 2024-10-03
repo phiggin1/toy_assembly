@@ -198,12 +198,7 @@ The dictionary that you return should be formatted as python dictionary. Follow 
         num_tokens = len(tokens)
         print(num_tokens)
          
-        if num_tokens > 4096:
-          '''
-          sys = self.chat.pop(0)
-          tmp = [sys]
-          self.chat = tmp.append(self.chat[2:])
-          '''
+        while num_tokens > 4096:
           del self.chat[1:2]
           conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
           tokens = self.tokenizer.tokenize(conversations)
