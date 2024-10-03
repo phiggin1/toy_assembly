@@ -174,6 +174,7 @@ The dictionary that you return should be formatted as python dictionary. Follow 
 5. Only use the actions listed in the list of actions.
 6. If the statement does not directed toward the robot or is not a request for the robot to perform an action the list should be empty.
 7. If the statement requires outside context such as refering to an object the list should be empty.
+7. If the statement referst to any object or location the action list should be empty.
 """  
         if prompt.find("[STATEMENT]") != -1:
             prompt = prompt.replace("[STATEMENT]", text)
