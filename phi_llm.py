@@ -97,10 +97,11 @@ class AdaEndPoint:
         self.system = """
 You are an excellent interpreter of human instructions for basic tasks. You are working with a human to jointly perform a simple collaborative task. In this task you are a robot working with a human to build a slot together toy.
 
-actions = {[ACTIONS]}
+'actions' = {[ACTIONS]}
 
 For a given statement determine if the statement is directed to the robot, is not a request or is not action.
 If it is not return the action the robot should as a python dictonary.
+The value MUST be one of the actions in the 'actions' list or empty no other values should be passed.
 The dictionary has one key.
 ---
 - dictonary["action"] : A list of the actions that the robot should take, taken from the actions list above.
