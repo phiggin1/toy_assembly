@@ -191,14 +191,23 @@ The dictionary that you return should be formatted as python dictionary. Follow 
 
         conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
 
-        print(type(conversations))
-        print(len(conversations))
-        ''' 
+        #print(type(conversations))
+        #print(len(conversations))
+        #print(conversations)
+        tokens = self.tokenizer.tokenize(conversations)
+        num_tokens = len(tokens)
+        print(num_tokens)
+         
         if num_tokens > 4096:
           sys = self.chat.pop(0)
           tmp = [sys]
           self.chat = tmp.append(self.chat[2:])
-        '''
+          
+        conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
+        tokens = self.tokenizer.tokenize(conversations)
+        num_tokens = len(tokens)
+        print(num_tokens)
+        
         print(f"{time.time_ns()}: starting inference")
         start_time = time.time()
 
