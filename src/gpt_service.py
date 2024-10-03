@@ -109,8 +109,8 @@ The dictionary has one key.
         if self.debug: rospy.loginfo("============================")
         if self.debug: print(f"Sending to gpt\ntext:{text}")
 
-        self.get_prompt(text, image, objects)
-        ans = self.chat_complete(self.messages)
+        new_msg = self.get_prompt(text, image, objects)
+        ans = self.chat_complete(new_msg)
         
         self.prev_answer = ans
 
@@ -121,7 +121,9 @@ The dictionary has one key.
         print("get_prompt")
         cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
         merge_test = "_".join(text.split(" "))
-        cv2.imwrite(f"/home/rivr/gpt_image_text_log/{image.header.stamp}{merge_test}.png", cv_img)
+        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
+        print(fname)
+        cv2.imwrite(fname, cv_img)
         is_success, buffer = cv2.imencode(".png", cv_img)
         io_buf = io.BytesIO(buffer)        
         encoded_image = base64.b64encode(buffer).decode("utf-8") 
@@ -157,27 +159,23 @@ The dictonary that you return should be formatted as python dictonary. Follow th
         if instruction.find('[OBJECTS]') != -1:
             instruction = instruction.replace('[OBJECTS]', ", ".join(objects))
 
-        self.messages.append(
-            {
-                "role":"user", 
+        return {"role":"user", 
                 "content": [
                     {"type":"text", "text" : instruction},
                     {"type":"image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
-                ]
-            }
-        )
+                ]}
 
-        
-
-    def chat_complete(self, messages):
+    def chat_complete(self, new_msg):
         start_time = time.time_ns()
         
+        self.messages.append(new_msg)
+
         model = "gpt-4o-2024-05-13"
         #model = "gpt-4o-mini-2024-07-18"
         temperature = 0.0
         max_tokens = 128
         
-        results = self.client.chat.completions.create(model=model, messages=messages, temperature=temperature, max_tokens=max_tokens, stream=True)
+        results = self.client.chat.completions.create(model=model, messages=self.messages, temperature=temperature, max_tokens=max_tokens, stream=True)
         response = []
         for chunk in results:
             response.append(chunk.choices[0].delta.content)

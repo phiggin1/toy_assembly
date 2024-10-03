@@ -14,6 +14,7 @@ from std_srvs.srv import Trigger
 from std_msgs.msg import String
 import pandas
 import os
+import time
 
 def extract_json(text):
     a = text.find('{')
@@ -34,7 +35,8 @@ class AssemblyClient:
         self.prefix =  rospy.get_param("~prefix", "test")
         path = "/home/rivr/toy_logs"
         os.makedirs(path, exist_ok=True)
-        self.log_file_path = os.path.join(path, f"{self.prefix}.csv")
+        start_time = time.strftime("%Y_%m_%d_%H_%M")
+        self.log_file_path = os.path.join(path, f"{self.prefix}_{start_time}.csv")
         rospy.loginfo(self.log_file_path)
         
         self.dataframe_csv = []
@@ -211,12 +213,12 @@ class AssemblyClient:
             self.high_level(text)  
             return
     
-        if "PICKUP" in action:
+        if "PICKUP" in action or  "OTHER" in action or  "MOVE_TO" in action:
             self.state = "HIGH_LEVEL"
-            self.high_level(text)  
-        elif "OTHER" in action:
+            self.high_level(text)
+        elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROLL_LEFT" in action and "ROLL_RIGHT" in action):
             self.state = "HIGH_LEVEL"
-            self.high_level(text)   
+            self.high_level(text)
         else:   
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"

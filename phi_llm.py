@@ -84,6 +84,8 @@ class AdaEndPoint:
           ["CLOSE_HAND", "Close the robots hand, grab objects between the robots fingers"],
           
           ["PICKUP", "Move the arm to pick up an object"],
+
+          ["MOVE_TO", "Move the are to a given location"],
           
           ["OTHER", "Any other possible command"]
         ]
