@@ -30,11 +30,10 @@ class AdaEndPoint:
         
         #LLAMA3/PHI3
         #model_name = "meta-llama/Meta-Llama-3-8B-Instruct"
-        '''
+        
         model_name = "microsoft/Phi-3-mini-4k-instruct"
         self.llm = LLM(
           model=model_name, 
-          revision="65be4e00a56c16d036e9cbe96b0b35f8aa0f84b0",
           dtype="float16"
         )
         '''
@@ -44,6 +43,7 @@ class AdaEndPoint:
           model=model_path, 
           dtype="float16"
         )
+        '''
         
         self.tokenizer = self.llm.get_tokenizer()
         self.sampling_params = SamplingParams(temperature=0,max_tokens=64)
