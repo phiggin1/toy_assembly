@@ -12,6 +12,8 @@ from toy_assembly.srv import MoveITPose
 from geometry_msgs.msg import TwistStamped, PoseStamped, PointStamped
 from std_srvs.srv import Trigger 
 from std_msgs.msg import String
+import pandas
+import os
 
 def extract_json(text):
     a = text.find('{')
@@ -29,7 +31,13 @@ class AssemblyClient:
         self.cvbridge = CvBridge()
         self.listener = tf.TransformListener()
 
-        self.real = rospy.get_param("~real", True)
+        self.prefix =  rospy.get_param("~prefix", "test")
+        path = "/home/rivr/toy_logs"
+        os.makedirs(path, exist_ok=True)
+        self.log_file_path = os.path.join(path, f"{self.prefix}.csv")
+        rospy.loginfo(self.log_file_path)
+        
+        self.dataframe_csv = []
 
         self.num_msgs = 20
         self.rate = rospy.Rate(20)
@@ -71,7 +79,8 @@ class AssemblyClient:
 
         #self.text_sub = rospy.Subscriber("/transcript", Transcription, self.text_cb)
         #rospy.spin()
-        
+
+        rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
             
             transcription = rospy.wait_for_message("/transcript", Transcription)
@@ -83,8 +92,16 @@ class AssemblyClient:
             '''
             self.text_cb(transcription)
 
+    def shutdown_hook(self):
+        pandas.concat(self.dataframe_csv).to_csv(self.log_file_path, index=False)
+
     def text_cb(self, transcript):
         if self.debug: rospy.loginfo("========================================================") 
+        self.df = pandas.DataFrame({
+            "timestamp": [transcript.audio_recieved],
+            "duration": [transcript.duration],
+            "transcript":[transcript.transcription]
+        })
         rospy.loginfo("THINKING")
         self.status_pub.publish("THINKING")
         if self.debug: rospy.loginfo(f"state: {self.state}")
@@ -103,6 +120,8 @@ class AssemblyClient:
         rospy.loginfo("WAITING")
         self.status_pub.publish("WAITING")
         if self.debug: rospy.loginfo("--------------------------------------------------------") 
+        self.dataframe_csv.append(self.df)
+        #self.df.to_csv(self.log_file_path, index=False, mode='a')  
 
     def high_level(self, text):
         overlay_topic = "/left_object_images"
@@ -114,7 +133,7 @@ class AssemblyClient:
             rospy.loginfo("object waiting timed out")
             self.state = "LOW_LEVEL"
             return
-        
+
         rospy.loginfo("recved objects")
         frame = obj_img.header.frame_id
         image = obj_img.image
@@ -125,8 +144,12 @@ class AssemblyClient:
         for i in range(len(opject_positions)):
             objects.append(f"obj_{i}")
 
+        obj_pos = []
         for i in range(len(opject_positions)):
             rospy.loginfo(f"{objects[i]}, {opject_positions[i].header.frame_id}, {opject_positions[i].point.x}, {opject_positions[i].point.y},{opject_positions[i].point.z}")
+            obj_pos.append([opject_positions[i].point.x, opject_positions[i].point.y, opject_positions[i].point.z])
+
+
 
         req = LLMImageRequest()
         req.text = text
@@ -135,6 +158,13 @@ class AssemblyClient:
         req.image = image
 
         resp = self.llm_text_srv(req)
+
+        self.df["image_timestamp"] = [obj_img.header.stamp]
+        self.df["objects"] = [objects]
+        self.df["objects_positions"] = [obj_pos]
+        
+        self.df["gpt_response"] = [str(resp.text).replace('\n','')]
+
         #Should do some error checking
         # in future
         json_dict = extract_json(resp.text)
@@ -153,6 +183,20 @@ class AssemblyClient:
 
         if "PICKUP" in action:
             self.pickup(json_dict, objects, opject_positions)
+        elif "MOVE_TO" in action:
+            print(json_dict)
+            if "direction" in json_dict:
+                move_dir = json_dict["direction"]
+                print(f"move in direction: {move_dir}")
+                #self.ee_move()
+            elif "object" in json_dict:
+                print(json_dict["object"])
+                obj = json_dict["object"]
+                indx = objects.index(obj)
+                self.target_position = opject_positions[indx]
+                print(f"{obj}, {self.target_position}")
+                self.indicate(self.target_position)
+            
         else:   
             self.ee_move(action)
 
@@ -187,6 +231,8 @@ class AssemblyClient:
         
         self.socket.send_json(msg)
         resp = self.socket.recv_json()
+
+        self.df["phi3_response"] = [str(resp["text"]).replace('\n','')]
 
         if "error" in resp:
             rospy.loginfo(resp["error"])
@@ -320,10 +366,18 @@ class AssemblyClient:
 
     def send_command(self, x, y, z, roll, pitch, yaw):
         linear_cmd = TwistStamped()
+        
         linear_cmd.header.frame_id ="right_base_link"
         linear_cmd.twist.linear.x = x
         linear_cmd.twist.linear.y = y
         linear_cmd.twist.linear.z = z
+        
+        '''
+        linear_cmd.header.frame_id ="right_end_effector_link"
+        linear_cmd.twist.linear.x = z
+        linear_cmd.twist.linear.y = -y
+        linear_cmd.twist.linear.z = x
+        '''
 
         angular_cmd = TwistStamped()
         angular_cmd.header.frame_id ="right_end_effector_link"

@@ -84,7 +84,16 @@ The dictionary has one key.
             self.system = self.system.replace("[ACTIONS]", actions)
 
 
-        self.messages = []
+        #self.messages = []
+
+        self.messages = [
+            {
+                "role":"system", 
+                "content": [
+                    {"type":"text", "text" : self.system},
+                ]
+            },
+        ] 
 
         self.llm_check_serv = rospy.Service("/gpt_servcice", LLMImage, self.call_gpt)
 
@@ -111,6 +120,8 @@ The dictionary has one key.
     def get_prompt(self, text, image, objects):
         print("get_prompt")
         cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+        merge_test = "_".join(text.split(" "))
+        cv2.imwrite(f"/home/rivr/gpt_image_text_log/{image.header.stamp}{merge_test}.png", cv_img)
         is_success, buffer = cv2.imencode(".png", cv_img)
         io_buf = io.BytesIO(buffer)        
         encoded_image = base64.b64encode(buffer).decode("utf-8") 
@@ -123,6 +134,7 @@ For a given statement determine what actions the robot should take.
 If the "PICKUP" action is chosen there must be a "object" key in the returned dictonary with the object from the list below as the value.
 Return only a single object from the list of objects provided.
 You should only choose "PICKUP" if the person instructs and if there are any objects in the "objects' list.
+If the "MOVE_TO" action is chosen there must either an "object" or "direction" in the returned dictonary and if "object" is used it must be from the list below as the value.
 Resume using the following instruction and the objects in the provided image.
 
 ---
@@ -131,7 +143,7 @@ The instruction is as follows:
 {"instruction": '[INSTRUCTION]}
 ---
 {"objects" = [OBJECTS]}
-{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILT_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "OTHER"]}
+{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILT_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "MOVE_TO", "OTHER"]}
 ---
 The dictonary that you return should be formatted as python dictonary. Follow these rules:
 1. Never leave ',' at the end of the list.
@@ -145,13 +157,7 @@ The dictonary that you return should be formatted as python dictonary. Follow th
         if instruction.find('[OBJECTS]') != -1:
             instruction = instruction.replace('[OBJECTS]', ", ".join(objects))
 
-        self.messages = [
-            {
-                "role":"system", 
-                "content": [
-                    {"type":"text", "text" : self.system},
-                ]
-            },
+        self.messages.append(
             {
                 "role":"user", 
                 "content": [
@@ -159,9 +165,8 @@ The dictonary that you return should be formatted as python dictonary. Follow th
                     {"type":"image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
                 ]
             }
-        ] 
-        #if True:
-        #    self.messages[1]["content"].append({"type":"image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}})
+        )
+
         
 
     def chat_complete(self, messages):
@@ -179,6 +184,14 @@ The dictonary that you return should be formatted as python dictonary. Follow th
 
         ans = [m for m in response if m is not None]
         answer = ''.join([m for m in ans])
+        self.messages.append(
+            {
+                "role":"assistant", 
+                "content": [
+                    {"type":"text", "text" : answer},
+                ]
+            }
+        )
         '''
         answer = self.woz(messages)
         '''

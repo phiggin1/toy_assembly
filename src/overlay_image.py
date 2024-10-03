@@ -48,12 +48,10 @@ class ImageSegment:
         if self.real:
             self.cam_link_name = "left_camera_color_frame"
             self.cam_link_name = "left_camera_link"
-            self.offset_x = 0.0275 - 0.0000
-            self.offset_y = 0.0660 - 0.05639
-            self.offset_x = 0.00
-            self.offset_y = 0.00
+            self.offset_x = 0.0#0.0275 - 0.0000
+            self.offset_y = 0.0#0.0660 - 0.05639
             cam_info_topic = f"/{self.arm}_camera/color/camera_info_throttled"
-            rgb_image_topic = f"/{self.arm}_camera/color/image_raw_throttled"
+            rgb_image_topic = f"/{self.arm}_camera/color/image_rect_color_throttled"
             obj_cluster_topic = f"/{self.arm}_camera/depth_registered/object_clusters"
             output_image_topic = f"/{self.arm}_camera/color/overlay_raw"
         else:
@@ -240,10 +238,12 @@ class ImageSegment:
         ee_right = PointStamped()
         ee_right.header.frame_id = "right_tool_frame"
         ee_right.point.y = 0.25
+        left = ()
 
         ee_up = PointStamped()
         ee_up.header.frame_id = "right_tool_frame"
         ee_up.point.z = 0.25
+        
 
         t = rospy.Time(0)
         self.listener.waitForTransform(self.frame, "right_tool_frame",  t, rospy.Duration(4.0))
@@ -256,9 +256,9 @@ class ImageSegment:
         ee_up = self.listener.transformPoint(self.frame, ee_up)
 
         ee = tuple(np.asarray(self.cam_model.project3dToPixel( [ee.point.x, ee.point.y, ee.point.z] ), int))
-        ee_forward = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_forward.point.x, ee_forward.point.y, ee_forward.point.z] ), int))
-        ee_right = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_right.point.x, ee_right.point.y, ee_right.point.z] ), int))
-        ee_up = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_up.point.x, ee_up.point.y, ee_up.point.z] ), int))
+        ee_forward = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_forward.point.x+self.offset_x, ee_forward.point.y+self.offset_y, ee_forward.point.z] ), int))
+        ee_right = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_right.point.x+self.offset_x, ee_right.point.y+self.offset_y, ee_right.point.z] ), int))
+        ee_up = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_up.point.x+self.offset_x, ee_up.point.y+self.offset_y, ee_up.point.z] ), int))
         
         cv2.line(rgb_img, ee, ee_forward, (255,0,0), 2) 
         cv2.line(rgb_img, ee, ee_right, (0,255,0), 2) 

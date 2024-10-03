@@ -105,9 +105,13 @@ The dictionary has one key.
 ---
 -------------------------------------------------------
 """
+        
         if self.system.find("[ACTIONS]") != -1:
             self.system = self.system.replace("[ACTIONS]", self.actions)
-            
+        
+        self.chat = [
+            {'role': 'system', 'content': self.system},
+        ] 
 
     def get_mem_usage(self, device):
         print("torch.cuda.memory_allocated: %fGB"%(torch.cuda.memory_allocated(device)/1024/1024/1024))
@@ -139,7 +143,7 @@ The dictionary has one key.
 
             self.socket.send_json(resp)
             end_time = time.time()
-            print(f"{time.time_ns()}: Message replied type: {msg_type}, took {end_time-start_time} second")
+            print(f"{time.time_ns()}: Message replied type: {msg_type}, took {end_time-start_time} seconds")
 
             
 
@@ -148,9 +152,10 @@ The dictionary has one key.
         
         #TODO better filtering
         if len(text) < 3:
-          response = {"type":"llm",
-                    "text":"",
-                    "error":"invalid transcript"
+          response = {
+            "type":"llm",
+            "text":"",
+            "error":"invalid transcript"
           }
           return response
 
@@ -173,11 +178,14 @@ The dictionary that you return should be formatted as python dictionary. Follow 
         if prompt.find("[STATEMENT]") != -1:
             prompt = prompt.replace("[STATEMENT]", text)
         
+        '''
         self.chat = [
             {'role': 'system', 'content': self.system},
             {'role': 'user', 'content': prompt}
         ] 
-        
+        '''
+        self.chat.append({'role': 'user', 'content': prompt})
+
         conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
         
         print(f"{time.time_ns()}: starting inference")
@@ -198,7 +206,7 @@ The dictionary that you return should be formatted as python dictionary. Follow 
         text = ''.join(text)
         print(text)
         
-        #self.chat.append({'role': 'assistant', 'content': text})
+        self.chat.append({'role': 'assistant', 'content': text})
         
         print("##################################")
 
