@@ -8,6 +8,7 @@
 
        <node name="left_camera_color_info_throttler" type="throttle" pkg="topic_tools" args="messages /left_camera/color/camera_info 30 /left_camera/color/camera_info_throttled" />
        <node name="left_camera_color_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/color/image_raw   30 /left_camera/color/image_raw_throttled" />
+       <node name="left_camera_image_rect_color_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/color/image_rect_color   30 /left_camera/color/image_rect_color_throttled" />
        <node name="left_camera_depth_info_throttler" type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/camera_info 30  /left_camera/depth_registered/sw_registered/camera_info_throttled" />
        <node name="left_camera_depth_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/image_rect   30 /left_camera/depth_registered/sw_registered/image_rect_throttled" />
 
@@ -30,8 +31,10 @@
        <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
        <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
 
-       <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  </node>
-<!--       
+       <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  
+              <param name="~prefix"  value="$(arg prefix)" />
+       </node>
+
        <node pkg="rosbag" type="record" name="toy_record"
               args="record 
               -o $(arg prefix)
@@ -46,6 +49,8 @@
               /unity/camera/left/rgb/camera_info
               /unity/camera/left/rgb/image_raw
 
+              /left_object_images
+
               /right_camera/color/camera_info_throttled
               /right_camera/color/image_raw_throttled
               /right_camera/depth_registered/sw_registered/camera_info_throttled
@@ -56,8 +61,6 @@
               /unity/camera/right/rgb/camera_info
               /unity/camera/right/rgb/image_raw
 
-              /left_object_images
-
               /tf_throttled
               /tf_static
               /my_gen3_left/joint_states_throttled
@@ -67,7 +70,7 @@
               /transcript
               /buttons"
        />
--->
+
 </launch>
 
 

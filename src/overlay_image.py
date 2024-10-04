@@ -48,8 +48,8 @@ class ImageSegment:
         if self.real:
             self.cam_link_name = "left_camera_color_frame"
             self.cam_link_name = "left_camera_link"
-            self.offset_x = 0.0#0.0275 - 0.0000
-            self.offset_y = 0.0#0.0660 - 0.05639
+            self.offset_x = 0#0.0275 - 0.0000
+            self.offset_y = 0#0.05639 - 0.0660
             cam_info_topic = f"/{self.arm}_camera/color/camera_info_throttled"
             rgb_image_topic = f"/{self.arm}_camera/color/image_rect_color_throttled"
             obj_cluster_topic = f"/{self.arm}_camera/depth_registered/object_clusters"
@@ -197,7 +197,7 @@ class ImageSegment:
                 u_max = min(int(math.ceil(max_pix[0]))+buffer, rgb_img.shape[1])
                 v_max = min(int(math.ceil(max_pix[1]))+buffer, rgb_img.shape[1])
 
-                cv2.rectangle(rgb_img, (u_min, v_min), (u_max, v_max), color=(255,255,255), thickness=1)
+                cv2.rectangle(rgb_img, (u_min, v_min), (u_max, v_max), color=(255,255,255), thickness=2)
 
             object_positions = []
             for obj in self.objects:
@@ -219,8 +219,8 @@ class ImageSegment:
                 
                 #rospy.loginfo(f"{i}, {center_pix}")
 
-                #text_location = (int(center_pix[0]),int(center_pix[1]))  #center of object
-                text_location = (u_min,v_min)   #top right rocer of object's bounding box
+                text_location = (int(center_pix[0]),int(center_pix[1]))  #center of object
+                #text_location = (u_min,v_min)   #top right rocer of object's bounding box
                 text = "obj_"+str(i)
                 
                 cv2.putText(rgb_img, text, text_location, font, font_scale, (0,0,0), thickness+1, line_type)
@@ -228,6 +228,7 @@ class ImageSegment:
 
                 #rospy.loginfo(text)
         
+        '''
         ee = PointStamped()
         ee.header.frame_id = "right_tool_frame"
 
@@ -248,8 +249,6 @@ class ImageSegment:
         t = rospy.Time(0)
         self.listener.waitForTransform(self.frame, "right_tool_frame",  t, rospy.Duration(4.0))
 
-        (trans,rot) = self.listener.lookupTransform(self.frame, "right_tool_frame", rospy.Time(0))
-
         ee = self.listener.transformPoint(self.frame, ee)
         ee_forward = self.listener.transformPoint(self.frame, ee_forward)
         ee_right = self.listener.transformPoint(self.frame, ee_right)
@@ -260,9 +259,10 @@ class ImageSegment:
         ee_right = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_right.point.x+self.offset_x, ee_right.point.y+self.offset_y, ee_right.point.z] ), int))
         ee_up = tuple(np.asarray(self.cam_model.project3dToPixel( [ee_up.point.x+self.offset_x, ee_up.point.y+self.offset_y, ee_up.point.z] ), int))
         
-        cv2.line(rgb_img, ee, ee_forward, (255,0,0), 2) 
-        cv2.line(rgb_img, ee, ee_right, (0,255,0), 2) 
-        cv2.line(rgb_img, ee, ee_up, (0,0,255), 2)
+        cv2.line(rgb_img, ee, ee_forward, (255,0,0), 1) 
+        cv2.line(rgb_img, ee, ee_right, (0,255,0), 1) 
+        cv2.line(rgb_img, ee, ee_up, (0,0,255), 1)
+        '''
 
         #rospy.loginfo(f"-----------------------")    
         rgb_msg = self.bridge.cv2_to_imgmsg(rgb_img, "bgr8")

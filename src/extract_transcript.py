@@ -13,8 +13,8 @@ class ExtractData:
     def __init__(self):
         rospy.init_node('extract_text', anonymous=True)
         self.bridge = CvBridge()
-        path = "/mnt/RAID/toy/Real_VR/Real/"
-        real = True
+        path = "/mnt/RAID/toy/VR_Real/VR/"
+        real = False
 
         self.object_image = None
         if not real:
@@ -40,7 +40,7 @@ class ExtractData:
         right_states_pub = rospy.Publisher(right_joint_topic, JointState, queue_size=10)
 
         data_path = "/home/rivr/text_image_data/"
-        text_file = open(os.path.join(data_path, "real_first_transcripts.txt"), "a")
+        #text_file = open(os.path.join(data_path, "real_second_transcripts.txt"), "a")
         for file in os.listdir(path):
             bag_filename = os.path.join(path, os.fsdecode(file))
             print("=======================")
@@ -56,8 +56,12 @@ class ExtractData:
                 time = speech_t
                 duration = speech_msg.duration
                 print(f"{participant}, \t{condition}, \t{speech_t}, \t{transcription}")
-                text_file.write(f"{participant}, \t{condition}, \t{speech_t}, \t{transcription}\n")
-
+                #text_file.write(f"{participant}, \t{condition}, \t{speech_t}, \t{transcription}\n")
+                f = open(os.path.join(data_path, participant, condition, f"""{time}{"_".join(transcription.split(" "))}.txt"""), "a")
+                f.write(transcription)
+                f.close()
+                
+                '''
                 depth_cam_info = self.get_last_msg(bagfile, speech_t, depth_cam_info_topic)
                 depth_image = self.get_last_msg(bagfile, speech_t, depth_image_topic)
                 rgb_cam_info = self.get_last_msg(bagfile, speech_t, rgb_cam_info_topic)
@@ -83,9 +87,6 @@ class ExtractData:
                         left_states_pub.publish(left_states)
                         right_states_pub.publish(right_states)
                     rospy.sleep(5)
-                    f = open(os.path.join(data_path, participant, condition, f"{time}.txt"), "a")
-                    f.write(transcription)
-                    f.close()
                     rgb_img = self.bridge.imgmsg_to_cv2(rgb_image, desired_encoding="bgr8")
                     cv2.imwrite(os.path.join(data_path, participant, condition, f"{time}.png"), rgb_img)
                     if self.object_image is not None:
@@ -97,8 +98,8 @@ class ExtractData:
                     self.object_image = None
                 else:
                     print("no data")
-                
-        text_file.close()
+                '''
+        #text_file.close()
 
     def get_last_msg(self, bag, end_time, topic_name):
         start_time = end_time - rospy.Duration(3)

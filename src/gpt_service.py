@@ -42,29 +42,23 @@ Understood?
         actions_list = [
           ["MOVE_FORWARD", "Move the robot's hand forward toward the human"], 
           ["MOVE_BACKWARD", "Move the robot's hand backward away from the human"], 
-          
           ["MOVE_RIGHT", "Move the robot's hand to the robot's right, the human's left"], 
-          ["MOVE_LEFT", "Move the robot's hand to the robot's left, the human's right"], 
-
+          ["MOVE_LEFT", "Move the robot's hand to the robot's left, the human's right"],
           ["MOVE_UP", "Move the robot's hand up."], 
           ["MOVE_DOWN", "Move the robot's hand down."], 
-          
           ["PITCH_UP", "Tilt the robot's hand up."],
           ["PITCH_DOWN", "Tilt the robot's hand down."],
-          
           ["ROLL_LEFT", "Rotate the robot's hand to the left."],
           ["ROLL_RIGHT", "Rotate the robot's hand to the right."],
-          
           ["OPEN_HAND", "Opens the robots hand, lets go of any held object."], 
           ["CLOSE_HAND", "Close the robots hand, grab objects between the robots fingers"],
-          
-          ["PICKUP", "Move the arm to pick up an object"],
-          
+          ["PICK_UP", "Move the arm to pick up an object"],
           ["OTHER", "Any other possible command"]
         ]
-        actions = ""
+        self.actions = ""
         for a in actions_list:
-          actions += " - "+a[0]+" : " + a[1]+"\n"
+          self.actions += " - "+a[0]+" : " + a[1]+"\n"
+
         self.system = """
 You are an excellent interpreter of human instructions for basic tasks. 
 You are working with a human to jointly perform a simple collaborative task. 
@@ -81,10 +75,8 @@ The dictionary has one key.
 -------------------------------------------------------
 """
         if self.system.find("[ACTIONS]") != -1:
-            self.system = self.system.replace("[ACTIONS]", actions)
+            self.system = self.system.replace("[ACTIONS]", self.actions)
 
-
-        #self.messages = []
 
         self.messages = [
             {
@@ -109,6 +101,15 @@ The dictionary has one key.
         if self.debug: rospy.loginfo("============================")
         if self.debug: print(f"Sending to gpt\ntext:{text}")
 
+        self.messages = [
+            {
+                "role":"system", 
+                "content": [
+                    {"type":"text", "text" : self.system},
+                ]
+            },
+        ] 
+        
         new_msg = self.get_prompt(text, image, objects)
         ans = self.chat_complete(new_msg)
         
@@ -128,15 +129,15 @@ The dictionary has one key.
         io_buf = io.BytesIO(buffer)        
         encoded_image = base64.b64encode(buffer).decode("utf-8") 
 
-
-
         prompt = """
 Start working. 
 For a given statement determine what actions the robot should take.
 If the "PICKUP" action is chosen there must be a "object" key in the returned dictonary with the object from the list below as the value.
 Return only a single object from the list of objects provided.
 You should only choose "PICKUP" if the person instructs and if there are any objects in the "objects' list.
-If the "MOVE_TO" action is chosen there must either an "object" or "direction" in the returned dictonary and if "object" is used it must be from the list below as the value.
+If the "MOVE_TO" action is chosen there must either an "object" or "direction" in the returned dictonary. 
+If "object" is used it must be from the list below as the value.
+If direction is used it must be one of "MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD".
 Resume using the following instruction and the objects in the provided image.
 
 ---
@@ -145,17 +146,20 @@ The instruction is as follows:
 {"instruction": '[INSTRUCTION]}
 ---
 {"objects" = [OBJECTS]}
-{"actions" = ["MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD", "TILT_UP", "TILT_DOWN", "ROTATE_LEFT", "ROTATE_RIGHT", "PICKUP", "OPEN_HAND", "CLOSE_HAND", "MOVE_TO", "OTHER"]}
+{"actions" = [ACTIONS]}
 ---
 The dictonary that you return should be formatted as python dictonary. Follow these rules:
 1. Never leave ',' at the end of the list.
 2. All keys of the dictionary should be double-quoted.
 3. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
 4. If the statement does not directed toward the robot or is not a request for the robot to perform an action the list should be empty.
-"""
+"""        
+        
         instruction = deepcopy(prompt)
+        if instruction.find("[ACTIONS]") != -1:
+            instruction = instruction.replace("[ACTIONS]", self.actions)
         if instruction.find('[INSTRUCTION]') != -1:
-            instruction = prompt.replace('[INSTRUCTION]', text)
+            instruction = instruction.replace('[INSTRUCTION]', text)
         if instruction.find('[OBJECTS]') != -1:
             instruction = instruction.replace('[OBJECTS]', ", ".join(objects))
 
@@ -174,7 +178,7 @@ The dictonary that you return should be formatted as python dictonary. Follow th
         #model = "gpt-4o-mini-2024-07-18"
         temperature = 0.0
         max_tokens = 128
-        
+        '''
         results = self.client.chat.completions.create(model=model, messages=self.messages, temperature=temperature, max_tokens=max_tokens, stream=True)
         response = []
         for chunk in results:
@@ -182,6 +186,10 @@ The dictonary that you return should be formatted as python dictonary. Follow th
 
         ans = [m for m in response if m is not None]
         answer = ''.join([m for m in ans])
+        '''
+        answer = self.woz(self.messages)
+        
+        '''
         self.messages.append(
             {
                 "role":"assistant", 
@@ -190,8 +198,6 @@ The dictonary that you return should be formatted as python dictonary. Follow th
                 ]
             }
         )
-        '''
-        answer = self.woz(messages)
         '''
         end_time = time.time_ns()
 

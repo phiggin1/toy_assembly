@@ -84,14 +84,13 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            
+            '''
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
-            self.state = "HIGH_LEVEL"
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            '''
+            
             self.text_cb(transcription)
 
     def shutdown_hook(self):
@@ -110,9 +109,6 @@ class AssemblyClient:
         if self.debug: rospy.loginfo(f"{transcript}")
 
         transcript =  transcript.transcription
-        #self.high_level(transcript)
-        #self.low_level(transcript)
-        #return
     
         if self.state == "HIGH_LEVEL":
             self.high_level(transcript)
@@ -126,6 +122,7 @@ class AssemblyClient:
         #self.df.to_csv(self.log_file_path, index=False, mode='a')  
 
     def high_level(self, text):
+        
         overlay_topic = "/left_object_images"
         rospy.loginfo("waiting for objects")
 
@@ -164,7 +161,6 @@ class AssemblyClient:
         self.df["image_timestamp"] = [obj_img.header.stamp]
         self.df["objects"] = [objects]
         self.df["objects_positions"] = [obj_pos]
-        
         self.df["gpt_response"] = [str(resp.text).replace('\n','')]
 
         #Should do some error checking
@@ -183,14 +179,14 @@ class AssemblyClient:
             self.state = "LOW_LEVEL"
             return
 
-        if "PICKUP" in action:
+        if "PICKUP" in action or "PICK_UP" in action:
             self.pickup(json_dict, objects, opject_positions)
         elif "MOVE_TO" in action:
             print(json_dict)
             if "direction" in json_dict:
                 move_dir = json_dict["direction"]
                 print(f"move in direction: {move_dir}")
-                #self.ee_move()
+                self.ee_move([move_dir])
             elif "object" in json_dict:
                 print(json_dict["object"])
                 obj = json_dict["object"]
@@ -198,7 +194,6 @@ class AssemblyClient:
                 self.target_position = opject_positions[indx]
                 print(f"{obj}, {self.target_position}")
                 self.indicate(self.target_position)
-            
         else:   
             self.ee_move(action)
 
@@ -213,7 +208,9 @@ class AssemblyClient:
             self.high_level(text)  
             return
     
-        if "PICKUP" in action or  "OTHER" in action or  "MOVE_TO" in action:
+        any_valid_commands = False
+
+        if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
             self.state = "HIGH_LEVEL"
             self.high_level(text)
         elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROLL_LEFT" in action and "ROLL_RIGHT" in action):
@@ -222,7 +219,7 @@ class AssemblyClient:
         else:   
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"
-            self.ee_move(action)
+            any_valid_commands = self.ee_move(action)
 
     def send_ada(self, text):
         msg = {"type":"llm",
@@ -272,6 +269,7 @@ class AssemblyClient:
         self.state = "LOW_LEVEL"
 
     def ee_move(self, actions):
+        any_valid_commands = False
         #Servo in EE base_link frame
         move = False
         x = 0.0
@@ -290,57 +288,70 @@ class AssemblyClient:
                     rospy.loginfo("PITCH_UP")
                     pitch =-self.angular_speed
                     move = True
+                    any_valid_commands = True
                 elif "PITCH_DOWN" in action:
                     rospy.loginfo("PITCH_DOWN")
                     pitch = self.angular_speed
                     move = True
+                    any_valid_commands = True
 
                 if  "ROLL_LEFT" in action:
                     rospy.loginfo("ROLL_LEFT")
                     roll =-self.angular_speed
                     move = True
+                    any_valid_commands = True
                 elif "ROLL_RIGHT" in action:
                     rospy.loginfo("ROLL_RIGHT")
                     roll = self.angular_speed
                     move = True
+                    any_valid_commands = True
                 
                 if "YAW_LEFT" in action:
                     rospy.loginfo("YAW_LEFT")
                     yaw =-self.angular_speed
                     move = True
+                    any_valid_commands = True
                 elif "YAW_RIGHT" in action:
                     rospy.loginfo("YAW_RIGHT")
                     yaw = self.angular_speed
                     move = True
+                    any_valid_commands = True
             
                 if "MOVE_FORWARD" in action:
                     rospy.loginfo("MOVE_FORWARD")
                     x = self.speed
                     move = True
+                    any_valid_commands = True
                 elif "MOVE_BACKWARD" in action:
                     rospy.loginfo("MOVE_BACKWARD")
                     x =-self.speed
                     move = True
+                    any_valid_commands = True
 
                 if "MOVE_RIGHT" in action:
                     rospy.loginfo("MOVE_RIGHT")
                     y =-self.speed
                     move = True
+                    any_valid_commands = True
                 elif "MOVE_LEFT" in action:
                     rospy.loginfo("MOVE_LEFT")
                     y = self.speed
                     move = True
+                    any_valid_commands = True
                 
                 if "MOVE_UP" in action:
                     rospy.loginfo("MOVE_UP")
                     z = self.speed
                     move = True
+                    any_valid_commands = True
                 elif "MOVE_DOWN" in action:
                     rospy.loginfo("MOVE_DOWN")
                     z =-self.speed
                     move = True
+                    any_valid_commands = True
             else:
                 if "CLOSE_HAND" in action:
+                    any_valid_commands = True
                     if move:
                         self.send_command(x,y,z, roll, pitch, yaw)
                         move = False
@@ -352,6 +363,7 @@ class AssemblyClient:
                         pitch = 0.0
                     self.close()
                 if "OPEN_HAND" in action:
+                    any_valid_commands = True
                     if move:
                         self.send_command(x,y,z, roll, pitch, yaw)
                         move = False
@@ -365,6 +377,8 @@ class AssemblyClient:
         if move:
             self.send_command(x,y,z, roll, pitch, yaw)
             move = False
+
+        return any_valid_commands 
 
     def send_command(self, x, y, z, roll, pitch, yaw):
         linear_cmd = TwistStamped()
