@@ -183,8 +183,8 @@ class AdaEndPoint:
         self.chat.append({'role': 'assistant', 'content': text})
 
         #only keep the system, and the last message
-        if len(self.messages) > 3:
-            del self.messages[1:2]
+        if len(self.chat) > 3:
+            del self.chat[1:2]
         
         self.get_mem_usage(self.device)
         
