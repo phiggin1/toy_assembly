@@ -84,13 +84,13 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            '''
+            
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            
+            '''
             self.text_cb(transcription)
 
     def shutdown_hook(self):
@@ -110,10 +110,12 @@ class AssemblyClient:
 
         transcript =  transcript.transcription
     
+        
         if self.state == "HIGH_LEVEL":
             self.high_level(transcript)
         else:
             self.low_level(transcript)
+        
     
         rospy.loginfo("WAITING")
         self.status_pub.publish("WAITING")
@@ -122,18 +124,15 @@ class AssemblyClient:
         #self.df.to_csv(self.log_file_path, index=False, mode='a')  
 
     def high_level(self, text):
-        
-        overlay_topic = "/left_object_images"
         rospy.loginfo("waiting for objects")
-
         try:        
-            obj_img = rospy.wait_for_message(overlay_topic, ObjectImage, timeout=10)
+            obj_img = rospy.wait_for_message("/left_object_images", ObjectImage, timeout=10)
         except:
             rospy.loginfo("object waiting timed out")
             self.state = "LOW_LEVEL"
             return
-
         rospy.loginfo("recved objects")
+        
         frame = obj_img.header.frame_id
         image = obj_img.image
         opject_positions = obj_img.object_positions
@@ -220,6 +219,7 @@ class AssemblyClient:
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"
             any_valid_commands = self.ee_move(action)
+            print(any_valid_commands)
 
     def send_ada(self, text):
         msg = {"type":"llm",

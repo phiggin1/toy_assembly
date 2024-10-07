@@ -2,6 +2,7 @@
 import torch
 import torchvision
 import numpy as np
+from copy import deepcopy
 import zmq
 import argparse
 import json
@@ -62,47 +63,24 @@ class AdaEndPoint:
         self.socket.connect("tcp://"+sever_address+":"+server_port)
         print(f"Connected to {sever_address}:{server_port}")
         
-        
-        actions_list = [
-          ["MOVE_FORWARD", "Move the robot's hand forward toward the human"], 
-          ["MOVE_BACKWARD", "Move the robot's hand backward away from the human"], 
-          ["MOVE_RIGHT", "Move the robot's hand to the robot's right, the human's left"], 
-          ["MOVE_LEFT", "Move the robot's hand to the robot's left, the human's right"], 
-          ["MOVE_UP", "Move the robot's hand up."], 
-          ["MOVE_DOWN", "Move the robot's hand down."], 
-          ["PITCH_UP", "Tilt the robot's hand up."],
-          ["PITCH_DOWN", "Tilt the robot's hand down."],
-          ["ROLL_LEFT", "Rotate the robot's hand to the left."],
-          ["ROLL_RIGHT", "Rotate the robot's hand to the right."],
-          ["OPEN_HAND", "Opens the robots hand, lets go of any held object."], 
-          ["CLOSE_HAND", "Close the robots hand, grab objects between the robots fingers"],
-          ["PICK_UP", "Move the arm to pick up an object"],
-          ["MOVE_TO", "Move the are to a given location"],
-          ["OTHER", "Any other possible command"]
-        ]
-        self.actions = ""
-        for a in actions_list:
-          self.actions += " - "+a[0]+" : " + a[1]+"\n"
+        fp_actions = "/home/phiggin1/toy_assembly/prompts/actions.txt"
+        with open(fp_actions) as f:
+            self.actions = f.read()
 
-        
-        self.system = """
-You are an excellent interpreter of human instructions for basic tasks. You are working with a human to jointly perform a simple collaborative task. In this task you are a robot working with a human to build a slot together toy.
-
-'actions' = {[ACTIONS]}
-
-For a given statement determine if the statement is directed to the robot, is not a request or is not action.
-If it is not return the action the robot should as a python dictonary.
-The value MUST be one of the actions in the 'actions' list or empty no other values should be passed.
-The dictionary has one key.
----
-- dictonary["action"] : A list of the actions that the robot should take, taken from the actions list above.
----
--------------------------------------------------------
-"""
-        
+        fp_system = "/home/phiggin1/toy_assembly/prompts/phi_system.txt"
+        with open(fp_system) as f:
+            self.system = f.read()
         if self.system.find("[ACTIONS]") != -1:
             self.system = self.system.replace("[ACTIONS]", self.actions)
-        
+        print(self.system)
+
+        fp_prompt = "/home/phiggin1/toy_assembly/prompts/phi_prompt.txt"
+        with open(fp_prompt) as f:
+            self.prompt = f.read()
+        if self.prompt.find("[ACTIONS]") != -1:
+            self.prompt = self.prompt.replace("[ACTIONS]", self.actions)
+        print(self.prompt)
+
         self.chat = [
             {'role': 'system', 'content': self.system},
         ] 
@@ -153,25 +131,10 @@ The dictionary has one key.
           }
           return response
 
-        prompt = """
-Start working using the instruction given below.
----
-The instruction is as follows:
----
-{"instruction": "[STATEMENT]"}
----
-The dictionary that you return should be formatted as python dictionary. Follow these rules:
-1. Never leave ',' at the end of the list.
-2. All keys of the dictionary should be double-quoted.
-3. All values of the dictionary should be double-quoted.
-4. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
-5. Only use the actions listed in the list of actions.
-6. If the statement does not directed toward the robot or is not a request for the robot to perform an action the list should be empty.
-7. If the statement requires outside context such as refering to an object the list should be empty.
-7. If the statement referst to any object or location the action list should be empty.
-"""  
-        if prompt.find("[STATEMENT]") != -1:
-            prompt = prompt.replace("[STATEMENT]", text)
+        instruction = deepcopy(self.prompt)
+
+        if instruction.find("[STATEMENT]") != -1:
+            instruction = instruction.replace("[STATEMENT]", text)
         
         '''
         self.chat = [
@@ -179,7 +142,7 @@ The dictionary that you return should be formatted as python dictionary. Follow 
             {'role': 'user', 'content': prompt}
         ] 
         '''
-        self.chat.append({'role': 'user', 'content': prompt})
+        self.chat.append({'role': 'user', 'content': instruction})
 
         conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
 
@@ -190,12 +153,14 @@ The dictionary that you return should be formatted as python dictionary. Follow 
         num_tokens = len(tokens)
         print(num_tokens)
          
+        
         while num_tokens > 4096:
           del self.chat[1:2]
           conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
           tokens = self.tokenizer.tokenize(conversations)
           num_tokens = len(tokens)
           print(num_tokens)
+        
         
         print(f"{time.time_ns()}: starting inference")
         start_time = time.time()
@@ -216,10 +181,15 @@ The dictionary that you return should be formatted as python dictionary. Follow 
         print(text)
         
         self.chat.append({'role': 'assistant', 'content': text})
+
+        #only keep the system, and the last message
+        #if len(self.messages) > 3:
+        #    del self.messages[1:2]
+        
+        self.get_mem_usage(self.device)
         
         print("##################################")
 
-        self.get_mem_usage(self.device)
 
         response = {"type":"llm",
                     "text":text

@@ -1,0 +1,23 @@
+Start working. 
+For a given statement determine what actions the robot should take.
+If the "PICKUP" action is chosen there must be a "object" key in the returned dictonary with the object from the list below as the value.
+Return only a single object from the list of objects provided.
+You should only choose "PICKUP" if the person instructs and if there are any objects in the "objects' list.
+If the "MOVE_TO" action is chosen there must either an "object" or "direction" in the returned dictonary. 
+If "object" is used it must be from the list below as the value.
+If direction is used it must be one of "MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD".
+Resume using the following instruction and the objects in the provided image.
+
+---
+The instruction is as follows:
+---
+{"instruction": '[INSTRUCTION]}
+---
+{"objects" = [OBJECTS]}
+{"actions" = [ACTIONS]}
+---
+The dictonary that you return should be formatted as python dictonary. Follow these rules:
+1. Never leave ',' at the end of the list.
+2. All keys of the dictionary should be double-quoted.
+3. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
+4. If the statement does not directed toward the robot or is not a request for the robot to perform an action the list should be empty.

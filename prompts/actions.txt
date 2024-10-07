@@ -1,0 +1,16 @@
+
+    ["MOVE_FORWARD", "Move the robot's hand forward toward the human"], 
+    ["MOVE_BACKWARD", "Move the robot's hand backward away from the human"], 
+    ["MOVE_RIGHT", "Move the robot's hand to the robot's right, the human's left"], 
+    ["MOVE_LEFT", "Move the robot's hand to the robot's left, the human's right"],
+    ["MOVE_UP", "Move the robot's hand up."], 
+    ["MOVE_DOWN", "Move the robot's hand down."], 
+    ["PITCH_UP", "Tilt the robot's hand up."],
+    ["PITCH_DOWN", "Tilt the robot's hand down."],
+    ["ROLL_LEFT", "Rotate the robot's hand to the left."],
+    ["ROLL_RIGHT", "Rotate the robot's hand to the right."],
+    ["OPEN_HAND", "Opens the robots hand, lets go of any held object."], 
+    ["CLOSE_HAND", "Close the robots hand, grab objects between the robots fingers"],
+    ["PICK_UP", "Move the arm to pick up an object"],
+    ["MOVE_TO", "Move the are to a given location"],
+    ["OTHER", "Any other possible command"]
