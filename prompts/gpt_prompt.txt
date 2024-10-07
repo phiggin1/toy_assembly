@@ -5,7 +5,7 @@ Return only a single object from the list of objects provided.
 You should only choose "PICKUP" if the person instructs and if there are any objects in the "objects' list.
 If the "MOVE_TO" action is chosen there must either an "object" or "direction" in the returned dictonary. 
 If "object" is used it must be from the list below as the value.
-If direction is used it must be one of "MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", "MOVE_BACKWARD".
+If direction is used it must be a list of containing only "MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", or "MOVE_BACKWARD".
 Resume using the following instruction and the objects in the provided image.
 
 ---

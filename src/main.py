@@ -84,7 +84,6 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             text = input("command: ")
@@ -210,16 +209,22 @@ class AssemblyClient:
         any_valid_commands = False
 
         if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
+            any_valid_commands = True
             self.state = "HIGH_LEVEL"
             self.high_level(text)
         elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROLL_LEFT" in action and "ROLL_RIGHT" in action):
+            any_valid_commands = True
             self.state = "HIGH_LEVEL"
             self.high_level(text)
         else:   
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"
             any_valid_commands = self.ee_move(action)
-            print(any_valid_commands)
+
+        if not any_valid_commands:
+            self.state = "HIGH_LEVEL"
+            self.high_level(text)
+
 
     def send_ada(self, text):
         msg = {"type":"llm",
@@ -463,9 +468,8 @@ class AssemblyClient:
         final_pose.pose.orientation.x = -1
         final_pose.pose.orientation.w = 0
         final_pose.pose.position.z -= 0.05
-        final_pose.pose.position.x += 0.01
 
-        min_safe_height = 0.0675
+        min_safe_height = 0.08
         final_pose.pose.position.z = max(min_safe_height, final_pose.pose.position.z)
 
         self.open()

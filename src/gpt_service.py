@@ -37,14 +37,14 @@ class LLMClient:
             self.system = f.read()
         if self.system.find("[ACTIONS]") != -1:
             self.system = self.system.replace("[ACTIONS]", self.actions)
-        print(self.system)
+        #print(self.system)
 
         fp_prompt = "/home/rivr/toy_ws/src/toy_assembly/prompts/gpt_prompt.txt"
         with open(fp_prompt) as f:
             self.prompt = f.read()
         if self.prompt.find("[ACTIONS]") != -1:
             self.prompt = self.prompt.replace("[ACTIONS]", self.actions)
-        print(self.prompt)
+        #print(self.prompt)
     
         self.messages = [
             {

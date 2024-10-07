@@ -47,17 +47,12 @@ class ImageSegment:
         '''
         if self.real:
             self.cam_link_name = "left_camera_color_frame"
-            self.cam_link_name = "left_camera_link"
-            self.offset_x = 0#0.0275 - 0.0000
-            self.offset_y = 0#0.05639 - 0.0660
             cam_info_topic = f"/{self.arm}_camera/color/camera_info_throttled"
             rgb_image_topic = f"/{self.arm}_camera/color/image_rect_color_throttled"
             obj_cluster_topic = f"/{self.arm}_camera/depth_registered/object_clusters"
             output_image_topic = f"/{self.arm}_camera/color/overlay_raw"
         else:
             self.cam_link_name = "left_camera_link"
-            self.offset_x = 0.00
-            self.offset_y = 0.00
             cam_info_topic = f"/unity/camera/{self.arm}/rgb/camera_info"
             rgb_image_topic = f"/unity/camera/{self.arm}/rgb/image_raw"
             obj_cluster_topic = f"/unity/camera/{self.arm}/depth/object_clusters"
@@ -67,6 +62,8 @@ class ImageSegment:
         rospy.loginfo(cam_info_topic)
         rospy.loginfo(rgb_image_topic)
         rospy.loginfo(obj_cluster_topic)
+
+        self.buffer = 15
 
         self.mutex = Lock()
         self.objects = []
@@ -131,20 +128,20 @@ class ImageSegment:
 
                 center_point = PointStamped()
                 center_point.header = obj_clusters.header
-                center_point.point.x = center[0]+self.offset_x
-                center_point.point.y = center[1]+self.offset_y
+                center_point.point.x = center[0]
+                center_point.point.y = center[1]
                 center_point.point.z = center[2]
-                if self.check_in_workspace(center_point):
+                if self.check_in_workspace(center_point, i):
                     min_point = PointStamped()
                     min_point.header = obj_clusters.header
-                    min_point.point.x = min_x+self.offset_x
-                    min_point.point.y = min_y+self.offset_y
+                    min_point.point.x = min_x
+                    min_point.point.y = min_y
                     min_point.point.z = min_z
 
                     max_point = PointStamped()
                     max_point.header = obj_clusters.header
-                    max_point.point.x = max_x+self.offset_x
-                    max_point.point.y = max_y+self.offset_y
+                    max_point.point.x = max_x
+                    max_point.point.y = max_y
                     max_point.point.z = max_z
 
                     center_point, min_point, max_point = self.transform_points(center_point, min_point, max_point)
@@ -154,8 +151,11 @@ class ImageSegment:
                     max_point = [max_point.point.x, max_point.point.y, max_point.point.z]
 
                     min_pix = self.cam_model.project3dToPixel( min_point )
+                    #min_pix = (int(min_pix[0]), int(min_pix[0]))
                     max_pix = self.cam_model.project3dToPixel (max_point )
+                    #max_pix = (int(max_pix[0]), int(max_pix[0]))
                     center_pix = self.cam_model.project3dToPixel( center )
+                    #center_pix = (int(center_pix[0]), int(center_pix[0]))
 
                     obj = dict()
                     obj["i"] = i
@@ -164,11 +164,13 @@ class ImageSegment:
                     obj["center_pix"] = center_pix
                     obj["center"] = center
                     self.objects.append(obj)
-                    #rospy.loginfo(f"{i}, {center_pix}")
-                    #print(min_x, max_x)
-                    #print(min_y, max_y)
-                    #print(min_z, max_z)
-                    i += 1
+                    '''
+                    rospy.loginfo(f"obj_{i}, {min_pix}, {center_pix}, {max_pix}")
+                    print(min_x, max_x)
+                    print(min_y, max_y)
+                    print(min_z, max_z)
+                    '''
+                i += 1
             
             self.have_objects = True
 
@@ -190,12 +192,12 @@ class ImageSegment:
                 max_pix = obj["max_pix"]
                 center_pix = obj["center_pix"]
 
-                buffer = 5
-                u_min = max(int(math.floor(min_pix[0]))-buffer, 0)
-                v_min = max(int(math.floor(min_pix[1]))-buffer, 0)
+                
+                u_min = max(int(math.floor(min_pix[0]))-self.buffer, 0)
+                v_min = max(int(math.floor(min_pix[1]))-self.buffer, 0)
                     
-                u_max = min(int(math.ceil(max_pix[0]))+buffer, rgb_img.shape[1])
-                v_max = min(int(math.ceil(max_pix[1]))+buffer, rgb_img.shape[1])
+                u_max = min(int(math.ceil(max_pix[0]))+self.buffer, rgb_img.shape[1])
+                v_max = min(int(math.ceil(max_pix[1]))+self.buffer, rgb_img.shape[1])
 
                 cv2.rectangle(rgb_img, (u_min, v_min), (u_max, v_max), color=(255,255,255), thickness=2)
 
@@ -211,16 +213,15 @@ class ImageSegment:
                 p.z = obj["center"][2]
                 object_positions.append(p)
 
-                u_min = max(int(math.floor(min_pix[0])), 0)
-                v_min = max(int(math.floor(min_pix[1])), 0)
-                    
-                u_max = min(int(math.ceil(max_pix[0])), rgb_img.shape[1])
-                v_max = min(int(math.ceil(max_pix[1])), rgb_img.shape[1])
+                u_min = max(int(math.floor(min_pix[0]))-self.buffer, 0)
+                v_min = max(int(math.floor(min_pix[1]))-self.buffer, 0)
+                u_max = min(int(math.ceil(max_pix[0]))+self.buffer, rgb_img.shape[1])
+                v_max = min(int(math.ceil(max_pix[1]))+self.buffer, rgb_img.shape[1])
                 
                 #rospy.loginfo(f"{i}, {center_pix}")
 
-                text_location = (int(center_pix[0]),int(center_pix[1]))  #center of object
-                #text_location = (u_min,v_min)   #top right rocer of object's bounding box
+                #text_location = (int(center_pix[0]),int(center_pix[1]))  #center of object
+                text_location = (u_min,v_min)   #top right rocer of object's bounding box
                 text = "obj_"+str(i)
                 
                 cv2.putText(rgb_img, text, text_location, font, font_scale, (0,0,0), thickness+1, line_type)
@@ -276,7 +277,7 @@ class ImageSegment:
         object_image.object_positions = object_positions
         self.object_images_pub.publish(object_image)
 
-    def check_in_workspace(self, p):
+    def check_in_workspace(self, p, i):
         t = rospy.Time(0)
         self.listener.waitForTransform(p.header.frame_id, "right_base_link", t, rospy.Duration(4.0))
         p.header.stamp = t
@@ -284,10 +285,10 @@ class ImageSegment:
         check = (0.1 < p.point.x < self.workspace_depth) and (-self.workspace_width < p.point.y < self.workspace_width) and (p.point.z < self.workspace_height)
 
         if check:
-            rospy.loginfo(f"point [{p.point.x:.2f},{p.point.y:.2f},{p.point.z:.2f}] check: {check}")
+            rospy.loginfo(f"cluster {i}, point [{p.point.x:.2f},{p.point.y:.2f},{p.point.z:.2f}] check: {check}")
             return True
         else:
-            rospy.loginfo(f"point [{p.point.x:.2f},{p.point.y:.2f},{p.point.z:.2f}] check: {check}")
+            rospy.loginfo(f"cluster {i}, point [{p.point.x:.2f},{p.point.y:.2f},{p.point.z:.2f}] check: {check}")
             return False
 
      
