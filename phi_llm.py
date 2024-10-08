@@ -136,31 +136,25 @@ class AdaEndPoint:
         if instruction.find("[STATEMENT]") != -1:
             instruction = instruction.replace("[STATEMENT]", text)
         
-        '''
+        
         self.chat = [
             {'role': 'system', 'content': self.system},
-            {'role': 'user', 'content': prompt}
+            {'role': 'user', 'content': instruction}
         ] 
-        '''
-        self.chat.append({'role': 'user', 'content': instruction})
+        
+        #self.chat.append({'role': 'user', 'content': instruction})
 
         conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
 
-        #print(type(conversations))
-        #print(len(conversations))
-        #print(conversations)
         tokens = self.tokenizer.tokenize(conversations)
         num_tokens = len(tokens)
         print(num_tokens)
-         
-        
         while num_tokens > 4096:
           del self.chat[1:2]
           conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
           tokens = self.tokenizer.tokenize(conversations)
           num_tokens = len(tokens)
           print(num_tokens)
-        
         
         print(f"{time.time_ns()}: starting inference")
         start_time = time.time()

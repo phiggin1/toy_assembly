@@ -20,4 +20,4 @@ The dictonary that you return should be formatted as python dictonary. Follow th
 1. Never leave ',' at the end of the list.
 2. All keys of the dictionary should be double-quoted.
 3. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
-4. If the statement does not directed toward the robot or is not a request for the robot to perform an action the list should be empty.
+6. If the statement is not directed toward the robot or is not a request for the robot to perform an action the list should be empty.
