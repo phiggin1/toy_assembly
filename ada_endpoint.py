@@ -132,9 +132,14 @@ class AdaEndPoint:
         
         img = np.asarray(data["image"], dtype=np.uint8)
 
-        
-        input_point = np.array([[target_x, target_y]])
-        input_label = np.array([0])
+        input_point = []
+        input_label = []
+        for i in range(len(target_x)):
+            input_point.append([target_x[i],target_y[i]])
+            input_label.append(0)
+
+        input_point = np.array(input_point)
+        input_label = np.array(input_label)
 
         print(img.shape)
 
