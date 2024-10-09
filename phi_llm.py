@@ -153,7 +153,7 @@ class AdaEndPoint:
         tokens = self.tokenizer.tokenize(conversations)
         num_tokens = len(tokens)
         print(num_tokens)
-        while num_tokens > 4096:
+        while num_tokens > 3000:
           del self.chat[1:2]
           conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
           tokens = self.tokenizer.tokenize(conversations)
@@ -180,9 +180,11 @@ class AdaEndPoint:
         
         self.chat.append({'role': 'assistant', 'content': text})
 
-        #only keep the system, and the last message
-        #if len(self.chat) > 3:
-        #    del self.chat[1:2]
+        #try and keep the chat log size down
+        # phi seems to get odd when it gets close
+        # to the contxt limit
+        if len(self.chat) > 20:
+            del self.chat[1:2]
         
         self.get_mem_usage(self.device)
         

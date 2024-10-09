@@ -71,16 +71,16 @@ class ImageSegment:
         </joint>
         '''
         if self.real:
-            self.cam_link_name = "left_camera_color_frame"
+            self.cam_link_name = f"{self.arm}_camera_color_frame"
             cam_info_topic = f"/{self.arm}_camera/color/camera_info_throttled"
             rgb_image_topic = f"/{self.arm}_camera/color/image_rect_color_throttled"
             obj_cluster_topic = f"/{self.arm}_camera/depth_registered/object_clusters"
             output_image_topic = f"/{self.arm}_camera/color/overlay_raw"
         else:
-            self.cam_link_name = "left_camera_link"
+            self.cam_link_name = f"{self.arm}_camera_link"
             cam_info_topic = f"/unity/camera/{self.arm}/rgb/camera_info"
             rgb_image_topic = f"/unity/camera/{self.arm}/rgb/image_raw"
-            obj_cluster_topic = f"/unity/camera/{self.arm}/depth/object_clusters"
+            obj_cluster_topic = f"/unity/camera/left/depth/object_clusters"
             output_image_topic = f"/unity/camera/{self.arm}/rgb/overlay_raw"
 
 
@@ -238,7 +238,7 @@ class ImageSegment:
                     obj["center"] = center_point
                     self.objects.append(obj)
                     
-                    #rospy.loginfo(f"obj_{i}, {min_pix}, {center_pix}, {max_pix}")
+                    #rospy.loginfo(f"{self.arm}, obj_{i}, {min_pix}, {center_pix}, {max_pix}")
                     #self.obj_marker_pub.publish( get_marker('world', rospy.Time.now(), 1, (max_x + min_x)/2, (max_y + min_y)/2, (max_z + min_z)/2, max_y - min_y ,max_x - min_x, max_z - min_z) )
                     
                 i += 1

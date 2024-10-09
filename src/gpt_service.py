@@ -88,7 +88,7 @@ class LLMClient:
 
     def get_prompt(self, text, image, objects):
         print("get_prompt")
-        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="rgb8")
         is_success, buffer = cv2.imencode(".png", cv_img)
         io_buf = io.BytesIO(buffer)        
         encoded_image = base64.b64encode(buffer).decode("utf-8") 

@@ -142,15 +142,17 @@ class AssemblyClient:
         transcript =  transcript.transcription
 
         if self.state == "HIGH_LEVEL":
-            self.high_level(transcript)
+            results = self.high_level(transcript)
         else:
-            self.low_level(transcript)
+            results = self.low_level(transcript)
         
+        rospy.loginfo(results)
         rospy.loginfo("WAITING")
         self.status_pub.publish("WAITING")
         if self.debug: rospy.loginfo("--------------------------------------------------------") 
         self.dataframe_csv.append(self.df)
         #self.df.to_csv(self.log_file_path, index=False, mode='a')  
+
 
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
@@ -159,7 +161,7 @@ class AssemblyClient:
         except:
             rospy.loginfo("object waiting timed out")
             self.state = "LOW_LEVEL"
-            return
+            return None
         rospy.loginfo("recved objects")
         
         frame = obj_img.header.frame_id
@@ -208,36 +210,39 @@ class AssemblyClient:
             action = json_dict["action"]
         else:
             self.state = "LOW_LEVEL"
-            return
+            return None
     
-
+        results = None
         if "PICKUP" in action or "PICK_UP" in action:
-            self.pickup(json_dict, objects, opject_positions)
+            success = self.pickup(json_dict, objects, opject_positions)
+            results = ("PICKUP", success)
         elif "MOVE_TO" in action:
             print(json_dict)
-            if "direction" in json_dict:
-                move_dir = json_dict["direction"]
-                print(f"move in direction: {move_dir}")
-                self.ee_move([move_dir])
-            elif "object" in json_dict:
+            if "object" in json_dict:
                 print(json_dict["object"])
                 obj = json_dict["object"]
                 indx = objects.index(obj)
                 self.target_position = opject_positions[indx]
                 print(f"{obj}, {self.target_position}")
-                self.move_to(self.target_position)
+                success = self.move_to(self.target_position)
+                results = ("MOVE_TO", success)
+            else:
+                results = ("MOVE_TO", False)
+
         else:   
-            self.ee_move(action)
+            any_valid_commands = self.ee_move(action)
+            results = (action, any_valid_commands)
 
         self.state = "LOW_LEVEL"
+        return results
 
     def low_level(self, text):
         action = self.send_ada(text)
         rospy.loginfo(f"low level action:\n\t {action}")
-
+        results = None
         if action is None or len(action)<1:
             self.state = "HIGH_LEVEL"
-            self.high_level(text)  
+            results = self.high_level(text)  
             return
         
         if "NO_ACTION" in action:
@@ -249,19 +254,22 @@ class AssemblyClient:
         if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
             any_valid_commands = True
             self.state = "HIGH_LEVEL"
-            self.high_level(text)
+            results = self.high_level(text)
         elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROLL_LEFT" in action and "ROLL_RIGHT" in action):
             any_valid_commands = True
             self.state = "HIGH_LEVEL"
-            self.high_level(text)
+            results = self.high_level(text)
         else:   
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"
             any_valid_commands = self.ee_move(action)
+            results = ("MOVE", any_valid_commands)
 
         if not any_valid_commands:
             self.state = "HIGH_LEVEL"
-            self.high_level(text)
+            results = self.high_level(text)
+
+        return results
 
 
     def send_ada(self, text):
@@ -309,9 +317,10 @@ class AssemblyClient:
         rospy.loginfo(f"grab move_to successful : {success}")
         #if not success:
         #    return False
-        self.grab(self.target_position)
+        success2 = self.grab(self.target_position)
         #Reset the state
         self.state = "LOW_LEVEL"
+        return (success and success2)
 
     def ee_move(self, actions):
         any_valid_commands = False
@@ -539,6 +548,8 @@ class AssemblyClient:
         self.debug_pose_pub.publish(retreat_pose)
         success = self.right_arm_move_to_pose(retreat_pose)
         rospy.loginfo(f"retreat successful : {success}")
+
+        return success
 
     def right_arm_move_to_pose(self, pose):
         try:
