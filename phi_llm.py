@@ -136,13 +136,17 @@ class AdaEndPoint:
         if instruction.find("[STATEMENT]") != -1:
             instruction = instruction.replace("[STATEMENT]", text)
         
-        
+        print(f"number of messages in chat:{len(self.chat)}")
+        '''
         self.chat = [
             {'role': 'system', 'content': self.system},
             {'role': 'user', 'content': instruction}
-        ] 
+        ]
+        ''' 
         
-        #self.chat.append({'role': 'user', 'content': instruction})
+        self.chat.append({'role': 'user', 'content': instruction})
+
+
 
         conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
 
@@ -177,8 +181,8 @@ class AdaEndPoint:
         self.chat.append({'role': 'assistant', 'content': text})
 
         #only keep the system, and the last message
-        if len(self.chat) > 3:
-            del self.chat[1:2]
+        #if len(self.chat) > 3:
+        #    del self.chat[1:2]
         
         self.get_mem_usage(self.device)
         
