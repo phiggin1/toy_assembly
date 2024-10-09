@@ -169,7 +169,6 @@ class AdaEndPoint:
         print(f"{time.time_ns()}: finished inference") 
         end_time = time.time()
         print(f"inference took {end_time-start_time} seconds")
-        print("##################################")
         
         text = []
         for o in outputs:
@@ -189,6 +188,7 @@ class AdaEndPoint:
         
         self.get_mem_usage(self.device)
         
+        print("##################################")
         print("##################################")
 
 
