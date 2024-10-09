@@ -4,7 +4,7 @@ import torchvision
 #import clip
 #import whisper
 from faster_whisper import WhisperModel
-#from segment_anything import SamPredictor, sam_model_registry
+from segment_anything import SamPredictor, sam_model_registry
 from scipy.io.wavfile import write as wavfile_writer
 import numpy as np
 import zmq
@@ -20,7 +20,7 @@ class AdaEndPoint:
         print(f"CUDA is available: {torch.cuda.is_available()}, version: {torch.version.cuda}")
         print(torch.backends.cudnn.version())
 
-        #print("sam_model_path:", sam_model_path)
+        print("sam_model_path:", sam_model_path)
         print("whisper_model_path:", whisper_model_path)
         #print("clip_model_path:", clip_model_path)
         #print("torch home path:", torch_home_path)
@@ -43,12 +43,12 @@ class AdaEndPoint:
         #self.whisper_model = whisper.load_model("large", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         self.whisper_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
         
-        '''
+        
         print(f"{time.time_ns()}: loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
-        self.sam.to(self.sam_device)
+        self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
-
+        '''
         print(f"{time.time_ns()}: loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         
@@ -144,7 +144,6 @@ class AdaEndPoint:
             point_labels=input_label,
             multimask_output=True,
         )
-
 
         print(masks.shape)
 
