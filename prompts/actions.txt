@@ -11,7 +11,7 @@
     ["ROLL_RIGHT", "Rotate the robot's hand to the right."],
     ["OPEN_HAND", "Opens the robot’s hand, lets go of any held object."], 
     ["CLOSE_HAND", "Close the robot’s hand, grab objects between the robots fingers"],
-    ["PICK_UP", "Have the arm pick up an object from the table or grab an object being held."],
+    ["PICK_UP", "Have the arm pick up, grasp, grab, or hold an object."],
     ["MOVE_TO", "Move the arm to a given location"],
     ["NO_ACTION", "The statement does not refer to the robot or is not a request for the robot to perform an action"],
     ["OTHER", "Any other possible command"]
