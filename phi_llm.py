@@ -121,6 +121,7 @@ class AdaEndPoint:
 
     def process_llm(self, data):
         text = data["text"]
+        prev = data["prev"]
         
         #TODO better filtering
         if len(text) < 3:
@@ -183,7 +184,7 @@ class AdaEndPoint:
         #try and keep the chat log size down
         # phi seems to get odd when it gets close
         # to the contxt limit
-        if len(self.chat) > 20:
+        if len(self.chat) > 5:
             del self.chat[1:2]
         
         self.get_mem_usage(self.device)
