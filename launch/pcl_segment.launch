@@ -67,4 +67,10 @@
     <param name="obj_cluster_topic" 		value="$(arg output_cloud)"/>
   </node>
 
+  <node name="right_overlay_image" pkg="toy_assembly" type="overlay_image.py" output="screen" >  
+    <param name="real" value="false"/>
+    <param name="arm" value="right"/>
+    <param name="obj_cluster_topic" 		value="$(arg output_cloud)"/>
+  </node>  
+
 </launch>

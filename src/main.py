@@ -140,7 +140,7 @@ class AssemblyClient:
         if self.debug: rospy.loginfo(f"{transcript}")
 
         transcript =  transcript.transcription
-    
+
         if self.state == "HIGH_LEVEL":
             self.high_level(transcript)
         else:
@@ -209,10 +209,7 @@ class AssemblyClient:
         else:
             self.state = "LOW_LEVEL"
             return
-        
-        if "NO_ACTION" in json_dict:
-            rospy.loginfo("No action")
-            return
+    
 
         if "PICKUP" in action or "PICK_UP" in action:
             self.pickup(json_dict, objects, opject_positions)
@@ -242,7 +239,11 @@ class AssemblyClient:
             self.state = "HIGH_LEVEL"
             self.high_level(text)  
             return
-    
+        
+        if "NO_ACTION" in action:
+            rospy.loginfo("No action")
+            return
+        
         any_valid_commands = False
 
         if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
