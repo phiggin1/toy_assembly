@@ -285,7 +285,7 @@ class ImageSegment:
                 #rospy.loginfo(f"{i}, {center_pix}")
 
                 #text_location = (int(center_pix[0]),int(center_pix[1]))  #center of object
-                text_location = (u_min,v_min)   #top right rocer of object's bounding box
+                text_location = (u_min,v_max)   #top right corner of object's bounding box
                 text = "obj_"+str(i)
                 
                 cv2.putText(rgb_img, text, text_location, font, font_scale, (0,0,0), thickness+1, line_type)

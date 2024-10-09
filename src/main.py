@@ -114,13 +114,12 @@ class AssemblyClient:
         
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            '''
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            
+            '''
             self.text_cb(transcription)
 
     def shutdown_hook(self):
@@ -146,12 +145,13 @@ class AssemblyClient:
         else:
             results = self.low_level(transcript)
         
+        self.df["results"] = [results]
+        
         rospy.loginfo(results)
         rospy.loginfo("WAITING")
         self.status_pub.publish("WAITING")
         if self.debug: rospy.loginfo("--------------------------------------------------------") 
         self.dataframe_csv.append(self.df)
-        #self.df.to_csv(self.log_file_path, index=False, mode='a')  
 
 
     def high_level(self, text):
@@ -263,7 +263,7 @@ class AssemblyClient:
             rospy.loginfo(f"state: {self.state}")
             self.state = "LOW_LEVEL"
             any_valid_commands = self.ee_move(action)
-            results = ("MOVE", any_valid_commands)
+            results = (action, any_valid_commands)
 
         if not any_valid_commands:
             self.state = "HIGH_LEVEL"

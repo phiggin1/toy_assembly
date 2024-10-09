@@ -162,7 +162,7 @@ class AdaEndPoint:
         audio = np.fromstring(audio_data[1:-1], dtype=float, sep=',')
         wavfile_writer(self.tmp_audio_filename, sample_rate, audio)
 
-        context = "move forward backward up down left right turn tilt rotate pickup grab open close"
+        #context = "move forward backward up down left right turn tilt rotate pickup grab open close"
         #print(context)
 
         #get transcription from whisper
