@@ -91,7 +91,9 @@ class AdaEndPoint:
         print("torch.cuda.max_memory_reserved: %fGB"%(torch.cuda.max_memory_reserved(device)/1024/1024/1024))
 
     def run(self):
-       
+    
+        print("##################################")
+        print("##################################")
         while True:
             msg = self.socket.recv_json()
 
@@ -116,7 +118,8 @@ class AdaEndPoint:
             self.socket.send_json(resp)
             end_time = time.time()
             print(f"{time.time_ns()}: Message replied type: {msg_type}, took {end_time-start_time} seconds")
-
+            print("##################################")
+            print("##################################")
             
 
     def process_llm(self, data):
@@ -188,10 +191,6 @@ class AdaEndPoint:
         
         self.get_mem_usage(self.device)
         
-        print("##################################")
-        print("##################################")
-
-
         response = {"type":"llm",
                     "text":text
         }

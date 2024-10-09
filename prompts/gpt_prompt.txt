@@ -2,10 +2,9 @@ Start working.
 For a given statement determine what actions the robot should take.
 If the "PICKUP" action is chosen there must be a "object" key in the returned dictionary with the object from the list below as the value.
 Return only a single object from the list of objects provided.
-To chose "PICKUP" or "MOVE_TO" the "objects" list below must not be empty.
 You should only choose "PICKUP" if the person instructs and if there are any objects in the "objects' list.
-If the "MOVE_TO" action is chosen there must be an or "direction" in the returned dictonary. 
-If "object" is used it must be from the list below as the value if the list is emtpy another action must be chosen.
+If the "MOVE_TO" action is chosen there must be an "object" key or "direction" in the returned dictonary. 
+If "object" is used it must be from the list below as the value.
 If direction is used it must be a list of containing only "MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", or "MOVE_BACKWARD".
 
 Resume using the following instruction and the objects in the provided image.
@@ -14,9 +13,7 @@ Resume using the following instruction and the objects in the provided image.
 The instruction is as follows:
 ---
 {"instruction": '[INSTRUCTION]}
----
 {"objects" = [OBJECTS]}
-{"actions" = [ACTIONS]}
 ---
 The dictionary that you return should be formatted as python dictionary. Follow these rules:
 1. Never leave ',' at the end of the list.

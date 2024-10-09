@@ -47,7 +47,8 @@ class AssemblyClient:
         self.rate = rospy.Rate(20)
         self.speed = 0.1
         self.angular_speed = 1.0
-
+        
+        self.prev = None
         self.state = "LOW_LEVEL"
         self.check = False
         self.debug = rospy.get_param("~debug", True)
@@ -114,12 +115,13 @@ class AssemblyClient:
         
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
+            '''
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            '''
+            
             self.text_cb(transcription)
 
     def shutdown_hook(self):
@@ -136,7 +138,8 @@ class AssemblyClient:
         rospy.loginfo("THINKING")
         self.status_pub.publish("THINKING")
         if self.debug: rospy.loginfo(f"state: {self.state}")
-        if self.debug: rospy.loginfo(f"{transcript}")
+        if self.debug: rospy.loginfo(f"audio transcript: {transcript}")
+        if self.debug: rospy.loginfo(f"prev command|action: {self.prev}")
 
         transcript =  transcript.transcription
 
@@ -145,8 +148,9 @@ class AssemblyClient:
         else:
             results = self.low_level(transcript)
         
+        self.prev = (transcript, results[0] if results is not None else None)
         self.df["results"] = [results]
-        
+
         rospy.loginfo(results)
         rospy.loginfo("WAITING")
         self.status_pub.publish("WAITING")
@@ -199,7 +203,7 @@ class AssemblyClient:
         #Should do some error checking
         # in future
         json_dict = extract_json(resp.text)
-        rospy.loginfo(f"init\n{json_dict}")
+        rospy.loginfo(f"init json dict:\n{json_dict}")
 
         if json_dict is None:
             self.state = "LOW_LEVEL"
@@ -214,18 +218,24 @@ class AssemblyClient:
     
         results = None
         if "PICKUP" in action or "PICK_UP" in action:
-            success = self.pickup(json_dict, objects, opject_positions)
-            results = ("PICKUP", success)
+            if len(objects) > 0:
+                success = self.pickup(json_dict, objects, opject_positions)
+                results = ("PICKUP", success)
+            else:
+                results = ("PICKUP", False)
         elif "MOVE_TO" in action:
-            print(json_dict)
-            if "object" in json_dict:
-                print(json_dict["object"])
-                obj = json_dict["object"]
-                indx = objects.index(obj)
-                self.target_position = opject_positions[indx]
-                print(f"{obj}, {self.target_position}")
-                success = self.move_to(self.target_position)
-                results = ("MOVE_TO", success)
+            if len(objects) > 0:
+                print(json_dict)
+                if "object" in json_dict:
+                    print(json_dict["object"])
+                    obj = json_dict["object"]
+                    indx = objects.index(obj)
+                    self.target_position = opject_positions[indx]
+                    print(f"{obj}, {self.target_position}")
+                    success = self.move_to(self.target_position)
+                    results = ("MOVE_TO", success)
+                else:
+                    results = ("MOVE_TO", False)
             else:
                 results = ("MOVE_TO", False)
 
@@ -274,7 +284,8 @@ class AssemblyClient:
 
     def send_ada(self, text):
         msg = {"type":"llm",
-               "text":text
+               "text":text,
+               "prev":self.prev
         }
 
         if self.debug: rospy.loginfo(f"LLM sending to ada\ntext:{text}")
@@ -309,18 +320,23 @@ class AssemblyClient:
         return action
     
     def pickup(self, json_dict, objects, opject_positions):
-        self.open()
+        open_succes = self.open()
+        rospy.loginfo(f"open_succes: {open_succes}")
+        if not open_succes:
+            return open_succes
+        
         obj = json_dict["object"]
         indx = objects.index(obj)
         self.target_position = opject_positions[indx]
-        success = self.move_to(self.target_position)
-        rospy.loginfo(f"grab move_to successful : {success}")
-        #if not success:
-        #    return False
-        success2 = self.grab(self.target_position)
+        init_grab_move_to_success = self.move_to(self.target_position)
+        rospy.loginfo(f"init grab move_to successful : {init_grab_move_to_success}")
+        if not init_grab_move_to_success:
+            return init_grab_move_to_success
+
+        grab_success = self.grab(self.target_position)
         #Reset the state
         self.state = "LOW_LEVEL"
-        return (success and success2)
+        return grab_success
 
     def ee_move(self, actions):
         any_valid_commands = False
@@ -498,7 +514,6 @@ class AssemblyClient:
 
     def move_to(self, position):
         rospy.loginfo(f"move_to:{position.header.frame_id} {position.point.x}, {position.point.y}, {position.point.z}")
-        #self.open()
         stamped_pose = PoseStamped()
         stamped_pose.header = position.header
         stamped_pose.pose.position = deepcopy(position.point)
@@ -522,21 +537,21 @@ class AssemblyClient:
         min_safe_height = 0.065
         final_pose.pose.position.z = max(min_safe_height, final_pose.pose.position.z)
 
-        success = self.open()
-        rospy.loginfo(f"open successful : {success}")
-        #if not success:
-        #    return False
+        open_success = self.open()
+        rospy.loginfo(f"open successful : {open_success}")
+        if not open_success:
+            return open_success
         
         self.debug_pose_pub.publish(final_pose)
-        success = self.right_arm_move_to_pose(final_pose)
-        rospy.loginfo(f"move to grab successful : {success}")
-        #if not success:
-        #    return False
+        move_to_grab_success = self.right_arm_move_to_pose(final_pose)
+        rospy.loginfo(f"move to grab successful : {move_to_grab_success}")
+        if not move_to_grab_success:
+            return move_to_grab_success
         
-        success = self.close()
-        rospy.loginfo(f"close successful : {success}")
-        #if not success:
-        #    return False
+        close_success = self.close()
+        rospy.loginfo(f"close successful : {close_success}")
+        if not close_success:
+            return close_success
         
 
         retreat_pose = PoseStamped()
@@ -546,10 +561,10 @@ class AssemblyClient:
         retreat_pose.pose.orientation.w = 0
         retreat_pose.pose.position.z += 0.125
         self.debug_pose_pub.publish(retreat_pose)
-        success = self.right_arm_move_to_pose(retreat_pose)
-        rospy.loginfo(f"retreat successful : {success}")
+        retreat_pose_success = self.right_arm_move_to_pose(retreat_pose)
+        rospy.loginfo(f"retreat successful : {retreat_pose_success}")
 
-        return success
+        return retreat_pose_success
 
     def right_arm_move_to_pose(self, pose):
         try:

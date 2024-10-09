@@ -88,6 +88,12 @@ class LLMClient:
 
     def get_prompt(self, text, image, objects):
         print("get_prompt")
+
+        '''
+        do some json
+        seperate out transcript from prev
+        '''
+
         cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="rgb8")
         is_success, buffer = cv2.imencode(".png", cv_img)
         io_buf = io.BytesIO(buffer)        

@@ -43,12 +43,12 @@ class AdaEndPoint:
         #self.whisper_model = whisper.load_model("large", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         self.whisper_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
         
-        
+        '''
         print(f"{time.time_ns()}: loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
         self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
-        '''
+        
         print(f"{time.time_ns()}: loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         

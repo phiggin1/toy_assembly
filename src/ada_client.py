@@ -128,7 +128,7 @@ class AdaClient:
             resp = self.socket.recv_json()
         if self.debug: rospy.loginfo('SAM recv from ada') 
 
-        #rospy.loginfo(f"SAM scores:{resp["scores"]}")
+        rospy.loginfo(resp["scores"])
 
 
         masks = []
