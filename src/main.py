@@ -10,11 +10,13 @@ from toy_assembly.msg import Transcription, ObjectImage
 from toy_assembly.srv import LLMImage, LLMImageRequest
 from toy_assembly.srv import MoveITPose
 from geometry_msgs.msg import TwistStamped, PoseStamped, PointStamped
+from sensor_msgs.msg import Image
 from std_srvs.srv import Trigger 
 from std_msgs.msg import String
 import pandas
 import os
 import time
+import cv2
 
 def extract_json(text):
     a = text.find('{')
@@ -69,6 +71,7 @@ class AssemblyClient:
         self.close_hand = rospy.ServiceProxy(close_service_name, Trigger)
 
         self.llm_text_srv = rospy.ServiceProxy('/gpt_servcice', LLMImage)
+        self.llm_context_srv = rospy.ServiceProxy('/gpt_context', LLMImage)
 
         self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
         self.debug_pose_pub = rospy.Publisher('/0debug_pose', PoseStamped, queue_size=10)
@@ -77,23 +80,52 @@ class AssemblyClient:
         self.twist_topic  = "/my_gen3_right/workspace/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
         
-        rospy.loginfo(self.twist_topic)
-
         #self.text_sub = rospy.Subscriber("/transcript", Transcription, self.text_cb)
         #rospy.spin()
 
+
+        '''
+        img = rospy.wait_for_message("//unity/camera/left/rgb/image_raw", Image, timeout=10)
+        req = LLMImageRequest()
+        req.image = img
+        resp = self.llm_context_srv(req)
+        print(resp)
+        return
+
+        rospy.loginfo("waiting for objects")
+        try:        
+            obj_img = rospy.wait_for_message("/left_object_images", ObjectImage, timeout=10)
+        except:
+            rospy.loginfo("object waiting timed out")
+            return
+        
+        opject_positions = obj_img.object_positions
+        objects = []
+        for i in range(len(opject_positions)):
+            objects.append(f"obj_{i}")
+        req = LLMImageRequest()
+        req.objects = objects
+        req.image = obj_img.image
+        resp = self.llm_context_srv(req)
+        
+        print(resp)
+        return
+        '''
+        
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
+            '''
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            '''
+            
             self.text_cb(transcription)
 
     def shutdown_hook(self):
-        pandas.concat(self.dataframe_csv).to_csv(self.log_file_path, index=False)
+        if len(self.dataframe_csv) > 0:
+            pandas.concat(self.dataframe_csv).to_csv(self.log_file_path, index=False)
 
     def text_cb(self, transcript):
         if self.debug: rospy.loginfo("========================================================") 
@@ -109,13 +141,11 @@ class AssemblyClient:
 
         transcript =  transcript.transcription
     
-        
         if self.state == "HIGH_LEVEL":
             self.high_level(transcript)
         else:
             self.low_level(transcript)
         
-    
         rospy.loginfo("WAITING")
         self.status_pub.publish("WAITING")
         if self.debug: rospy.loginfo("--------------------------------------------------------") 
@@ -135,7 +165,6 @@ class AssemblyClient:
         frame = obj_img.header.frame_id
         image = obj_img.image
         opject_positions = obj_img.object_positions
-        opject_positions = self.transform_positions(opject_positions, frame, "world")
 
         objects = []
         for i in range(len(opject_positions)):
@@ -146,8 +175,6 @@ class AssemblyClient:
             rospy.loginfo(f"{objects[i]}, {opject_positions[i].header.frame_id}, {opject_positions[i].point.x}, {opject_positions[i].point.y},{opject_positions[i].point.z}")
             obj_pos.append([opject_positions[i].point.x, opject_positions[i].point.y, opject_positions[i].point.z])
 
-
-
         req = LLMImageRequest()
         req.text = text
         req.objects = objects
@@ -156,7 +183,13 @@ class AssemblyClient:
 
         resp = self.llm_text_srv(req)
 
-        self.df["image_timestamp"] = [obj_img.header.stamp]
+        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+        merge_test = "_".join(text.split(" "))
+        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
+        print(fname)
+        cv2.imwrite(fname, cv_img)
+
+        self.df["image_path"] = [fname]
         self.df["objects"] = [objects]
         self.df["objects_positions"] = [obj_pos]
         self.df["gpt_response"] = [str(resp.text).replace('\n','')]
@@ -176,6 +209,10 @@ class AssemblyClient:
         else:
             self.state = "LOW_LEVEL"
             return
+        
+        if "NO_ACTION" in json_dict:
+            rospy.loginfo("No action")
+            return
 
         if "PICKUP" in action or "PICK_UP" in action:
             self.pickup(json_dict, objects, opject_positions)
@@ -191,7 +228,7 @@ class AssemblyClient:
                 indx = objects.index(obj)
                 self.target_position = opject_positions[indx]
                 print(f"{obj}, {self.target_position}")
-                self.indicate(self.target_position)
+                self.move_to(self.target_position)
         else:   
             self.ee_move(action)
 
@@ -267,8 +304,10 @@ class AssemblyClient:
         obj = json_dict["object"]
         indx = objects.index(obj)
         self.target_position = opject_positions[indx]
-        print(self.target_position)
-        self.indicate(self.target_position)
+        success = self.move_to(self.target_position)
+        rospy.loginfo(f"grab move_to successful : {success}")
+        #if not success:
+        #    return False
         self.grab(self.target_position)
         #Reset the state
         self.state = "LOW_LEVEL"
@@ -447,8 +486,8 @@ class AssemblyClient:
             self.cart_vel_pub.publish(zero_cmd)
             self.rate.sleep()
 
-    def indicate(self, position):
-        rospy.loginfo(f"indicate:{position.header.frame_id} {position.point.x}, {position.point.y}, {position.point.z}")
+    def move_to(self, position):
+        rospy.loginfo(f"move_to:{position.header.frame_id} {position.point.x}, {position.point.y}, {position.point.z}")
         #self.open()
         stamped_pose = PoseStamped()
         stamped_pose.header = position.header
@@ -457,8 +496,9 @@ class AssemblyClient:
         stamped_pose.pose.orientation.w = 0
         stamped_pose.pose.position.z += 0.125
         self.debug_pose_pub.publish(stamped_pose)
-        self.right_arm_move_to_pose(stamped_pose)
-        #self.close()
+        status = self.right_arm_move_to_pose(stamped_pose)
+        rospy.loginfo(f"move_to successful : {status}")
+        return status
 
     def grab(self, position):
         rospy.loginfo(f"grab:{position.header.frame_id} {position.point.x}, {position.point.y}, {position.point.z}")
@@ -467,15 +507,27 @@ class AssemblyClient:
         final_pose.pose.position = deepcopy(position.point)
         final_pose.pose.orientation.x = -1
         final_pose.pose.orientation.w = 0
-        final_pose.pose.position.z -= 0.05
+        final_pose.pose.position.z -= 0.075
 
-        min_safe_height = 0.08
+        min_safe_height = 0.065
         final_pose.pose.position.z = max(min_safe_height, final_pose.pose.position.z)
 
-        self.open()
+        success = self.open()
+        rospy.loginfo(f"open successful : {success}")
+        #if not success:
+        #    return False
+        
         self.debug_pose_pub.publish(final_pose)
-        self.right_arm_move_to_pose(final_pose)
-        self.close()
+        success = self.right_arm_move_to_pose(final_pose)
+        rospy.loginfo(f"move to grab successful : {success}")
+        #if not success:
+        #    return False
+        
+        success = self.close()
+        rospy.loginfo(f"close successful : {success}")
+        #if not success:
+        #    return False
+        
 
         retreat_pose = PoseStamped()
         retreat_pose.header = position.header
@@ -484,23 +536,20 @@ class AssemblyClient:
         retreat_pose.pose.orientation.w = 0
         retreat_pose.pose.position.z += 0.125
         self.debug_pose_pub.publish(retreat_pose)
-        self.right_arm_move_to_pose(retreat_pose)
-
-        init_pose = PoseStamped()
-        init_pose.header.frame_id = "world"
-        init_pose.pose.position.x =  0.35
-        init_pose.pose.position.y = -0.4
-        init_pose.pose.position.z =  0.2
-        init_pose.pose.orientation.x = -1.0
-        init_pose.pose.orientation.y =  0.0
-        init_pose.pose.orientation.z =  0.0
-        init_pose.pose.orientation.w =  0.0
-        self.right_arm_move_to_pose(init_pose)
+        success = self.right_arm_move_to_pose(retreat_pose)
+        rospy.loginfo(f"retreat successful : {success}")
 
     def right_arm_move_to_pose(self, pose):
         try:
-            resp = self.moveit_pose(pose)
-            return resp
+            success = False
+            count = 1
+            num_retries = 3
+            while count < num_retries and not success:
+                resp = self.moveit_pose(pose)
+                count += 1
+                success = resp.result
+            rospy.loginfo(f"right_arm_move_to_pose: {count} tries before {success}")
+            return success
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
             return False
@@ -508,7 +557,7 @@ class AssemblyClient:
     def close(self):
         try:
             resp = self.close_hand()
-            return resp
+            return resp.success
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
             return False
@@ -516,7 +565,7 @@ class AssemblyClient:
     def open(self):
         try:
             resp = self.open_hand()
-            return resp
+            return resp.success
         except rospy.ServiceException as e:
             rospy.loginfo("Service call failed: %s"%e)
             return False
@@ -529,7 +578,9 @@ class AssemblyClient:
             stamped_p = PointStamped()
             stamped_p.header.frame_id = org_frame
             stamped_p.header.stamp = t
-            stamped_p.point = p
+            stamped_p.point.x = p.point.x
+            stamped_p.point.y = p.point.y
+            stamped_p.point.z = p.point.z
             new_p = self.listener.transformPoint(new_frame, stamped_p)
 
             new_positions.append(new_p)

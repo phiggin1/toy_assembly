@@ -6,10 +6,10 @@ The toy is made of three parts, a body, front legs, and back legs.
 'actions' = {[ACTIONS]}
 
 For a given statement determine if the statement is directed to the robot, is not a request or is not action.
-If it is not return the action the robot should as a python dictonary.
+If it is not return the action the robot should as a python dictionary.
 The value MUST be one of the actions in the 'actions' list or empty no other values should be passed.
 The dictionary has one key.
 ---
-- dictonary["action"] : A list of the actions that the robot should take, taken from the actions list above.
+- dictionary["action"] : A list of the actions that the robot should take, taken from the actions list above.
 ---
 -------------------------------------------------------

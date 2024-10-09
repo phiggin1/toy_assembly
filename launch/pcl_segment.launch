@@ -14,23 +14,36 @@
   <arg name="min_cluster_size" default="30"/>
   <arg name="max_cluster_size" default="500"/>
 
-  <arg name="down_input_cloud"      default="/unity/camera/$(arg arm)/depth/points"/>
+  <arg name="crop_input_cloud"      default="/unity/camera/$(arg arm)/depth/points"/>
+  <arg name="down_input_cloud"      default="/unity/camera/$(arg arm)/depth/points_crop"/>
   <arg name="down_output_cloud"     default="/unity/camera/$(arg arm)/depth/downsampled_points"/>
   <arg name="filtered_output_cloud" default="/unity/camera/$(arg arm)/depth/points_filtered"/>
   <arg name="output_cloud"          default="/unity/camera/left/depth/object_clusters"/>  
   <arg name="debug_output_cloud"    default="/unity/camera/left/depth/objects"/>  
 
-  <node name= "$(arg arm)_downsample" pkg= "obj_segmentation" type= "segmentation_downsample" output="screen" respawn= "false">
-    <param name="minX"		value="$(arg minX)"/>
-    <param name="maxX"		value="$(arg maxX)"/>
-    <param name="minY"		value="$(arg minY)"/>
-    <param name="maxY"		value="$(arg maxY)"/>
-    <param name="minZ"		value="$(arg minZ)"/>
-    <param name="maxZ"		value="$(arg maxZ)"/>
-    <param name="leaf_size"		value="$(arg leaf_size)"/>
-    <param name="input_cloud" 		value="$(arg down_input_cloud)"/>
-    <param name="output_cloud" 		value="$(arg down_output_cloud)"/>
+  <!-- launch the nodelet manager -->
+  <node pkg="nodelet" type="nodelet" name="pcl_manager" args="manager" output="screen"/>  
+  <node pkg="nodelet" type="nodelet" name="cropbox" args="load pcl/CropBox /pcl_manager" output="screen">
+    <remap from="~input" to="$(arg crop_input_cloud)"/>
+    <remap from="~output" to="$(arg down_input_cloud)"/>
+    <param name="~output_frame" 		value="world"/>
+    <param name="min_x"		value="$(arg minX)"/>
+    <param name="max_x"		value="$(arg maxX)"/>
+    <param name="min_y"		value="$(arg minY)"/>
+    <param name="max_y"		value="$(arg maxY)"/>
+    <param name="min_z"		value="$(arg minZ)"/>
+    <param name="max_z"		value="$(arg maxZ)"/>
   </node>
+  <node pkg="nodelet" type="nodelet" name="voxel" args="load pcl/VoxelGrid /pcl_manager" output="screen">
+    <remap from="~input" to="$(arg down_input_cloud)"/>
+    <remap from="~output" to="$(arg down_output_cloud)"/>
+    <param name="leaf_size"		value="$(arg leaf_size)"/>
+    <param name="filter_field_name"		value="z"/>
+    <param name="filter_limit_min"		value="-10.0"/>
+    <param name="filter_limit_max"		value="10.0"/>
+  </node>
+
+
 
   <node name="$(arg arm)_rgbd_filter" pkg="sensor_filters" type="pointcloud2_filter_chain" output="screen">
     <rosparam command="load" file="$(find toy_assembly)/config/left_camera_filter.yaml" />

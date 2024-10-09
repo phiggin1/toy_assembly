@@ -55,7 +55,7 @@ class LLMClient:
             },
         ] 
 
-        self.llm_check_serv = rospy.Service("/gpt_servcice", LLMImage, self.call_gpt)
+        self.llm_serv = rospy.Service("/gpt_servcice", LLMImage, self.call_gpt)
 
         rospy.spin()
 
@@ -64,7 +64,7 @@ class LLMClient:
         check = req.check
         image = req.image
         objects = req.objects
-        rospy.loginfo(f"call_gpt transcript:{text}, check:{check}, objects:{objects}")
+        rospy.loginfo(f"call_gpt transcript:{text}, objects:{objects}")
 
         if self.debug: rospy.loginfo("============================")
         if self.debug: print(f"Sending to gpt\ntext:{text}")
@@ -89,10 +89,6 @@ class LLMClient:
     def get_prompt(self, text, image, objects):
         print("get_prompt")
         cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-        merge_test = "_".join(text.split(" "))
-        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
-        print(fname)
-        cv2.imwrite(fname, cv_img)
         is_success, buffer = cv2.imencode(".png", cv_img)
         io_buf = io.BytesIO(buffer)        
         encoded_image = base64.b64encode(buffer).decode("utf-8") 

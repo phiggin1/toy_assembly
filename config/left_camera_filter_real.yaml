@@ -8,9 +8,9 @@ cloud_filter_chain:
     type: robot_body_filter/RobotBodyFilterPointCloud2
     params:
       frames/fixed: world
-      frames/sensor: left_camera_color_frame
-      frames/filtering: left_camera_color_frame
-      frames/output: left_camera_color_frame
+      frames/sensor: world
+      frames/filtering: world
+      frames/output: world
       filter/keep_clouds_organized: True
       filter/do_clipping: True
       filter/do_contains_test: True

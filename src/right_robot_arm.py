@@ -14,7 +14,7 @@ from image_geometry import PinholeCameraModel
 import sensor_msgs.point_cloud2 as pc2
 from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
-from toy_assembly.srv import MoveITGrabPose, MoveITPose
+from toy_assembly.srv import MoveITGrabPose, MoveITPose, MoveITPoseResponse
 from toy_assembly.srv import OrientCamera
 
 from std_srvs.srv import Trigger 
@@ -273,23 +273,27 @@ class Right_arm:
         print(f'transformed: {self.horse_pose}')
 
     def move_to_pose(self, request):
+        rospy.loginfo("---=== move_to_pose ===---")
         object_pose = self.transform_obj_pos(request.pose)        
-        print(object_pose)
+        rospy.loginfo(object_pose)
+
         pose_goal = Pose()
-        #print('timeout1')
         pose_goal.position = object_pose.pose.position
         pose_goal.orientation = object_pose.pose.orientation
 
-        self.arm_move_group.set_pose_target(pose_goal)
-      
-        print(object_pose)
-        #print('timeout3')
+        print(pose_goal)
+
         status = False
+        self.arm_move_group.set_pose_target(pose_goal)
         status = self.arm_move_group.go(pose_goal, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
 
-        return status
+        resp = MoveITPoseResponse()
+        resp.result = status
+        rospy.loginfo(resp)
+
+        return resp
 
     def get_object(self, request):
         object_pose = self.transform_obj_pos(request.pose)        
@@ -350,24 +354,21 @@ class Right_arm:
         publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
         """
 
-
-        self.gripper_move_group.set_max_velocity_scaling_factor(0.1)
-        status = self.gripper_move_group.go(self.hand_closed, wait=True) 
-        self.gripper_move_group.stop()
-        self.gripper_move_group.set_max_velocity_scaling_factor(1.0)
-
-        
         # close fingers
         a = dict()
         a["robot"] = "right"
         a["action"] = "grab"
         s = json.dumps(a)
         self.grab.publish(s)
-        
 
+        self.gripper_move_group.set_max_velocity_scaling_factor(0.1)
+        status = self.gripper_move_group.go(self.hand_closed, wait=True) 
+        self.gripper_move_group.stop()
+        self.gripper_move_group.set_max_velocity_scaling_factor(1.0)
 
         resp = Trigger._response_class()
         resp.success = status
+
         return resp
         
     def open_gipper(self, req):
@@ -387,6 +388,7 @@ class Right_arm:
 
         resp = Trigger._response_class()
         resp.success = status
+
         return resp
 
     def transform_obj_pos(self, obj_pos):
@@ -584,7 +586,6 @@ class Right_arm:
         self.max_left.z = max_z
         self.have_left = True
     
-
     def check_collision(self):
         #print(f"left  : {self.min_left.x:,.4f}, {self.max_left.x:,.4f}, {self.min_left.y:,.4f}, {self.max_left.y:,.4f}, {self.min_left.z:,.4f}, {self.max_left.z:,.4f}")
         #print(f"right : {self.min_right.x:,.4f}, {self.max_right.x:,.4f}, {self.min_right.y:,.4f}, {self.max_right.y:,.4f}, {self.min_right.z:,.4f}, {self.max_right.z:,.4f}")

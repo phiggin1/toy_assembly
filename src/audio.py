@@ -47,7 +47,6 @@ class AudioSpeechToText:
         self.status_pub = rospy.Publisher("/status", String, queue_size=10)
 
         self.audio_subscriber = rospy.Subscriber("/audio", RivrAudio, self.audio_cb)
-        print(self.audio_subscriber )
         rospy.spin()
     
     def audio_cb(self, msg):
