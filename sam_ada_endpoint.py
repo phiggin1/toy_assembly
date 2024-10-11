@@ -216,7 +216,7 @@ if __name__ == '__main__':
                         help="port transcribe_server.py is listening on.")
     parser.add_argument("--sam2_checkpoint", default="/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/checkpoints/sam2.1_hiera_large.pt", required=False,
                         help="port transcribe_server.py is listening on.")
-    parser.add_argument("--sam2_model_config", default="/home/phiggin1//home/phiggin1/Grounded-SAM-2/configs/sam2.1/sam2.1_hiera_l.yaml", required=False,
+    parser.add_argument("--sam2_model_config", default="/home/phiggin1//home/phiggin1/Grounded-SAM-2/sam2/configs/sam2.1/sam2.1_hiera_l.yaml", required=False,
                         help="port transcribe_server.py is listening on.")
     parser.add_argument("--grounding_dino_checkpoint", default="/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/gdino_checkpoints/groundingdino_swint_ogc.pth", required=False,
                         help="port transcribe_server.py is listening on.")
