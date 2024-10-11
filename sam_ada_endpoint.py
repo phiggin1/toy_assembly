@@ -216,19 +216,25 @@ if __name__ == '__main__':
                         help="hostname for ROS system running ada_client.py")
     parser.add_argument("--port", default="8899", required=False,
                         help="port transcribe_server.py is listening on.")
-    parser.add_argument("--sam2_checkpoint", default="/checkpoints/sam2.1_hiera_large.pt", required=False,
+    parser.add_argument("--sam2_checkpoint", default="/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/checkpoints/sam2.1_hiera_large.pt", required=False,
                         help="port transcribe_server.py is listening on.")
-    parser.add_argument("--sam2_model_config", default="configs/sam2.1/sam2.1_hiera_l.yaml", required=False,
+    parser.add_argument("--sam2_model_config", default="/home/phiggin1//home/phiggin1/Grounded-SAM-2/configs/sam2.1/sam2.1_hiera_l.yaml", required=False,
                         help="port transcribe_server.py is listening on.")
-    parser.add_argument("--grounding_dino_checkpoint", default="gdino_checkpoints/groundingdino_swint_ogc.pth", required=False,
+    parser.add_argument("--grounding_dino_checkpoint", default="/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/gdino_checkpoints/groundingdino_swint_ogc.pth", required=False,
                         help="port transcribe_server.py is listening on.")
-    parser.add_argument("--grounding_dino_config", default="grounding_dino/groundingdino/config/GroundingDINO_SwinT_OGC.py", required=False,
+    parser.add_argument("--grounding_dino_config", default="/home/phiggin1//home/phiggin1/Grounded-SAM-2/grounding_dino/groundingdino/config/GroundingDINO_SwinT_OGC.py", required=False,
                         help="port transcribe_server.py is listening on.")
     parser.add_argument("--box_threshold", default=0.35, required=False,
                         help="port transcribe_server.py is listening on.")
     parser.add_argument("--text_threshold", default=0.25, required=False,
                         help="port transcribe_server.py is listening on.")
-    
+    '''
+    /home/phiggin1//home/phiggin1/Grounded-SAM-2/
+    SAM2_CHECKPOINT = "/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/checkpoints/sam2.1_hiera_large.pt"
+    SAM2_MODEL_CONFIG = "configs/sam2.1/sam2.1_hiera_l.yaml"
+    GROUNDING_DINO_CONFIG = "grounding_dino/groundingdino/config/GroundingDINO_SwinT_OGC.py"
+    GROUNDING_DINO_CHECKPOINT = "/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/gdino_checkpoints/groundingdino_swint_ogc.pth"
+    '''
     args = parser.parse_args()
 
     hostname = args.hostname
