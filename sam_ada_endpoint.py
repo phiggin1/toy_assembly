@@ -62,18 +62,16 @@ class SamEndPoint:
         server_port  = port
 
         # build SAM2 image predictor
-        sam2_checkpoint = CHECKPOINT
-        model_cfg = CONFIG
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=self.device)
+        self.sam2_model = build_sam2(sam2_model_config, sam2_checkpoint, device=self.device)
         self.sam2_predictor = SAM2ImagePredictor(self.sam2_model)
 
         # build grounding dino model
         self.grounding_model = load_model(
-            model_config_path=GROUNDING_DINO_CONFIG, 
-            model_checkpoint_path=GROUNDING_DINO_CHECKPOINT,
-            device=DEVICE
+            model_config_path=grounding_dino_config, 
+            model_checkpoint_path=grounding_dino_checkpoint,
+            device=self.device
         )
         self.get_mem_usage(self.device)
         
