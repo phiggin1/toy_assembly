@@ -190,7 +190,6 @@ class SamEndPoint:
         # save the results in standard format
         results = {
             "type":"sam",
-            "image_path": img_path,
             "annotations" : [
                 {
                     "class_name": class_name,
