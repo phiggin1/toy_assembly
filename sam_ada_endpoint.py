@@ -134,7 +134,7 @@ class SamEndPoint:
             torch.backends.cuda.matmul.allow_tf32 = True
             torch.backends.cudnn.allow_tf32 = True
 
-        masks, scores, logits = sam2_predictor.predict(
+        masks, scores, logits = self.sam2_predictor.predict(
             point_coords=None,
             point_labels=None,
             box=input_boxes,
