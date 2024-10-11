@@ -43,12 +43,12 @@ class AdaEndPoint:
         #self.whisper_model = whisper.load_model("large", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
         self.whisper_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
         
-        
+        '''
         print(f"{time.time_ns()}: loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
         self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
-        '''
+        
         print(f"{time.time_ns()}: loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
         
@@ -86,16 +86,18 @@ class AdaEndPoint:
             print(f"{time.time_ns()}: Message recieved type: {msg_type}")
             start_time = time.time()
             
-            if msg_type == "sam":
-                resp = self.process_sam(msg)
-            elif msg_type == "clip":
-                resp = self.process_clip(msg)
-            elif msg_type == "whisper":
+            if msg_type == "whisper":
                 resp = self.process_whisper(msg)
-            elif msg_type =="tts":
-                resp = self.process_tts(msg)
             else:
                 resp = {}
+            '''
+            elif msg_type == "clip":
+                resp = self.process_clip(msg)
+            elif msg_type == "sam":
+                resp = self.process_sam(msg)
+            elif msg_type =="tts":
+                resp = self.process_tts(msg)
+            '''
 
             self.socket.send_json(resp)
             end_time = time.time()

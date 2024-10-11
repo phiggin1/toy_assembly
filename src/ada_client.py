@@ -110,15 +110,13 @@ class AdaClient:
         if self.debug: rospy.loginfo('SAM req recv')
 
         image = self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")     
-        target_x = request.target_x
-        target_y = request.target_y
-        
+        text = "tan tray. orange tray. horse body. blue horse legs. orange horse legs."
+
         print(image.shape)
 
         msg = {"type":"sam",
                "image":image.tolist(),
-               "target_x":target_x,
-               "target_y":target_y
+               "text":text,
         }
 
         if self.debug: rospy.loginfo("SAM sending to ada")
@@ -128,16 +126,17 @@ class AdaClient:
             resp = self.socket.recv_json()
         if self.debug: rospy.loginfo('SAM recv from ada') 
 
-        rospy.loginfo(resp["scores"])
+        rospy.loginfo(resp)
 
 
+        '''
         masks = []
         for mask in resp["masks"]:
             m = np.asarray(mask, dtype=np.uint8)*255
             masks.append(self.cvbridge.cv2_to_imgmsg(m))
-
+        '''
         response = SAMResponse()
-        response.masks = masks
+        #response.masks = masks
         return response
 
     def TTS(self, request):
