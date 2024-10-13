@@ -58,6 +58,8 @@ class AdaClient:
         self.real = rospy.get_param("~real", default=False)
         self.arm = rospy.get_param("~arm", default="left")
 
+        rospy.loginfo(f"debug:{self.debug}")
+        rospy.loginfo(f"server_port: {server_port}")
         rospy.loginfo(f"real world:{self.real}")
         rospy.loginfo(f"arm: {self.arm}")
 
@@ -74,6 +76,10 @@ class AdaClient:
             depth_image_topic = f"/unity/camera/{self.arm}/depth/image_raw"
             output_image_topic = f"/unity/camera/{self.arm}/rgb/overlay_raw"
 
+        rospy.loginfo(cam_info_topic)
+        rospy.loginfo(rgb_image_topic)
+        rospy.loginfo(depth_image_topic)
+
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.bind("tcp://*:%s" % server_port)
@@ -85,12 +91,16 @@ class AdaClient:
 
         self.rgb_sub = message_filters.Subscriber(rgb_image_topic, Image)
         self.depth_sub = message_filters.Subscriber(depth_image_topic, Image)
-
-        ts = message_filters.TimeSynchronizer([self.rgb_sub, self.depth_sub], 10)
+        ts = message_filters.ApproximateTimeSynchronizer([self.rgb_sub, self.depth_sub], slop=0.2, queue_size=10)
         ts.registerCallback(self.image_cb)
         self.rgb_image = None
         self.depth_image = None
 
+        self.have_images = False
+        rate = rospy.Rate(5)
+        while not self.have_images:
+            rate.sleep()
+        
         self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
         
         self.pub = rospy.Publisher(output_image_topic, Image, queue_size=10)
@@ -102,11 +112,14 @@ class AdaClient:
         if success:
             self.rgb_image = self.cvbridge.imgmsg_to_cv2(rgb_ros_image) 
             self.depth_image = self.cvbridge.imgmsg_to_cv2(depth_ros_image) 
+            if not self.have_images:
+                rospy.loginfo("HAVE IMAGES")
+                self.have_images = True
+            self.mutex.release()
 
     def SAM(self, request):
         if self.debug: rospy.loginfo('SAM req recv')
-
-        image = self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")     
+        #image = self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")     
         with self.mutex:
             image = self.rgb_image #self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")     
             text = "tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. hand."
@@ -120,9 +133,8 @@ class AdaClient:
 
             if self.debug: rospy.loginfo("SAM sending to ada")
             
-            with self.mutex:
-                self.socket.send_json(msg)
-                resp = self.socket.recv_json()
+            self.socket.send_json(msg)
+            resp = self.socket.recv_json()
             if self.debug: rospy.loginfo('SAM recv from ada') 
 
             response = SAMResponse()

@@ -161,7 +161,7 @@ class SamEndPoint:
         """
         Visualize image with supervision useful API
         """
-        '''
+        
         img = cv_img.copy()
         detections = sv.Detections(
             xyxy=input_boxes,  # (n, 4)
@@ -170,7 +170,7 @@ class SamEndPoint:
         )
         box_annotator = sv.BoxAnnotator()
         annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
-
+        '''
         label_annotator = sv.LabelAnnotator()
         annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
         cv2.imwrite(os.path.join(OUTPUT_DIR, "groundingdino_annotated_image.jpg"), annotated_frame)
