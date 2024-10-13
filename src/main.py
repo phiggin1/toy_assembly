@@ -8,6 +8,7 @@ import tf
 from cv_bridge import CvBridge
 from toy_assembly.msg import Transcription, ObjectImage
 from toy_assembly.srv import LLMImage, LLMImageRequest
+from toy_assembly.srv import SAM, SAMRequest, SAMResponse
 from toy_assembly.srv import MoveITPose
 from geometry_msgs.msg import TwistStamped, PoseStamped, PointStamped
 from sensor_msgs.msg import Image
@@ -72,7 +73,6 @@ class AssemblyClient:
         self.close_hand = rospy.ServiceProxy(close_service_name, Trigger)
 
         self.llm_text_srv = rospy.ServiceProxy('/gpt_servcice', LLMImage)
-        self.llm_context_srv = rospy.ServiceProxy('/gpt_context', LLMImage)
 
         self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
         self.debug_pose_pub = rospy.Publisher('/0debug_pose', PoseStamped, queue_size=10)
@@ -81,18 +81,14 @@ class AssemblyClient:
         self.twist_topic  = "/my_gen3_right/workspace/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
         
+
         #self.text_sub = rospy.Subscriber("/transcript", Transcription, self.text_cb)
         #rospy.spin()
 
 
-        '''
-        img = rospy.wait_for_message("//unity/camera/left/rgb/image_raw", Image, timeout=10)
-        req = LLMImageRequest()
-        req.image = img
-        resp = self.llm_context_srv(req)
-        print(resp)
-        return
+        self.sam_srv = rospy.ServiceProxy('/get_sam_segmentation', SAM)
 
+        '''
         rospy.loginfo("waiting for objects")
         try:        
             obj_img = rospy.wait_for_message("/left_object_images", ObjectImage, timeout=10)
@@ -115,13 +111,13 @@ class AssemblyClient:
         
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            '''
+            
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            
+            '''
             self.text_cb(transcription)
 
     def shutdown_hook(self):
@@ -160,6 +156,7 @@ class AssemblyClient:
 
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
+        '''
         try:        
             obj_img = rospy.wait_for_message("/left_object_images", ObjectImage, timeout=10)
         except:
@@ -180,6 +177,8 @@ class AssemblyClient:
         for i in range(len(opject_positions)):
             rospy.loginfo(f"{objects[i]}, {opject_positions[i].header.frame_id}, {opject_positions[i].point.x}, {opject_positions[i].point.y},{opject_positions[i].point.z}")
             obj_pos.append([opject_positions[i].point.x, opject_positions[i].point.y, opject_positions[i].point.z])
+        '''
+        image, objects, object_positions = self.get_detections('')
 
         req = LLMImageRequest()
         req.text = text
@@ -197,7 +196,7 @@ class AssemblyClient:
 
         self.df["image_path"] = [fname]
         self.df["objects"] = [objects]
-        self.df["objects_positions"] = [obj_pos]
+        self.df["objects_positions"] = [object_positions]
         self.df["gpt_response"] = [str(resp.text).replace('\n','')]
 
         #Should do some error checking
@@ -219,7 +218,7 @@ class AssemblyClient:
         results = None
         if "PICKUP" in action or "PICK_UP" in action:
             if len(objects) > 0:
-                success = self.pickup(json_dict, objects, opject_positions)
+                success = self.pickup(json_dict, objects, object_positions)
                 results = ("PICKUP", success)
             else:
                 results = ("PICKUP", False)
@@ -230,7 +229,7 @@ class AssemblyClient:
                     print(json_dict["object"])
                     obj = json_dict["object"]
                     indx = objects.index(obj)
-                    self.target_position = opject_positions[indx]
+                    self.target_position = object_positions[indx]
                     print(f"{obj}, {self.target_position}")
                     success = self.move_to(self.target_position)
                     results = ("MOVE_TO", success)
@@ -613,6 +612,26 @@ class AssemblyClient:
             new_positions.append(new_p)
 
         return new_positions
+
+    def get_detections(self, text):
+        '''
+        topic = "/unity/camera/left/rgb/image_raw"
+        topic = "/left_camera/color/image_rect_color_throttled"
+        img = rospy.wait_for_message(topic, Image, timeout=10)
+        '''
+        req = SAMRequest()
+        req.text_prompt = text
+        resp = self.sam_srv(req)
+
+        annotated_img = resp.annotated_image
+        
+        objects = []
+        object_positions = []
+        for obj in resp.object:
+            objects.append(obj.class_name)
+            objects.append(obj.center)
+
+        return (annotated_img, objects, object_positions)
 
 if __name__ == '__main__':
     llm = AssemblyClient()

@@ -1,5 +1,5 @@
 sensor_msgs/Image image
-int32[] target_x
-int32[] target_y
+string text_prompt
 ---
-sensor_msgs/Image[]  masks
+sensor_msgs/Image annotated_image
+toy_assembly/Detection[] object

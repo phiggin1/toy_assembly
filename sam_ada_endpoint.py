@@ -28,7 +28,7 @@ GROUNDING_DINO_CHECKPOINT = "gdino_checkpoints/groundingdino_swint_ogc.pth"
 BOX_THRESHOLD = 0.35
 TEXT_THRESHOLD = 0.25
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-OUTPUT_DIR = Path("outputs/grounded_sam2_local_demo")
+OUTPUT_DIR = Path("/home/phiggin1/cmat_ada/users/phiggin1/images/")
 DUMP_JSON_RESULTS = True
 
 # create output directory
@@ -39,7 +39,6 @@ def single_mask_to_rle(mask):
     rle["counts"] = rle["counts"].decode("utf-8")
     return rle
 
-#def load_image(image_path: str) -> Tuple[np.array, torch.Tensor]:
 def load_image(cv_img):
     transform = T.Compose(
         [
@@ -48,10 +47,11 @@ def load_image(cv_img):
             T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
         ]
     )
-    #image_source = Image.open(image_path).convert("RGB")
-    image_source = Image.fromarray(cv_img).convert("RGB")
+
+    image_source = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)).convert("RGB")
     image = np.asarray(image_source)
     image_transformed, _ = transform(image_source, None)
+
     return image, image_transformed
 
 # environment settings
@@ -104,12 +104,14 @@ class SamEndPoint:
             print(f"{time.time_ns()}: Message replied type: {msg_type}, took {end_time-start_time} second")
             
     def process_sam(self, msg):
-        img = np.asarray(msg["image"], dtype=np.uint8)
+        cv_img = np.asarray(msg["image"], dtype=np.uint8)
         text = msg["text"]
+        
+        print(f"text prompt: {text}")
         # setup the input image and text prompt for SAM 2 and Grounding DINO
         # VERY important: text queries need to be lowercased + end with a dot
 
-        image_source, image = load_image(img)
+        image_source, image = load_image(cv_img)
 
         self.sam2_predictor.set_image(image_source)
 
@@ -127,8 +129,7 @@ class SamEndPoint:
         input_boxes = box_convert(boxes=boxes, in_fmt="cxcywh", out_fmt="xyxy").numpy()
 
         # FIXME: figure how does this influence the G-DINO model
-        torch.autocast(device_type="cuda", dtype=torch.bfloat16).__enter__()
-
+        torch.autocast(device_type="cuda", dtype=torch.float16).__enter__()
         if torch.cuda.get_device_properties(0).major >= 8:
             # turn on tfloat32 for Ampere GPUs (https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices)
             torch.backends.cuda.matmul.allow_tf32 = True
@@ -159,26 +160,25 @@ class SamEndPoint:
 
         """
         Visualize image with supervision useful API
-        
-        img = cv2.imread(img_path)
+        """
+        '''
+        img = cv_img.copy()
         detections = sv.Detections(
             xyxy=input_boxes,  # (n, 4)
             mask=masks.astype(bool),  # (n, h, w)
             class_id=class_ids
         )
-
         box_annotator = sv.BoxAnnotator()
         annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
 
         label_annotator = sv.LabelAnnotator()
         annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
         cv2.imwrite(os.path.join(OUTPUT_DIR, "groundingdino_annotated_image.jpg"), annotated_frame)
-
+        '''
         mask_annotator = sv.MaskAnnotator()
         annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
-        cv2.imwrite(os.path.join(OUTPUT_DIR, "grounded_sam2_annotated_image_with_mask.jpg"), annotated_frame)
-        """
-
+        #cv2.imwrite(os.path.join(OUTPUT_DIR, "grounded_sam2_annotated_image_with_mask.jpg"), annotated_frame)
+        
         """
         Dump the results in standard format and save as json files
         """
@@ -190,6 +190,7 @@ class SamEndPoint:
         # save the results in standard format
         results = {
             "type":"sam",
+            "annotated_image":annotated_frame.tolist(),
             "annotations" : [
                 {
                     "class_name": class_name,
@@ -225,15 +226,8 @@ if __name__ == '__main__':
                         help="port transcribe_server.py is listening on.")
     parser.add_argument("--text_threshold", default=0.25, required=False,
                         help="port transcribe_server.py is listening on.")
-    '''
-    /home/phiggin1//home/phiggin1/Grounded-SAM-2/
-    SAM2_CHECKPOINT = "/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/checkpoints/sam2.1_hiera_large.pt"
-    SAM2_MODEL_CONFIG = "configs/sam2.1/sam2.1_hiera_l.yaml"
-    GROUNDING_DINO_CONFIG = "grounding_dino/groundingdino/config/GroundingDINO_SwinT_OGC.py"
-    GROUNDING_DINO_CHECKPOINT = "/home/phiggin1/cmat_ada/users/phiggin1/grouned_sam2_models/gdino_checkpoints/groundingdino_swint_ogc.pth"
-    '''
-    args = parser.parse_args()
 
+    args = parser.parse_args()
     hostname = args.hostname
     port = args.port
     sam2_checkpoint = args.sam2_checkpoint

@@ -24,17 +24,22 @@
               <param name="max_duration"  value="30" />
               <param name="debug"  value="True" />
        </node>
+       
        <!-- listen for utterances and get a transcription -->
        <node name="transcribe" pkg="toy_assembly" type="transcribe.py" output="screen" >
-              <param name="debug"  value="True" />
+              <param name="debug"  value="True" /> 
        </node>
-       <node name="ada_services" pkg="toy_assembly" type="ada_client.py" output="screen" />
+
+       <node name="whisper_ada_services" pkg="toy_assembly" type="whisper_ada_client.py" output="screen" />
+
+       <node name="sam_ada_services" pkg="toy_assembly" type="sam_ada_client.py" output="screen" />
+
        <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
 
        <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  
               <param name="~prefix"  value="$(arg prefix)" />
        </node>
-
+<!--
        <node pkg="rosbag" type="record" name="toy_record"
               args="record 
               -o $(arg prefix)
@@ -70,7 +75,7 @@
               /transcript
               /buttons"
        />
-
+-->
 </launch>
 
 
