@@ -170,13 +170,13 @@ class SamEndPoint:
         )
         box_annotator = sv.BoxAnnotator()
         annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
-        '''
+        
         label_annotator = sv.LabelAnnotator()
         annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-        cv2.imwrite(os.path.join(OUTPUT_DIR, "groundingdino_annotated_image.jpg"), annotated_frame)
-        '''
-        mask_annotator = sv.MaskAnnotator()
-        annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
+        #cv2.imwrite(os.path.join(OUTPUT_DIR, "groundingdino_annotated_image.jpg"), annotated_frame)
+        
+        #mask_annotator = sv.MaskAnnotator()
+        #annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
         #cv2.imwrite(os.path.join(OUTPUT_DIR, "grounded_sam2_annotated_image_with_mask.jpg"), annotated_frame)
         
         """
