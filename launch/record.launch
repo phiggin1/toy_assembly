@@ -32,8 +32,6 @@
 
        <node name="whisper_ada_services" pkg="toy_assembly" type="whisper_ada_client.py" output="screen" />
 
-       <node name="sam_ada_services" pkg="toy_assembly" type="sam_ada_client.py" output="screen" />
-
        <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
 
        <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  

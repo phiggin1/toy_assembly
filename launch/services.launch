@@ -22,6 +22,10 @@
 
   <node name="status" pkg="toy_assembly" type="status.py" output="screen" > </node>
 
+  <node name="sam_ada_services" pkg="toy_assembly" type="sam_ada_client.py" output="screen" >  
+    <param name="~real"  value="false" />
+  </node>
+
   <arg name="arm" default="left"/>
   <arg name="minX" default="-0.25"/>
   <arg name="maxX" default=" 0.25"/>

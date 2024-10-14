@@ -100,7 +100,7 @@
      <node pkg="tf2_ros"
       type="static_transform_publisher"
       name="camera_depth_tf_publisher"
-      args="-0.0075 -0.0 0 0 0 0 $(arg camera_link_frame_id) $(arg depth_frame_id)" /> 
+      args="-0.0075 -0.01450 0 0 0 0 $(arg camera_link_frame_id) $(arg depth_frame_id)" /> 
 
     <node pkg="tf2_ros"
       type="static_transform_publisher"
