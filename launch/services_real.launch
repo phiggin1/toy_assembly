@@ -24,6 +24,10 @@
     <param name="prefix"  value="left" />  
   </node>
 
+  <node name="sam_ada_services" pkg="toy_assembly" type="sam_ada_client.py" output="screen" >  
+    <param name="~real"  value="true" />
+  </node>
+
   <!-- detecting objects on a table and adding a bounding box overlay to an image -->
   <arg name="debug" default="true"/>
   <arg name="minX" default="-0.25"/>

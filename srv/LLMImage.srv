@@ -1,6 +1,6 @@
 sensor_msgs/Image image
 string text
+string env
 string[] objects
-bool check
 ---
 string text

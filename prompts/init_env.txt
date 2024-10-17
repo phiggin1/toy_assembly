@@ -1,0 +1,15 @@
+{
+    'environment': 
+    {
+        'objects': 
+        ['tan tray', 'orange tray', 'tan horse body', 'blue horse legs', 'orange horse legs', 'table'], 
+        'object_states': 
+        {
+            'tan tray': 'on_something(table)', 
+            'orange tray': 'on_something(table)', 
+            'tan horse body': 'on_something(orange tray)', 
+            'blue horse legs': 'on_something(tan tray)', 
+            'orange horse legs': 'on_something(tan tray)'
+        }
+    }
+}

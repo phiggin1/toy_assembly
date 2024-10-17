@@ -9,7 +9,7 @@ import base64
 import rospy
 import tf
 from cv_bridge import CvBridge
-from toy_assembly.srv import LLMImage
+from toy_assembly.srv import LLMImage, LLMImageRequest, LLMImageResponse
 
 class LLMClient:
     def __init__(self):
@@ -46,13 +46,27 @@ class LLMClient:
             self.prompt = self.prompt.replace("[ACTIONS]", self.actions)
         #print(self.prompt)
     
+        fp_state = "/home/rivr/toy_ws/src/toy_assembly/prompts/gpt_env_state.txt"
+        with open(fp_state) as f:
+            self.state = f.read()
+
+
+
         self.messages = [
             {
                 "role":"system", 
-                "content": [
-                    {"type":"text", "text" : self.system},
-                ]
+                "content": 
+                [ {"type":"text", "text" : self.system} ]
             },
+            {
+                "role":"user", 
+                "content": 
+                [ {"type":"text", "text" : self.state} ]
+            },
+            {
+                "role":"assistant", 
+                "content": [ {"type":"text", "text" : "Understood. Waiting for next input."} ]
+            }
         ] 
 
         self.llm_serv = rospy.Service("/gpt_servcice", LLMImage, self.call_gpt)
@@ -61,9 +75,9 @@ class LLMClient:
 
     def call_gpt(self, req):
         text = req.text
-        check = req.check
         image = req.image
         objects = req.objects
+        env = req.env
         rospy.loginfo(f"call_gpt transcript:{text}, objects:{objects}")
 
         if self.debug: rospy.loginfo("============================")
@@ -72,13 +86,21 @@ class LLMClient:
         self.messages = [
             {
                 "role":"system", 
-                "content": [
-                    {"type":"text", "text" : self.system},
-                ]
+                "content": 
+                [ {"type":"text", "text" : self.system} ]
             },
+            {
+                "role":"user", 
+                "content": 
+                [ {"type":"text", "text" : self.state} ]
+            },
+            {
+                "role":"assistant", 
+                "content": [ {"type":"text", "text" : "Understood. Waiting for next input."} ]
+            }
         ] 
         
-        new_msg = self.get_prompt(text, image, objects)
+        new_msg = self.get_prompt(text, image, objects, env)
         ans = self.chat_complete(new_msg)
         
         self.prev_answer = ans
@@ -86,7 +108,7 @@ class LLMClient:
         return ans
 
 
-    def get_prompt(self, text, image, objects):
+    def get_prompt(self, text, image, objects, env):
         print("get_prompt")
 
         '''
@@ -98,18 +120,25 @@ class LLMClient:
         is_success, buffer = cv2.imencode(".png", cv_img)
         io_buf = io.BytesIO(buffer)        
         encoded_image = base64.b64encode(buffer).decode("utf-8") 
- 
+
         instruction = deepcopy(self.prompt)
         if instruction.find('[INSTRUCTION]') != -1:
             instruction = instruction.replace('[INSTRUCTION]', text)
         if instruction.find('[OBJECTS]') != -1:
             instruction = instruction.replace('[OBJECTS]', ", ".join(objects))
+        if instruction.find('[ENVIRONMENT]') != -1:
+            instruction = instruction.replace('[ENVIRONMENT]', env)
 
-        return {"role":"user", 
-                "content": [
-                    {"type":"text", "text" : instruction},
-                    {"type":"image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
-                ]}
+        prompt_dict = {
+            "role":"user", 
+            "content": 
+            [
+                {"type":"text", "text" : instruction},
+                {"type":"image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
+            ]
+        }
+
+        return prompt_dict
 
     def chat_complete(self, new_msg):
         start_time = time.time_ns()
@@ -119,7 +148,7 @@ class LLMClient:
         model = "gpt-4o-2024-05-13"
         #model = "gpt-4o-mini-2024-07-18"
         temperature = 0.0
-        max_tokens = 128
+        max_tokens = 350
         
         results = self.client.chat.completions.create(model=model, messages=self.messages, temperature=temperature, max_tokens=max_tokens, stream=True)
         response = []
@@ -128,9 +157,9 @@ class LLMClient:
 
         ans = [m for m in response if m is not None]
         answer = ''.join([m for m in ans])
-        
-        #answer = self.woz(self.messages)
-        
+        '''
+        answer = self.woz(self.messages)
+        '''
         
         self.messages.append(
             {
@@ -142,7 +171,7 @@ class LLMClient:
         )
 
         # only keep the system, and the last message
-        if len(self.messages) > 3:
+        if len(self.messages) > 4:
             del self.messages[1:2]
 
         end_time = time.time_ns()
@@ -158,8 +187,8 @@ class LLMClient:
         print("=================")
 
         action = input("action: ")
-        obj = input(f"Object # (0-2): ")
-        answer = f"""'''{{"action":"{action}","object":"obj_{obj}"}}'''"""
+        description = input(f"description: ")
+        answer = f"""'''{{"action":"{action}","object":"{description}"}}'''"""
         rospy.loginfo(answer)
 
         print("=================")

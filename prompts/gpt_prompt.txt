@@ -3,20 +3,32 @@ For a given statement determine what actions the robot should take.
 If the "PICKUP" action is chosen there must be a "object" key in the returned dictionary with the object from the list below as the value.
 Return only a single object from the list of objects provided.
 You should only choose "PICKUP" if the person instructs and if there are any objects in the "objects' list.
+There cannot be more than onve object in the robots hand.
 If the "MOVE_TO" action is chosen there must be an "object" key or "direction" in the returned dictonary. 
 If "object" is used it must be from the list below as the value.
 If direction is used it must be a list of containing only "MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", or "MOVE_BACKWARD".
 
 Resume using the following instruction and the objects in the provided image.
 
+{"environment":[ENVIRONMENT]}
+
 ---
 The instruction is as follows:
 ---
 {"instruction": '[INSTRUCTION]}
-{"objects" = [OBJECTS]}
 ---
 The dictionary that you return should be formatted as python dictionary. Follow these rules:
-1. Never leave ',' at the end of the list.
-2. All keys of the dictionary should be double quoted.
-3. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
-6. If the statement is not directed toward the robot or is not a request for the robot to perform an action the list should consist of "NO_ACTION" only.
+1. If the statement is not directed toward the robot or is not a request for the robot to perform an action the list should consist of "NO_ACTION" only.
+2. Never leave ',' at the end of the list.
+3. All keys of the dictionary should be double quoted.
+4. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
+6. Keep track of all items listed in the "objects" section of the "environment_before" field. Please ensure that you fill out both the "objects" and "object_states" sections for all listed items. 
+7. Use the "STATE LIST" for the "object states" field.
+"""
+"STATE LIST"
+- on_something(<something>): Object is located on <something>
+- attaced_to(<something>): Object is attached to <something>
+- inside_hand(): Object is being grasped by a robot hand
+"""
+7. All keys of the dictionary should be double-quoted.
+8. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.

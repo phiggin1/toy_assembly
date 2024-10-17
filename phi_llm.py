@@ -109,7 +109,7 @@ class AdaEndPoint:
             print(f"{time.time_ns()}: Message recieved type: {msg_type} \n {msg}")
 
             if msg_type == "llm":
-              resp = self.process_llm(msg)
+                resp = self.process_llm(msg)
             else:
                 resp = {}
 
