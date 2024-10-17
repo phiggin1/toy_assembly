@@ -168,16 +168,14 @@ class SamEndPoint:
             mask=masks.astype(bool),  # (n, h, w)
             class_id=class_ids
         )
-        box_annotator = sv.BoxAnnotator()
+        box_annotator = sv.BoxAnnotator(thickness=1)
         annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
         
-        label_annotator = sv.LabelAnnotator()
+        label_annotator = sv.LabelAnnotator(text_scale=0.35)
         annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-        #cv2.imwrite(os.path.join(OUTPUT_DIR, "groundingdino_annotated_image.jpg"), annotated_frame)
         
         #mask_annotator = sv.MaskAnnotator()
         #annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
-        #cv2.imwrite(os.path.join(OUTPUT_DIR, "grounded_sam2_annotated_image_with_mask.jpg"), annotated_frame)
         
         """
         Dump the results in standard format and save as json files

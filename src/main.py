@@ -114,10 +114,10 @@ class AssemblyClient:
         self.state = "LOW_LEVEL"
         self.check = False
         self.debug = rospy.get_param("~debug", True)
-        self.sim_time = rospy.get_param("/use_sime_time", False)
+        self.sim_time = rospy.get_param("/use_sim_time")#, False)
 
         rospy.loginfo(f"sim time active: {self.sim_time}")
-
+        
         move_service_name = "/my_gen3_right/move_pose"
         rospy.wait_for_service(move_service_name)
         self.moveit_pose = rospy.ServiceProxy(move_service_name, MoveITPose)
@@ -137,7 +137,7 @@ class AssemblyClient:
         phi_service_name = "/phi_servcice"
         rospy.wait_for_service(phi_service_name)
         self.llm_text_srv = rospy.ServiceProxy(phi_service_name, LLMText)
-
+        
         sam_service_name = "/get_sam_segmentation"
         rospy.wait_for_service(sam_service_name)
         self.sam_srv = rospy.ServiceProxy(sam_service_name, SAM)
@@ -154,7 +154,8 @@ class AssemblyClient:
         fp_init_env = "/home/rivr/toy_ws/src/toy_assembly/prompts/init_env.txt"
         with open(fp_init_env) as f:
             self.init_env = f.read()
-        self.env = None
+
+        self.env = self.init_env
 
         self.colors = {
             "tan tray":(255,0,0),
@@ -194,6 +195,14 @@ class AssemblyClient:
         rate = rospy.Rate(5)
         while not self.have_images:
             rate.sleep()
+
+
+        
+        gpt_state_service_name = "/gpt_state_servcice"
+        rospy.wait_for_service(gpt_state_service_name)
+        self.llm_state_srv = rospy.ServiceProxy(gpt_state_service_name, LLMImage)
+
+        
         
 
         rospy.on_shutdown(self.shutdown_hook)
@@ -206,19 +215,53 @@ class AssemblyClient:
             transcription.transcription = text
             
             self.text_cb(transcription)
+      
 
     def image_cb(self, rgb_ros_image, depth_ros_image):
         success = self.mutex.acquire(block=False, timeout=0.02)
         if success:
             #print(f"rgb eoncoding: {rgb_ros_image.encoding}")
             #print(f"depth eoncoding: {depth_ros_image.encoding}")
+            self.rgb_encoding = rgb_ros_image.encoding
+            self.depth_encoding = depth_ros_image.encoding
             self.rgb_image = self.cvbridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="bgr8") 
-            self.depth_image = self.cvbridge.imgmsg_to_cv2(depth_ros_image)#, desired_encoding="passthrough") 
+            self.depth_image = self.cvbridge.imgmsg_to_cv2(depth_ros_image)
             if not self.have_images:
                 rospy.loginfo("HAVE IMAGES")
                 self.have_images = True
             self.mutex.release()
 
+    def check_env(self, action, success, env):
+        text = {
+            "action":action,
+            "success":success
+        }
+        image, objects, _, _, _ = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table.")
+        req = LLMImageRequest()
+        req.text = json.dumps(text)
+        req.objects = objects
+        req.env = self.init_env
+        req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
+        resp = self.llm_state_srv(req)
+
+        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}_annotated.png"
+        print(fname)
+        cv2.imwrite(fname, cv_img)
+        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}.png"
+        cv2.imwrite(fname, self.rgb_image)
+
+        json_dict = extract_json(resp.text)
+
+        if json_dict['correct']:
+            print("predicted matches actual")
+            return env
+        else:
+            act_env = json_dict["environment_actual"]
+            print(f"predicted env:{env} does not match actual env: {act_env}")
+            return json.dumps(json_dict["environment_actual"], indent=4)
+
+    
     def shutdown_hook(self):
         if len(self.dataframe_csv) > 0:
             pandas.concat(self.dataframe_csv).to_csv(self.log_file_path, index=False)
@@ -246,9 +289,11 @@ class AssemblyClient:
         self.prev = (transcript, results[0] if results is not None else None)
         self.df["results"] = [results]
 
+        print(f"results: {results}")
+        print(f"env: {self.env}")
 
-        print(results)
-        print(self.env)
+        if results is not None:
+            self.env = self.check_env(results[0], results[1], self.env)
 
         '''
         check if env makes sense with what is seen
@@ -271,15 +316,18 @@ class AssemblyClient:
         if self.env is None:
             self.env = self.init_env
         req.env = self.env
-        req.image = image
+        req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
 
         resp = self.llm_image_srv(req)
 
         cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
         merge_test = "_".join(text.split(" "))
-        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
+        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
         print(fname)
         cv2.imwrite(fname, cv_img)
+        merge_test = "_".join(text.split(" "))
+        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
+        cv2.imwrite(fname, self.rgb_image)
 
         self.df["image_path"] = [fname]
         self.df["objects"] = [objects]
@@ -307,12 +355,13 @@ class AssemblyClient:
                 if "object" in json_dict:
                     print(json_dict["object"])
                     target_object = json_dict["object"]
-
                     target_position = self.get_position(target_object, objects, rles, bboxs, scores)
-
-                    success = self.pickup(target_position)
-                    self.env = json.dumps(json_dict["environment_after"], indent=4)
-                    results = ("PICKUP", success)
+                    if target_position is not None:
+                        success = self.pickup(target_position)
+                        self.env = json.dumps(json_dict["environment_after"], indent=4)
+                        results = ("PICKUP", success)
+                    else:
+                        results = ("PICKUP", False)
             else:
                 results = ("PICKUP", False)
         elif "MOVE_TO" in action:
@@ -320,13 +369,14 @@ class AssemblyClient:
                 if "object" in json_dict:
                     print(json_dict["object"])
                     target_object = json_dict["object"]
-
                     target_position = self.get_position(target_object, objects, rles, bboxs, scores)
-
-                    print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x}, x:{target_position.point.y}, x:{target_position.point.z}")
-                    success = self.move_to(target_position)
-                    self.env = json.dumps(json_dict["environment_after"], indent=4)
-                    results = ("MOVE_TO", success)
+                    if target_position is not None:
+                        print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x}, x:{target_position.point.y}, x:{target_position.point.z}")
+                        success = self.move_to(target_position)
+                        self.env = json.dumps(json_dict["environment_after"], indent=4)
+                        results = ("MOVE_TO", success)
+                    else:
+                        results = ("PICKUP", False)
                 else:
                     results = ("MOVE_TO", False)
             else:
@@ -335,10 +385,6 @@ class AssemblyClient:
         else:   
             any_valid_commands = self.ee_move(action)
             results = (action, any_valid_commands)
-        '''
-        check if predicted state and actual state match
-        if not update self.env
-        '''
 
         self.state = "LOW_LEVEL"
         return results
@@ -346,11 +392,7 @@ class AssemblyClient:
     def low_level(self, text):
         req = LLMTextRequest()
         req.text = text
-        '''
-        if self.env is None:
-            self.env = self.init_env
-        req.env = self.env
-        '''
+
         resp = self.llm_text_srv(req)
 
         self.df["phi3_response"] = [str(resp.text).replace('\n','')]
@@ -400,7 +442,6 @@ class AssemblyClient:
             action = json_dict["action"]
 
         return action
-
 
     def pickup(self, target_position):
         open_succes = self.open()
@@ -700,6 +741,11 @@ class AssemblyClient:
         return (annotated_img, objects, rles, bboxes, scores)
     
     def get_position(self, target_object, objects, rles, bboxs, scores):
+        print(f"target_object: {target_object}")
+        print(f"objects: {objects}")
+        print(f"num rle: {len(rles)}")
+        print(f"num bboxs: {len(bboxs)}")
+        print(f"num scores: {len(scores)}")
         target_bbox = None
         target_rle = None
         max_score = -100
@@ -710,8 +756,9 @@ class AssemblyClient:
                 if scores[i]>max_score:
                     target_bbox = bboxs[i]
                     target_rle = json.loads(rles[i])
+        if target_rle is None:
+            return None
         
-   
         mask = mask_util.decode([target_rle])
         u_min = int(target_bbox[0])
         v_min = int(target_bbox[1])
@@ -739,10 +786,13 @@ class AssemblyClient:
             for u in range(u_min, u_max, 2):
                 if mask[v][u] > 0:
                     d = (self.depth_image[v][u])
-                    #if d > 100 depth is in mm
-                    if d > 100:
+                    #if depth is 16bit int the depth value is in mm
+                    # convert to m
+                    if self.depth_encoding == "16UC1":
                         d = d/1000.0
-                    if d <= 0.001 or d > 1.0 or np.isnan(d):
+                    #toss out points that are too close or too far 
+                    # to simplify outlier rejection
+                    if d <= 0.02 or d > 1.5 or np.isnan(d):
                         continue
                     distances.append((d, v, u))
 

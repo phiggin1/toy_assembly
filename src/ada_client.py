@@ -36,7 +36,7 @@ class AdaClient:
         
         self.whisper_serv = rospy.Service('/get_transciption', Whisper, self.Whisper)
         #self.clip_serv = rospy.Service('/get_clip_probabilities', CLIP, self.CLIP)
-        self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
+        #self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
         #self.tts_serv = rospy.Service("/get_text_to_speech", TTS, self.TTS)
         
         rospy.spin()

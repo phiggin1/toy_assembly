@@ -1,0 +1,23 @@
+Start working. 
+Determine if the predicted environment matches the outcome of the given <action> from the provided image.
+Return only a python dictionary.
+Resume using the predicted environment  and the objects in the provided image.
+
+{"prdicted_environment":[ENVIRONMENT]}
+{"action:[ACTION]}
+{"success:[SUCCESS]}
+
+The dictionary that you return should be formatted as python dictionary. Follow these rules:
+1. Never leave ',' at the end of the list.
+2. All keys of the dictionary should be double quoted.
+3. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
+4. Keep track of all items listed in the "objects" section of the "environment_before" field. Please ensure that you fill out both the "objects" and "object_states" sections for all listed items. 
+5. Use the "STATE LIST" for the "object states" field.
+"""
+"STATE LIST"
+- on_something(<something>): Object is located on <something>
+- attached_to(<something>): Object is attached to <something>
+- inside_hand(): Object is being grasped by a robot hand
+"""
+6. All keys of the dictionary should be double-quoted.
+7. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.    

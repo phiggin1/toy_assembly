@@ -68,7 +68,7 @@ def transform_point(ps, mat44, target_frame):
 
 class AdaClient:
     def __init__(self):
-        rospy.init_node('ada_sam')
+        rospy.init_node('SamAdaClient')
 
         self.mutex = Lock()
 
@@ -135,6 +135,10 @@ class AdaClient:
         if success:
             #print(f"rgb eoncoding: {rgb_ros_image.encoding}")
             #print(f"depth eoncoding: {depth_ros_image.encoding}")
+
+            self.rgb_encoding = rgb_ros_image.encoding
+            self.depth_encoding = depth_ros_image.encoding
+
             self.rgb_image = self.cvbridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="bgr8") 
             self.depth_image = self.cvbridge.imgmsg_to_cv2(depth_ros_image)#, desired_encoding="passthrough") 
             if not self.have_images:
@@ -233,10 +237,13 @@ class AdaClient:
             for u in range(u_min, u_max, 2):
                 if mask[v][u] > 0:
                     d = (self.depth_image[v][u])
-                    #if d > 100 depth is in mm
-                    if d > 100:
+                    #if depth is 16bit int the depth value is in mm
+                    # convert to m
+                    if self.depth_encoding == "16UC1":
                         d = d/1000.0
-                    if d <= 0.001 or d > 1.0 or np.isnan(d):
+                    #toss out points that are too close or too far 
+                    # to simplify outlier rejection
+                    if d <= 0.02 or d > 1.5 or np.isnan(d):
                         continue
                     distances.append((d, v, u))
 

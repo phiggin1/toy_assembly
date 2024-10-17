@@ -32,8 +32,10 @@
 
        <node name="whisper_ada_services" pkg="toy_assembly" type="whisper_ada_client.py" output="screen" />
        <node name="phi" pkg="toy_assembly" type="phi_service.py" output="screen" />
-
        <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
+       
+       <node name="gpt_state" pkg="toy_assembly" type="gpt_state.py" output="screen" />
+       
 
        <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  
               <param name="~prefix"  value="$(arg prefix)" />

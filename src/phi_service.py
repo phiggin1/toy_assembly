@@ -6,7 +6,7 @@ from toy_assembly.srv import LLMText, LLMTextRequest, LLMTextResponse
 
 class LLMClient:
     def __init__(self):
-        rospy.init_node('PHI_LLM')
+        rospy.init_node('PHILLMService')
 
         self.debug = rospy.get_param("~debug", True)
         server_port = rospy.get_param("~port", "8877")
