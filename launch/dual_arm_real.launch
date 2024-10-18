@@ -17,7 +17,7 @@ roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.
   <arg name="left_y0" default="0.40"/>
   <arg name="left_z0" default="0"/>
 
-  <arg name="/use_sim_time" default="false"/>
+  <param name="/use_sim_time" value="false"/>
 
   <arg name="left_robot_name" default="my_gen3_left"/>
   <arg name="left_prefix" default="left_"/>

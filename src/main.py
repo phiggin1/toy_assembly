@@ -111,8 +111,6 @@ class AssemblyClient:
         self.angular_speed = 1.0
         
         self.prev = None
-        self.state = "LOW_LEVEL"
-        self.check = False
         self.debug = rospy.get_param("~debug", True)
         self.sim_time = rospy.get_param("/use_sim_time")#, False)
 
@@ -142,14 +140,17 @@ class AssemblyClient:
         rospy.wait_for_service(sam_service_name)
         self.sam_srv = rospy.ServiceProxy(sam_service_name, SAM)
 
-        self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
-        self.debug_pose_pub = rospy.Publisher('/0debug_pose', PoseStamped, queue_size=10)
-        self.status_pub = rospy.Publisher("/status", String, queue_size=10)
+        gpt_state_service_name = "/gpt_state_servcice"
+        rospy.wait_for_service(gpt_state_service_name)
+        self.llm_state_srv = rospy.ServiceProxy(gpt_state_service_name, LLMImage)
 
         self.twist_topic  = "/my_gen3_right/workspace/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
-        
-        self.test_cloud = rospy.Publisher("test_cloud", PointCloud2, queue_size=10)
+        self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
+        self.status_pub = rospy.Publisher("/status", String, queue_size=10)
+
+        self.debug_pose_pub = rospy.Publisher('/0debug/pose', PoseStamped, queue_size=10)
+        self.test_cloud = rospy.Publisher("/0debug/test_cloud", PointCloud2, queue_size=10)
 
         fp_init_env = "/home/rivr/toy_ws/src/toy_assembly/prompts/init_env.txt"
         with open(fp_init_env) as f:
@@ -192,18 +193,18 @@ class AssemblyClient:
         self.depth_image = None
         self.have_images = False
         
+        self.init_objects = [
+            "tan tray",
+            "orange tray",
+            "tan horse body",
+            "blue horse legs",
+            "orange horse legs",
+            "table"
+        ]
+
         rate = rospy.Rate(5)
         while not self.have_images:
             rate.sleep()
-
-
-        
-        gpt_state_service_name = "/gpt_state_servcice"
-        rospy.wait_for_service(gpt_state_service_name)
-        self.llm_state_srv = rospy.ServiceProxy(gpt_state_service_name, LLMImage)
-
-        
-        
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
@@ -236,30 +237,32 @@ class AssemblyClient:
             "action":action,
             "success":success
         }
-        image, objects, _, _, _ = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table.")
-        req = LLMImageRequest()
-        req.text = json.dumps(text)
-        req.objects = objects
-        req.env = self.init_env
-        req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
-        resp = self.llm_state_srv(req)
+        image, objects, _, _, _ = self.get_detections(". ".join(self.init_objects)+'.')
+            
+        with self.mutex:
+            req = LLMImageRequest()
+            req.text = json.dumps(text)
+            req.objects = objects
+            req.env = self.init_env
+            req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
+            resp = self.llm_state_srv(req)
 
-        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}_annotated.png"
-        print(fname)
-        cv2.imwrite(fname, cv_img)
-        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}.png"
-        cv2.imwrite(fname, self.rgb_image)
+            cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}_annotated.png"
+            print(fname)
+            cv2.imwrite(fname, cv_img)
+            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}.png"
+            cv2.imwrite(fname, self.rgb_image)
 
-        json_dict = extract_json(resp.text)
+            json_dict = extract_json(resp.text)
 
-        if json_dict['correct']:
-            print("predicted matches actual")
-            return env
-        else:
-            act_env = json_dict["environment_actual"]
-            print(f"predicted env:{env} does not match actual env: {act_env}")
-            return json.dumps(json_dict["environment_actual"], indent=4)
+            if json_dict['correct']:
+                print("predicted matches actual")
+                return env
+            else:
+                act_env = json_dict["environment_actual"]
+                print(f"predicted env:{env} does not match actual env: {act_env}")
+                return json.dumps(json_dict["environment_actual"], indent=4)
 
     
     def shutdown_hook(self):
@@ -275,16 +278,12 @@ class AssemblyClient:
         })
         rospy.loginfo("THINKING")
         self.status_pub.publish("THINKING")
-        if self.debug: rospy.loginfo(f"state: {self.state}")
         if self.debug: rospy.loginfo(f"audio transcript: {transcript}")
         if self.debug: rospy.loginfo(f"prev command|action: {self.prev}")
 
         transcript =  transcript.transcription
 
-        if self.state == "HIGH_LEVEL":
-            results = self.high_level(transcript)
-        else:
-            results = self.low_level(transcript)
+        results = self.low_level(transcript)
         
         self.prev = (transcript, results[0] if results is not None else None)
         self.df["results"] = [results]
@@ -308,26 +307,26 @@ class AssemblyClient:
 
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
-
+        
         image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table.")
+        with self.mutex:
+            req = LLMImageRequest()
+            req.text = text
+            if self.env is None:
+                self.env = self.init_env
+            req.env = self.env
+            req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
 
-        req = LLMImageRequest()
-        req.text = text
-        if self.env is None:
-            self.env = self.init_env
-        req.env = self.env
-        req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
+            resp = self.llm_image_srv(req)
 
-        resp = self.llm_image_srv(req)
-
-        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-        merge_test = "_".join(text.split(" "))
-        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
-        print(fname)
-        cv2.imwrite(fname, cv_img)
-        merge_test = "_".join(text.split(" "))
-        fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
-        cv2.imwrite(fname, self.rgb_image)
+            cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+            merge_test = "_".join(text.split(" "))
+            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
+            print(fname)
+            cv2.imwrite(fname, cv_img)
+            merge_test = "_".join(text.split(" "))
+            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
+            cv2.imwrite(fname, self.rgb_image)
 
         self.df["image_path"] = [fname]
         self.df["objects"] = [objects]
@@ -339,54 +338,52 @@ class AssemblyClient:
         rospy.loginfo(f"init json dict:\n{json_dict}")
 
         if json_dict is None:
-            self.state = "LOW_LEVEL"
-            return None
+            return ("NO_ACTION", True)
 
         action = None
         if "action" in json_dict:
-            action = json_dict["action"]
+            actions = json_dict["action"]
         else:
-            self.state = "LOW_LEVEL"
-            return None
-    
-        results = None
-        if "PICKUP" in action or "PICK_UP" in action:
-            if len(objects) > 0:
-                if "object" in json_dict:
-                    print(json_dict["object"])
-                    target_object = json_dict["object"]
-                    target_position = self.get_position(target_object, objects, rles, bboxs, scores)
-                    if target_position is not None:
-                        success = self.pickup(target_position)
-                        self.env = json.dumps(json_dict["environment_after"], indent=4)
-                        results = ("PICKUP", success)
-                    else:
-                        results = ("PICKUP", False)
-            else:
-                results = ("PICKUP", False)
-        elif "MOVE_TO" in action:
-            if len(objects) > 0:
-                if "object" in json_dict:
-                    print(json_dict["object"])
-                    target_object = json_dict["object"]
-                    target_position = self.get_position(target_object, objects, rles, bboxs, scores)
-                    if target_position is not None:
-                        print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x}, x:{target_position.point.y}, x:{target_position.point.z}")
-                        success = self.move_to(target_position)
-                        self.env = json.dumps(json_dict["environment_after"], indent=4)
-                        results = ("MOVE_TO", success)
-                    else:
-                        results = ("PICKUP", False)
+            return ("NO_ACTION", True)
+        
+        results = []
+        for action in actions:
+            result = None
+            if "PICKUP" in action or "PICK_UP" in action:
+                if len(objects) > 0:
+                    if "object" in json_dict:
+                        print(json_dict["object"])
+                        target_object = json_dict["object"]
+                        target_position = self.get_position(target_object, objects, rles, bboxs, scores)
+                        if target_position is not None:
+                            success = self.pickup(target_position)
+                            self.env = json.dumps(json_dict["environment_after"], indent=4)
+                            result = ("PICKUP", success)
+                        else:
+                            result = ("PICKUP", False)
                 else:
-                    results = ("MOVE_TO", False)
-            else:
-                results = ("MOVE_TO", False)
+                    result = ("PICKUP", False)
+            elif "MOVE_TO" in action:
+                if len(objects) > 0:
+                    if "object" in json_dict:
+                        print(json_dict["object"])
+                        target_object = json_dict["object"]
+                        target_position = self.get_position(target_object, objects, rles, bboxs, scores)
+                        if target_position is not None:
+                            print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x}, x:{target_position.point.y}, x:{target_position.point.z}")
+                            success = self.move_to(target_position)
+                            self.env = json.dumps(json_dict["environment_after"], indent=4)
+                            result = ("MOVE_TO", success)
+                        else:
+                            result = ("PICKUP", False)
+                    else:
+                        result = ("MOVE_TO", False)
+                else:
+                    result = ("MOVE_TO", False)
+            else:   
+                any_valid_commands = self.ee_move(action)
+                result = (action, any_valid_commands)
 
-        else:   
-            any_valid_commands = self.ee_move(action)
-            results = (action, any_valid_commands)
-
-        self.state = "LOW_LEVEL"
         return results
 
     def low_level(self, text):
@@ -401,38 +398,31 @@ class AssemblyClient:
         rospy.loginfo(f"low level action:\n\t {action}")
         results = None
         if action is None or len(action)<1:
-            self.state = "HIGH_LEVEL"
             results = self.high_level(text)  
-            return
+            return results
         
         if "NO_ACTION" in action:
             rospy.loginfo("No action")
-            return
+            return ("NO_ACTION", True)
         
         any_valid_commands = False
 
         if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
             any_valid_commands = True
-            self.state = "HIGH_LEVEL"
             results = self.high_level(text)
         elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROLL_LEFT" in action and "ROLL_RIGHT" in action):
             any_valid_commands = True
-            self.state = "HIGH_LEVEL"
             results = self.high_level(text)
         else:   
-            rospy.loginfo(f"state: {self.state}")
-            self.state = "LOW_LEVEL"
             any_valid_commands = self.ee_move(action)
             results = (action, any_valid_commands)
 
         if not any_valid_commands:
-            self.state = "HIGH_LEVEL"
             results = self.high_level(text)
 
         return results
 
     def parse_llm_response(self, text):
-        print(text)
         json_dict = extract_json(text)
         if json_dict is None:
             return None
@@ -456,8 +446,7 @@ class AssemblyClient:
             return init_grab_move_to_success
 
         grab_success = self.grab(target_position)
-        #Reset the state
-        self.state = "LOW_LEVEL"
+
         return grab_success
 
     def ee_move(self, actions):
@@ -782,8 +771,8 @@ class AssemblyClient:
         fy = self.cam_model.fy()
 
         distances = []
-        for v in range(v_min, v_max, 2):
-            for u in range(u_min, u_max, 2):
+        for v in range(v_min, v_max, 1):
+            for u in range(u_min, u_max, 1):
                 if mask[v][u] > 0:
                     d = (self.depth_image[v][u])
                     #if depth is 16bit int the depth value is in mm

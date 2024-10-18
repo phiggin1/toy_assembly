@@ -1,0 +1,28 @@
+<launch>
+       <arg name="prefix" default="0"/>
+
+       <node name="left_camera_color_info_throttler10"          type="throttle" pkg="topic_tools" args="messages /left_camera/color/camera_info 10 /left_camera/color/camera_info_throttled10" />
+       <node name="left_camera_color_throttler10"               type="throttle" pkg="topic_tools" args="messages /left_camera/color/image_raw   10 /left_camera/color/image_raw_throttled10" />
+       <node name="left_camera_image_rect_color_throttler10"    type="throttle" pkg="topic_tools" args="messages /left_camera/color/image_rect_color   10 /left_camera/color/image_rect_color_throttled10" />
+       <node name="left_camera_depth_info_throttler10"          type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/camera_info 10  /left_camera/depth_registered/sw_registered/camera_info_throttled10" />
+       <node name="left_camera_depth_throttler10"               type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/image_rect   10 /left_camera/depth_registered/sw_registered/image_rect_throttled10" />
+
+       <node pkg="rosbag" type="record" name="toy_record"
+              args="record 
+              -o $(arg prefix)
+              /left_camera/color/camera_info_throttled10
+              /left_camera/color/image_raw_throttled10
+              /left_camera/depth_registered/sw_registered/camera_info_throttled10
+              /left_camera/depth_registered/sw_registered/image_rect_throttled10
+              /unity/camera/left/depth/camera_info
+              /unity/camera/left/depth/image_raw
+              /unity/camera/left/rgb/camera_info
+              /unity/camera/left/rgb/image_raw
+              /0debug/test_cloud
+              /left_camera/color/sam_overlay_raw
+              /unity/camera/left/rgb/sam_overlay_raw
+              /left_object_images"
+       />
+</launch>
+
+
