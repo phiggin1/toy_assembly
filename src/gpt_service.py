@@ -1,103 +1,200 @@
 #!/usr/bin/env python3
 
-import rospy
-from std_msgs.msg import String
-from openai import OpenAI
+import io
+import cv2
 import time
-from toy_assembly.srv import LLMText, LLMTextRequest, LLMTextResponse
+from copy import deepcopy
+from openai import OpenAI
+import base64
+import rospy
+import tf
+from cv_bridge import CvBridge
+from toy_assembly.srv import LLMImage, LLMImageRequest, LLMImageResponse
 
-class GPTServ:
+class LLMClient:
     def __init__(self):
-        self.stop = False
-        rospy.init_node('gpt_service_node')
-        
-        
-        key_filename = "/home/phiggin1/ai.key"
+        rospy.init_node('GPTService')
+
+        self.debug = rospy.get_param("~debug", True)
+
+        self.cvbridge = CvBridge()
+        self.listener = tf.TransformListener()
+
+        key_filename = rospy.get_param("~key_file", "/home/phiggin1/ai.key")
         with open(key_filename, "rb") as key_file:
             key = key_file.read().decode("utf-8")
+            
         self.client = OpenAI(
             api_key = key,
         )
 
-        #self.llm_img_serv = rospy.Service("/llm_image", LLMImage, self.LLMImage)
-        self.llm_text_serv = rospy.Service("/llm_text", LLMText, self.LLMText)
+        fp_actions = "/home/rivr/toy_ws/src/toy_assembly/prompts/actions.txt"
+        with open(fp_actions) as f:
+            self.actions = f.read()
+
+        fp_system = "/home/rivr/toy_ws/src/toy_assembly/prompts/gpt_system.txt"
+        with open(fp_system) as f:
+            self.system = f.read()
+        if self.system.find("[ACTIONS]") != -1:
+            self.system = self.system.replace("[ACTIONS]", self.actions)
+        #print(self.system)
+
+        fp_prompt = "/home/rivr/toy_ws/src/toy_assembly/prompts/gpt_prompt.txt"
+        with open(fp_prompt) as f:
+            self.prompt = f.read()
+        if self.prompt.find("[ACTIONS]") != -1:
+            self.prompt = self.prompt.replace("[ACTIONS]", self.actions)
+        #print(self.prompt)
+    
+        fp_state = "/home/rivr/toy_ws/src/toy_assembly/prompts/gpt_env_state.txt"
+        with open(fp_state) as f:
+            self.state = f.read()
+
+
+
+        self.messages = [
+            {
+                "role":"system", 
+                "content": 
+                [ {"type":"text", "text" : self.system} ]
+            },
+            {
+                "role":"user", 
+                "content": 
+                [ {"type":"text", "text" : self.state} ]
+            },
+            {
+                "role":"assistant", 
+                "content": [ {"type":"text", "text" : "Understood. Waiting for next input."} ]
+            }
+        ] 
+
+        self.llm_serv = rospy.Service("/gpt_servcice", LLMImage, self.call_gpt)
+
         rospy.spin()
 
-    def get_prompt(self, statement):
-        objects = ['<red_horse_front_legs>', '<yellow_horse_back_legs>', '<horse_body_blue>', '<horse_body_red>', '<horse_body_yellow>']
-        with open("/home/phiggin1/catkin_ws/src/toy_assembly/src/prompt/system.txt") as f:
-            system = f.read()
-        with open("/home/phiggin1/catkin_ws/src/toy_assembly/src/prompt/prompt.txt") as f:
-            prompt = f.read()
-        with open("/home/phiggin1/catkin_ws/src/toy_assembly/src/prompt/query.txt") as f:
-            query = f.read()
+    def call_gpt(self, req):
+        text = req.text
+        image = req.image
+        objects = req.objects
+        env = req.env
+        rospy.loginfo(f"call_gpt transcript:{text}, objects:{objects}")
 
-        if query.find("[OBJECTS]") != -1:
-            query = query.replace("[OBJECTS]", ", ".join(objects))
+        if self.debug: rospy.loginfo("============================")
+        if self.debug: print(f"Sending to gpt\ntext:{text}")
 
-        if query.find("[STATEMENT]") != -1:
-            query = query.replace("[STATEMENT]", statement)
-
-        messages = []
-        messages.append({"role": "system", 
-                       "content": system})
-        messages.append({"role": "assistant", 
-                       "content" : 'Understood. Waiting for next input.'})
+        self.messages = [
+            {
+                "role":"system", 
+                "content": 
+                [ {"type":"text", "text" : self.system} ]
+            },
+            {
+                "role":"user", 
+                "content": 
+                [ {"type":"text", "text" : self.state} ]
+            },
+            {
+                "role":"assistant", 
+                "content": [ {"type":"text", "text" : "Understood. Waiting for next input."} ]
+            }
+        ] 
         
-        messages.append({"role": "user", 
-                       "content": prompt})
-        messages.append({"role": "assistant", 
-                       "content" : 'Understood. Waiting for next input.'})
+        new_msg = self.get_prompt(text, image, objects, env)
+        ans = self.chat_complete(new_msg)
         
-        messages.append({"role": "user", 
-                       "content" : query})
+        self.prev_answer = ans
 
-        return messages
+        return ans
 
-    def chat_complete(self, statement):
-        print(statement)
-        messages = self.get_prompt(statement)
-        
+
+    def get_prompt(self, text, image, objects, env):
+        print("get_prompt")
+
+        '''
+        do some json
+        seperate out transcript from prev
+        '''
+
+        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="rgb8")
+        is_success, buffer = cv2.imencode(".png", cv_img)
+        io_buf = io.BytesIO(buffer)        
+        encoded_image = base64.b64encode(buffer).decode("utf-8") 
+
+        instruction = deepcopy(self.prompt)
+        if instruction.find('[INSTRUCTION]') != -1:
+            instruction = instruction.replace('[INSTRUCTION]', text)
+        if instruction.find('[OBJECTS]') != -1:
+            instruction = instruction.replace('[OBJECTS]', ", ".join(objects))
+        if instruction.find('[ENVIRONMENT]') != -1:
+            instruction = instruction.replace('[ENVIRONMENT]', env)
+
+        prompt_dict = {
+            "role":"user", 
+            "content": 
+            [
+                {"type":"text", "text" : instruction},
+                {"type":"image_url", "image_url": {"url": f"data:image/jpeg;base64,{encoded_image}"}}
+            ]
+        }
+
+        return prompt_dict
+
+    def chat_complete(self, new_msg):
         start_time = time.time_ns()
-        print(f"{start_time/10**9} :\tSending query")
-        response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo-16k",
-                messages=messages,
-                temperature=0.0,
-                max_tokens=8000,
-                top_p=0.5,
-                frequency_penalty=0.0,
-                presence_penalty=0.0)
-        end_time = time.time_ns()
-        print(f"{end_time/10**9} :\tRespone recieved")
-        print(f"latency: {(end_time-start_time)/(10**9)}")
         
-        text = response.choices[0].message.content
+        self.messages.append(new_msg)
 
+        model = "gpt-4o-2024-05-13"
+        #model = "gpt-4o-mini-2024-07-18"
+        temperature = 0.0
+        max_tokens = 350
+        
+        results = self.client.chat.completions.create(model=model, messages=self.messages, temperature=temperature, max_tokens=max_tokens, stream=True)
+        response = []
+        for chunk in results:
+            response.append(chunk.choices[0].delta.content)
+
+        ans = [m for m in response if m is not None]
+        answer = ''.join([m for m in ans])
         '''
-        text = """Sure! Here is the dictionary with the objects we should pick up:
-
-{
-  "robot": "<horse_body_yellow>",
-  "human": "<red_horse_front_legs>"
-}"""
+        answer = self.woz(self.messages)
         '''
+        
+        self.messages.append(
+            {
+                "role":"assistant", 
+                "content": [
+                    {"type":"text", "text" : answer},
+                ]
+            }
+        )
 
-        print(text)
-        return text
+        # only keep the system, and the last message
+        if len(self.messages) > 4:
+            del self.messages[1:2]
 
+        end_time = time.time_ns()
+
+        rospy.loginfo(f"GPT resp:\n {answer} \n latency: {(end_time-start_time)/(10**9)}")
+
+        return answer
     
-    def LLMText(self, req):
-        statement = req.text
-        text = self.chat_complete(statement)
+    def woz(self, messages):
+        n_msgs = len(messages)
+        print(n_msgs)
 
-        resp = LLMTextResponse()
-        resp.text = text
+        print("=================")
 
-        return resp
+        action = input("action: ")
+        description = input(f"description: ")
+        answer = f"""'''{{"action":"{action}","object":"{description}"}}'''"""
+        rospy.loginfo(answer)
 
+        print("=================")
 
+        return answer
+        
 
 if __name__ == '__main__':
-    gpt = GPTServ()
-
+    llm = LLMClient()

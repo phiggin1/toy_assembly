@@ -1,29 +1,70 @@
 <launch>
-    <param name="/use_sim_time" value="true"/>
+    <arg name="use_sim_time" value="true"/>
+    <arg name="retry_startup_delay" default="5" />
+    <arg name="port" default=" 7777" />
+    <arg name="address" default="" />
+    <arg name="fragment_timeout" default="600" />
+    <arg name="delay_between_messages" default="0" />
+    <arg name="max_message_size" default="None" />
+    <arg name="authenticate" default="false" />
+    <arg name="bson_only_mode" default="true"/>
+    <param name="use_sim_time" value="$(arg use_sim_time)"/>
 
-    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" > 
-        <arg name="port" value="7777"/>
-        <arg name="bson_only_mode" value="true"/>
-    </include>
-    
-    <node pkg="nodelet" type="nodelet" args="manager" name="record_player_manager" output="screen"/>
+    <node name="rosapi" pkg="rosapi" type="rosapi_node" >
+        <param name="use_sim_time" value="$(arg use_sim_time)"/>
+    </node>
 
-    <node name="decompress_rgb_right" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/right/rgb raw out:=/unity/camera/right/rgb/image_raw" />
+    <node name="rosbridge_websocket" pkg="rosbridge_server" type="rosbridge_websocket" output="screen">
+        <param name="authenticate" value="$(arg authenticate)" />
+        <param name="port" value="$(arg port)"/>
+        <param name="address" value="$(arg address)"/>
+        <param name="retry_startup_delay" value="$(arg retry_startup_delay)"/>
+        <param name="fragment_timeout" value="$(arg fragment_timeout)"/>
+        <param name="delay_between_messages" value="$(arg delay_between_messages)"/>
+        <param name="max_message_size" value="$(arg max_message_size)"/>
+        <param name="bson_only_mode" value="$(arg bson_only_mode)"/>
+        <param name="use_sim_time" value="$(arg use_sim_time)"/>
+    </node>
+
+    <node pkg="nodelet" type="nodelet" args="manager" name="record_player_manager" output="screen">
+        <param name="use_sim_time" value="$(arg use_sim_time)"/>
+    </node>
+
+    <node name="decompress_rgb_right" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/right/rgb raw out:=/unity/camera/right/rgb/image_raw" >
+        <param name="use_sim_time" value="$(arg use_sim_time)"/>
+    </node>
+    <!-- addes noise to color and depth images -->
+    <node name="right_effects" pkg="rivr_ros" type="sensor_effects.py" output="screen" >  
+        <param name="rgb_topic" value="/unity/camera/right/rgb/image_raw"/>
+        <param name="out_rgb_topic" value="/unity/camera/effects/right/rgb/image_raw"/>
+        <param name="depth_topic" value="/unity/camera/right/depth/image_raw"/>
+        <param name="out_depth_topic" value="/unity/camera/effects/right/depth/image_raw"/>
+    </node>
     <!-- builds pointcloud from the color and depth images -->
     <node pkg="nodelet" type="nodelet" name="cloudify_right" args="load depth_image_proc/point_cloud_xyzrgb record_player_manager ">
         <remap from="depth_registered/image_rect" to="/unity/camera/right/depth/image_raw"/> 
         <remap from="rgb/image_rect_color"  to="/unity/camera/right/rgb/image_raw"/> 
         <remap from="rgb/camera_info" to="/unity/camera/right/rgb/camera_info"/>
         <remap from="depth_registered/points" to="/unity/camera/right/depth/points"/> 
+        <param name="use_sim_time" value="$(arg use_sim_time)"/>
     </node>
   
-    <node name="decompress_rgb_left" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/left/rgb raw out:=/unity/camera/left/rgb/image_raw" />
+    <node name="decompress_rgb_left" pkg="image_transport" type="republish" args="compressed in:=/unity/camera/left/rgb raw out:=/unity/camera/left/rgb/image_raw" >
+        <param name="use_sim_time" value="$(arg use_sim_time)"/>
+    </node>
+    <!-- addes noise to color and depth images -->
+    <node name="left_effects" pkg="rivr_ros" type="sensor_effects.py" output="screen" >  
+        <param name="rgb_topic" value="/unity/camera/left/rgb/image_raw"/>
+        <param name="out_rgb_topic" value="/unity/camera/effects/right/rgb/image_raw"/>
+        <param name="depth_topic" value="/unity/camera/left/depth/image_raw"/>
+        <param name="out_depth_topic" value="/unity/camera/effects/left/depth/image_raw"/>
+    </node>
     <!-- builds pointcloud from the color and depth images -->
     <node pkg="nodelet" type="nodelet" name="cloudify_left" args="load depth_image_proc/point_cloud_xyzrgb record_player_manager ">
         <remap from="depth_registered/image_rect" to="/unity/camera/left/depth/image_raw"/> 
         <remap from="rgb/image_rect_color"  to="/unity/camera/left/rgb/image_raw"/> 
         <remap from="rgb/camera_info" to="/unity/camera/left/rgb/camera_info"/>
         <remap from="depth_registered/points" to="/unity/camera/left/depth/points"/> 
+        <param name="use_sim_time" value="$(arg use_sim_time)"/>
     </node>
-
 </launch>

@@ -9,15 +9,25 @@ roslaunch kortex_driver iral_kortex_driver.launch prefix:=left ip_address:=192.1
 roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.168.1.11
 -->
 
-<arg name="left_robot_name" default="my_gen3_left"/>
-<arg name="left_prefix" default="left_"/>
-<arg name="left_ip" default="192.168.1.11"/>
-  
-<arg name="right_robot_name" default="my_gen3_right"/>
-<arg name="right_prefix" default="right_"/>
-<arg name="right_ip" default="192.168.1.10"/>
+  <arg name="right_x0" default="0"/>
+  <arg name="right_y0" default="-0.4"/>
+  <arg name="right_z0" default="0"/>
 
-<!-- left arm driver + vision -->
+  <arg name="left_x0" default="-0.0025"/>
+  <arg name="left_y0" default="0.40"/>
+  <arg name="left_z0" default="0"/>
+
+  <param name="/use_sim_time" value="false"/>
+
+  <arg name="left_robot_name" default="my_gen3_left"/>
+  <arg name="left_prefix" default="left_"/>
+  <arg name="left_ip" default="192.168.1.11"/>
+    
+  <arg name="right_robot_name" default="my_gen3_right"/>
+  <arg name="right_prefix" default="right_"/>
+  <arg name="right_ip" default="192.168.1.10"/>
+
+  <!-- left arm driver + vision -->
   <include file="$(find toy_assembly)/launch/iral_kortex_driver.launch">
     <arg name="robot_name" value="$(arg left_robot_name)"/>
     <arg name="prefix" value="$(arg left_prefix)"/>
@@ -27,8 +37,8 @@ roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.
     <arg name="prefix" value="$(arg left_prefix)"/>
     <arg name="device" value="$(arg left_ip)"/>
   </include>
-  
-<!-- right arm driver + vision -->
+
+  <!-- right arm driver + vision -->
   <include file="$(find toy_assembly)/launch/iral_kortex_driver.launch">
     <arg name="robot_name" value="$(arg right_robot_name)"/>
     <arg name="prefix" value="$(arg right_prefix)"/>
@@ -40,6 +50,7 @@ roslaunch kinova_vision iral_kinova_vision_rgbd.launch prefix:=left device:=192.
   </include>
 
   
-  <node name="dual_arm_transform" pkg="tf" type="static_transform_publisher" output="screen" args="-0.005 0.8 0.0 0.0 0.0 0.0 right_base_link left_base_link 50"/>
-  
+  <!-- publish fixed transfrom between arms -->
+  <node name="dual_arm_transform_right" pkg="tf" type="static_transform_publisher" output="screen" args="$(arg right_x0) $(arg right_y0) $(arg right_z0) 0.0 0.0 0.0 world right_base_link  50"/>
+  <node name="dual_arm_transform_left"  pkg="tf" type="static_transform_publisher" output="screen" args="$(arg  left_x0) $(arg  left_y0) $(arg  left_z0) 0.0 0.0 0.0 world  left_base_link  50"/>
 </launch>

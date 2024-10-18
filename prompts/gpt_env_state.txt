@@ -1,0 +1,29 @@
+Information about environments and objects are given as python dictionary. 
+Example:
+"""
+{"environment": 
+    {
+        'objects': ['tan tray', 'orange tray', 'tan horse body', 'blue horse legs', 'orange horse legs', 'table'], 
+        'object_states': 
+        {
+            'tan tray': 'on_something(table)', 
+            'orange tray': 'on_something(table)', 
+            'tan horse body': 'on_something(orange tray)', 
+            'blue horse legs': 'on_something(tan tray)', 
+            'orange horse legs': 'on_something(tan tray)'
+        }
+    }
+}
+"""
+Asset states and object states are represented using those state sets:
+"""
+"STATE LIST"
+- on_something(<something>): Object is located on <something>
+- attached_to(<something>): Object is attached to <something>
+- inside_hand(): Object is being grasped by a robot hand
+"""
+<something> should be one of the assets or objects in the environment.
+An object cannot be on_something(<something>) if is inside_hand().
+-------------------------------------------------------
+The texts above are part of the overall instruction. 
+Do not start working yet.

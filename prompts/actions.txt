@@ -1,0 +1,17 @@
+
+    ["MOVE_FORWARD", "Move the robot's hand forward toward the human"], 
+    ["MOVE_BACKWARD", "Move the robot's hand backward away from the human"], 
+    ["MOVE_RIGHT", "Move the robot's hand to the robot's right, the human's left"], 
+    ["MOVE_LEFT", "Move the robot's hand to the robot's left, the human's right"],
+    ["MOVE_UP", "Move the robot's hand up."], 
+    ["MOVE_DOWN", "Move the robot's hand down."], 
+    ["PITCH_UP", "Tilt the robot's hand up."],
+    ["PITCH_DOWN", "Tilt the robot's hand down."],
+    ["ROLL_LEFT", "Rotate the robot's hand to the left."],
+    ["ROLL_RIGHT", "Rotate the robot's hand to the right."],
+    ["OPEN_HAND", "Opens the robot’s hand, dropping, releasing or letting go of any held object."], 
+    ["CLOSE_HAND", "Close the robot’s hand, grab objects between the robot's fingers"],
+    ["PICK_UP", "Have the arm pick up, grasp, grab, or hold an object."],
+    ["MOVE_TO", "Move the arm to a the location of another object"],
+    ["NO_ACTION", "The statement does not refer to the robot or is not a request for the robot to perform an action"],
+    ["OTHER", "Any other possible command"]

@@ -3,43 +3,61 @@
 import rospy
 import pyaudio
 import numpy as np
-from std_msgs.msg import Float32MultiArray
+from rivr_ros.msg import RivrAudio
 
 
-rospy.init_node("audio_recorder")
+class AudioStreamer:
+    def __init__(self):
+        rospy.init_node("audio_recorder")
+        rospy.on_shutdown(self.shutdownhook)
 
-publish_rate = 10
-ros_pub_rate = rospy.Rate(publish_rate)
+        FORMAT = pyaudio.paFloat32
+        CHANNELS = 1 
+        RATE = 48000
+        CHUNK = 1024
+        publish_rate = 2
 
-CHANNELS = 1 
-FORMAT = pyaudio.paFloat32
-RATE = 16000
+        print(f"rate: {RATE}hz, format: {FORMAT}, publish rate:{publish_rate}hz")
 
-print(RATE/publish_rate)
-print(FORMAT)
+        self.pub = rospy.Publisher("/audio", RivrAudio, queue_size=10)
 
-CHUNK = 1024
+        self.pa = pyaudio.PyAudio()
+        self.stream = self.pa.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
 
-pub = rospy.Publisher("/audio", Float32MultiArray, queue_size=10)
+        audio_msg = RivrAudio()
+        audio_msg.sample_rate = RATE
 
-pa = pyaudio.PyAudio()
-stream = pa.open(format=FORMAT, channels=CHANNELS, rate=RATE, input=True, frames_per_buffer=CHUNK)
+        dt = 1/publish_rate
+        t = rospy.Time.now()
+        next_publish = t
 
-while not rospy.is_shutdown():
-    #read in audio clip
-    audio = stream.read(CHUNK)
+        buffer = np.array([], dtype=np.float32)
+        while not rospy.is_shutdown():
 
-    #get the float array
-    float_array = np.fromstring(audio, dtype=np.float32)
-    
-    print(float_array.shape)
+            t = rospy.Time.now()
 
-    float_array_msg = Float32MultiArray()
-    float_array_msg.data = float_array
+            #rospy.loginfo(f"{next_publish}, {t}")
 
-    #publish
-    pub.publish(float_array_msg)
-    #ros_pub_rate.sleep()
+            #read in audio clip
+            audio = self.stream.read(CHUNK)
+            #get the float array
+            float_array = np.fromstring(audio, dtype=np.float32)
+            buffer = np.concatenate((buffer, float_array))
+            #print(f"{buffer.shape}, {np.max(buffer)}")
+            
+            if t > next_publish:
+                #publish
+                #rospy.loginfo(f"shape: {buffer.shape}, max: {np.max(buffer)}")
+                audio_msg.data = buffer
+                self.pub.publish(audio_msg)
+                next_publish = t + rospy.Duration(dt)
+                buffer = np.array([], dtype=np.float32)
+                
 
-stream.close()
-pa.terminate()
+    def shutdownhook(self):
+        self.stream.close()
+        self.pa.terminate()
+
+if __name__ == '__main__':
+    stream = AudioStreamer()
+

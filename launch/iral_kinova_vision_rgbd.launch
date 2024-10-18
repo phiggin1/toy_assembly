@@ -92,17 +92,36 @@
       <param name="frame_id"                value="$(arg color_frame_id)"/>
     </node>
 
-    <!-- Static transformations -->
-    <node pkg="tf2_ros"
+    <!-- Static transformations org 
+     <node pkg="tf2_ros"
       type="static_transform_publisher"
       name="camera_depth_tf_publisher"
-      args="-0.019 -0.0145 0 0 0 0 $(arg camera_link_frame_id) $(arg depth_frame_id)" />
+      args="-0.019 -0.0145 0 0 0 0 $(arg camera_link_frame_id) $(arg depth_frame_id)" /> -->
+     <node pkg="tf2_ros"
+      type="static_transform_publisher"
+      name="camera_depth_tf_publisher"
+      args="-0.0075 -0.01450 0 0 0 0 $(arg camera_link_frame_id) $(arg depth_frame_id)" /> 
 
     <node pkg="tf2_ros"
       type="static_transform_publisher"
       name="camera_color_tf_publisher"
-      args="0 0 0 0 0 0 $(arg camera_link_frame_id) $(arg color_frame_id)" />
+      args="-0.005 0 0 0 0 0 $(arg camera_link_frame_id) $(arg color_frame_id)" />
 
+
+<!--
+      <link name="${prefix}camera_depth_frame" />
+      <joint name="${prefix}depth_module" type="fixed">
+        <origin xyz="0.0275 0.066 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
+        <parent link="${prefix}end_effector_link" />
+        <child  link="${prefix}camera_depth_frame" />
+      </joint>
+      <link name="${prefix}camera_color_frame" />
+      <joint name="${prefix}color_module" type="fixed">
+        <origin xyz="0 0.05639 -0.00305" rpy="3.14159265358979 3.14159265358979 0" />
+        <parent link="${prefix}end_effector_link" />
+        <child  link="${prefix}camera_color_frame" />
+      </joint>
+-->
     <!-- Processing modules configuration-->
     <arg name="rgb_processing"                  default="true"  />
     <arg name="debayer_processing"              default="false" />

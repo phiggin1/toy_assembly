@@ -62,23 +62,23 @@ class ManualServo:
         print(self.shape)
 
 
-        self.real = rospy.get_param("~real", default="false")
-        self.arm_prefix = rospy.get_param("~arm_prefix", default="right")
+        self.real = rospy.get_param("~real", default=False)
+        self.arm_prefix = rospy.get_param("~arm", default="right")
         rospy.loginfo(f"arm: {self.arm_prefix}")
         rospy.loginfo(f"real: {self.real}")
+
+        print(type(self.real))
+
         if self.real:
             rgb_topic = "/right_camera/color/image_raw"
-        else:
-            rgb_topic = "/unity/camera/right/rgb/image_raw"
-        rospy.loginfo(f"rgb_topic: {rgb_topic}")
-
-
-        if self.real:
             object_image_topic = "/left_camera/color/image_raw"
             #object_image_topic = "/object_images"
         else:
+            rgb_topic = "/unity/camera/right/rgb/image_raw"
             object_image_topic = "/unity/camera/left/rgb/image_raw"
             #object_image_topic = "/object_images"
+
+        rospy.loginfo(f"rgb_topic: {rgb_topic}")
         rospy.loginfo(f"object_image_topic: {object_image_topic}")
 
 
@@ -140,10 +140,10 @@ class ManualServo:
             self.object_buttons.draw(self.pgscreen)
             '''        
 
-        self.angular_vel = 0.1
-        self.linear_vel = 0.2
+        self.angular_vel = 0.2
+        self.linear_vel = 0.5
 
-        self.twist_topic  = rospy.get_param("/twist_topic", "/my_gen3_"+self.arm_prefix+"/servo/delta_twist_cmds")
+        self.twist_topic  = rospy.get_param("/twist_topic", "/my_gen3_"+self.arm_prefix+"/workspace/delta_twist_cmds")
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
         rospy.loginfo(self.twist_topic)
 
@@ -171,6 +171,7 @@ class ManualServo:
             rate.sleep()
 
     def get_input(self):
+        pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 rospy.loginfo("pygame.QUIT")
@@ -208,6 +209,7 @@ class ManualServo:
         '''
         cmd = TwistStamped()
         cmd.header.frame_id = self.arm_prefix+"_end_effector_link"
+        #cmd.header.frame_id = self.arm_prefix+"_base_link"
         key = None
         keys = pygame.key.get_pressed()
         pressed = False
@@ -302,7 +304,7 @@ class ManualServo:
             self.rgb_img = cv2.resize(self.rgb_img, (640, 480))
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.rgb_img, cv2.COLOR_BGR2RGB).tobytes(), self.rgb_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (5,5))
-            pygame.display.update()
+            #pygame.display.update()
 
     def object_image_cb(self, object_image):
         with self.mutex:
@@ -316,7 +318,7 @@ class ManualServo:
             self.object_img = cv2.resize(self.object_img, (640, 480))
             pg_img = pygame.image.frombuffer(cv2.cvtColor(self.object_img, cv2.COLOR_BGR2RGB).tobytes(), self.object_img.shape[1::-1], "RGB")
             self.pgscreen.blit(pg_img, (self.shape[0],5))
-            pygame.display.update()
+            #pygame.display.update()
     
     def grab(self):
         service_name = "/my_gen3_right/close_hand"

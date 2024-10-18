@@ -1,8 +1,9 @@
 
 import torch
 import torchvision
-import clip
-import whisper
+#import clip
+#import whisper
+from faster_whisper import WhisperModel
 from segment_anything import SamPredictor, sam_model_registry
 from scipy.io.wavfile import write as wavfile_writer
 import numpy as np
@@ -14,37 +15,39 @@ import time
 
 class AdaEndPoint:
     def __init__(self, hostname, port, sam_model_path, whisper_model_path, clip_model_path, torch_home_path):
-        print("PyTorch version:", torch.__version__)
-        print("Torchvision version:", torchvision.__version__)
-        print("CUDA is available:", torch.cuda.is_available())
+        print(f"PyTorch version: {torch.__version__}")
+        print(f"Torchvision version: {torchvision.__version__}")
+        print(f"CUDA is available: {torch.cuda.is_available()}, version: {torch.version.cuda}")
+        print(torch.backends.cudnn.version())
 
         print("sam_model_path:", sam_model_path)
         print("whisper_model_path:", whisper_model_path)
-        print("clip_model_path:", clip_model_path)
-        print("torcho home path:", torch_home_path)
+        #print("clip_model_path:", clip_model_path)
+        #print("torch home path:", torch_home_path)
 
         torch.hub.set_dir(torch_home_path)
 
-        if torch.cuda.device_count() < 2:
-            print("Requires at least 2 2080s")
-            exit()
+        #if torch.cuda.device_count() < 2:
+        #    print("Requires at least 2 2080s")
+        #    exit()
 
         self.device = "cuda:0" if torch.cuda.is_available() else "cpu"
         print("device:",self.device)
 
-        self.sam_device = "cuda:1"
+        #self.sam_device = "cuda:0"
 
         sever_address = hostname
         server_port  = port
         
         print(f"{time.time_ns()}: loading whipser")
-        self.whisper_model = whisper.load_model("medium", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
+        #self.whisper_model = whisper.load_model("large", download_root="/nfs/ada/cmat/users/phiggin1/whisper_models")  
+        self.whisper_model = WhisperModel("large-v3", device="cuda", compute_type="float16")
         
+        '''
         print(f"{time.time_ns()}: loading sam")
         self.sam = sam_model_registry["default"](checkpoint=sam_model_path)
-        self.sam.to(self.sam_device)
+        self.sam.to(self.device)
         self.predictor = SamPredictor(self.sam)
-
         
         print(f"{time.time_ns()}: loading clip")
         self.clip_model, self.clip_preprocess = clip.load(name=clip_model_path, device=self.device)
@@ -58,17 +61,16 @@ class AdaEndPoint:
         self.waveglow = self.waveglow.to(self.device)
         self.waveglow.eval()
         self.utils = torch.hub.load('NVIDIA/DeepLearningExamples:torchhub', 'nvidia_tts_utils')
+        '''
         
         self.get_mem_usage(self.device)
-        self.get_mem_usage(self.sam_device)
-
+        
         print(f"Connecting to {sever_address}:{server_port}")
         context = zmq.Context()
         self.socket = context.socket(zmq.PAIR)
         self.socket.connect("tcp://"+sever_address+":"+server_port)
         print(f"Connected to {sever_address}:{server_port}")
 
-        self.sample_rate = 16000
         self.tmp_audio_filename = '/tmp/audio.mp3'
 
     def get_mem_usage(self, device):
@@ -82,20 +84,26 @@ class AdaEndPoint:
 
             msg_type = msg["type"]
             print(f"{time.time_ns()}: Message recieved type: {msg_type}")
-
-            if msg_type == "sam":
-                resp = self.process_sam(msg)
-            elif msg_type == "clip":
-                resp = self.process_clip(msg)
-            elif msg_type == "whisper":
+            start_time = time.time()
+            
+            if msg_type == "whisper":
                 resp = self.process_whisper(msg)
-            elif msg_type =="tts":
-                resp = self.process_tts(msg)
             else:
                 resp = {}
+            '''
+            elif msg_type == "clip":
+                resp = self.process_clip(msg)
+            elif msg_type == "sam":
+                resp = self.process_sam(msg)
+            elif msg_type =="tts":
+                resp = self.process_tts(msg)
+            '''
 
             self.socket.send_json(resp)
-            print(f"{time.time_ns()}: Message replied type: {msg_type}")
+            end_time = time.time()
+            print(f"{time.time_ns()}: Message replied type: {msg_type}, took {end_time-start_time} second")
+            
+
 
     def process_tts(self, data):
         #testing
@@ -126,11 +134,15 @@ class AdaEndPoint:
         
         img = np.asarray(data["image"], dtype=np.uint8)
 
-        
-        input_point = np.array([[target_x, target_y]])
-        input_label = np.array([1])
+        input_point = []
+        input_label = []
+        for i in range(len(target_x)):
+            input_point.append([target_x[i],target_y[i]])
+            input_label.append(0)
 
-        print('sam start')
+        input_point = np.array(input_point)
+        input_label = np.array(input_label)
+
         print(img.shape)
 
         self.predictor.set_image(img)
@@ -139,7 +151,6 @@ class AdaEndPoint:
             point_labels=input_label,
             multimask_output=True,
         )
-        print('sam end')
 
         print(masks.shape)
 
@@ -151,28 +162,35 @@ class AdaEndPoint:
         return response
     
     def process_whisper(self, data):
-        data = data["data"]
-        audio = np.fromstring(data[1:-1], dtype=float, sep=',')
-        wavfile_writer(self.tmp_audio_filename, self.sample_rate, audio)
-
+        audio_data = data["data"]
+        sample_rate =  data["sample_rate"]
         context = data["context"]
-        print(context)
+        audio = np.fromstring(audio_data[1:-1], dtype=float, sep=',')
+        wavfile_writer(self.tmp_audio_filename, sample_rate, audio)
+
+        #context = "move forward backward up down left right turn tilt rotate pickup grab open close"
+        #print(context)
 
         #get transcription from whisper
-        print('whisper start')
+        '''
         result = self.whisper_model.transcribe(self.tmp_audio_filename, initial_prompt=context) 
-        print('whisper end')
-
-        print(result["text"])
+        text = result["text"]
+        '''
+        segments, info = self.whisper_model.transcribe(self.tmp_audio_filename, beam_size=5, word_timestamps=True, initial_prompt=context, language="en")
+        
+        text = "" 
+        for s in segments:
+          text+=s.text
+          print(f"{s.start} to {s.end}: {s.text}")
+        
+        print(text)
         response = {"type":"whisper",
-                    "text":result["text"]
-
+                    "text":text
         }
+        
         return response
     
     def process_clip(self, data):
-
-        print('clip model start')
         #images = data["images"]
         raw_images = []
         for img in data["images"]:
@@ -191,7 +209,7 @@ class AdaEndPoint:
         with torch.no_grad():
             logits_per_image, logits_per_text = self.clip_model(images, text)
             probs = logits_per_text.softmax(dim=-1).cpu().numpy()
-        print('clip model end')
+
 
         print("logits:", logits_per_text) 
         print("Label probs:", probs)  

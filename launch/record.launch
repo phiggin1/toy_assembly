@@ -1,35 +1,82 @@
 <launch>
- 
- <node pkg="rosbag" type="record" name="toy_record"
-       args="record 
-       /left_camera/color/camera_info
-       /left_camera/color/image_raw
-       /left_camera/depth_registered/points
-       /left_camera/depth_registered/sw_registered/camera_info
-       /left_camera/depth_registered/sw_registered/image_rect
-       /right_camera/color/camera_info
-       /right_camera/color/image_raw
-       /right_camera/depth_registered/points
-       /right_camera/depth_registered/sw_registered/camera_info
-       /right_camera/depth_registered/sw_registered/image_rect
-       /unity/camera/left/depth/camera_info
-       /unity/camera/left/depth/image_raw
-       /unity/camera/left/depth/points
-       /unity/camera/left/rgb/camera_info
-       /unity/camera/left/rgb/image_raw
-       /unity/camera/right/depth/camera_info
-       /unity/camera/right/depth/image_raw
-       /unity/camera/right/depth/points
-       /unity/camera/right/rgb/camera_info
-       /unity/camera/right/rgb/image_raw
-       /tf
-       /tf_static
-       /my_gen3_left/joint_states
-       /my_gen3_right/joint_states  
-       /scene/transform
-       /audio
-       /buttons"
-/>
+       <arg name="prefix" default="0"/>
 
+       <node name="tf_throttler" type="throttle" pkg="topic_tools" args="messages /tf 30 /tf_throttled" />
 
+       <node name="left_joint_states_throttler" type="throttle" pkg="topic_tools" args="messages /my_gen3_left/joint_states 30 /my_gen3_left/joint_states_throttled" />
+       <node name="right_joint_states_throttler" type="throttle" pkg="topic_tools" args="messages /my_gen3_right/joint_states 30 /my_gen3_right/joint_states_throttled" />
+
+       <node name="left_camera_color_info_throttler" type="throttle" pkg="topic_tools" args="messages /left_camera/color/camera_info 30 /left_camera/color/camera_info_throttled" />
+       <node name="left_camera_color_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/color/image_raw   30 /left_camera/color/image_raw_throttled" />
+       <node name="left_camera_image_rect_color_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/color/image_rect_color   30 /left_camera/color/image_rect_color_throttled" />
+       <node name="left_camera_depth_info_throttler" type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/camera_info 30  /left_camera/depth_registered/sw_registered/camera_info_throttled" />
+       <node name="left_camera_depth_throttler"      type="throttle" pkg="topic_tools" args="messages /left_camera/depth_registered/sw_registered/image_rect   30 /left_camera/depth_registered/sw_registered/image_rect_throttled" />
+
+       <node name="right_camera_color_info_throttler" type="throttle" pkg="topic_tools" args="messages /right_camera/color/camera_info 5 /right_camera/color/camera_info_throttled" />
+       <node name="right_camera_color_throttler"      type="throttle" pkg="topic_tools" args="messages /right_camera/color/image_raw   10 /right_camera/color/image_raw_throttled" />
+       <node name="right_camera_depth_info_throttler" type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/camera_info 5  /right_camera/depth_registered/sw_registered/camera_infov" />
+       <node name="right_camera_depth_throttler"      type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/image_rect   10 /right_camera/depth_registered/sw_registered/image_rect_throttled" />
+
+       <!-- listen to an audio stream and break it up into utterences -->
+       <node name="audio_manager" pkg="toy_assembly" type="audio.py" output="screen" >
+              <param name="threshold"  value="0.1" />
+              <param name="silent_wait" value="2" />
+              <param name="max_duration"  value="30" />
+              <param name="debug"  value="True" />
+       </node>
+       
+       <!-- listen for utterances and get a transcription -->
+       <node name="transcribe" pkg="toy_assembly" type="transcribe.py" output="screen" >
+              <param name="debug"  value="True" /> 
+       </node>
+
+       <node name="whisper_ada_services" pkg="toy_assembly" type="whisper_ada_client.py" output="screen" />
+       <node name="phi" pkg="toy_assembly" type="phi_service.py" output="screen" />
+       <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
+       
+       <node name="gpt_state" pkg="toy_assembly" type="gpt_state.py" output="screen" />
+       
+
+       <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  
+              <param name="~prefix"  value="$(arg prefix)" />
+       </node>
+<!--
+       <node pkg="rosbag" type="record" name="toy_record"
+              args="record 
+              -o $(arg prefix)
+
+              /left_camera/color/camera_info_throttled
+              /left_camera/color/image_raw_throttled
+              /left_camera/depth_registered/sw_registered/camera_info_throttled
+              /left_camera/depth_registered/sw_registered/image_rect_throttled
+
+              /unity/camera/left/depth/camera_info
+              /unity/camera/left/depth/image_raw
+              /unity/camera/left/rgb/camera_info
+              /unity/camera/left/rgb/image_raw
+
+              /left_object_images
+
+              /right_camera/color/camera_info_throttled
+              /right_camera/color/image_raw_throttled
+              /right_camera/depth_registered/sw_registered/camera_info_throttled
+              /right_camera/depth_registered/sw_registered/image_rect_throttled
+
+              /unity/camera/right/depth/camera_info
+              /unity/camera/right/depth/image_raw
+              /unity/camera/right/rgb/camera_info
+              /unity/camera/right/rgb/image_raw
+
+              /tf_throttled
+              /tf_static
+              /my_gen3_left/joint_states_throttled
+              /my_gen3_right/joint_states_throttled
+              /scene/transform
+              /audio
+              /transcript
+              /buttons"
+       />
+-->
 </launch>
+
+

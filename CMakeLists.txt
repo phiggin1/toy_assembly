@@ -58,6 +58,7 @@ add_message_files(
    Intrest.msg
    ImageArray.msg
    ObjectImage.msg
+   Detection.msg
 )
 
 ## Generate services in the 'srv' folder

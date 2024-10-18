@@ -1,0 +1,6 @@
+<launch>
+    <node name="status" pkg="toy_assembly" type="status.py" output="screen" >  
+        <param name="real"  value="True" />
+    </node>
+   <node name="audio_recorder" pkg="toy_assembly" type="audio_recorder.py" output="screen" >  </node>
+</launch>
