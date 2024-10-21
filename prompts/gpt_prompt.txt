@@ -1,12 +1,10 @@
 Start working. 
 For a given statement determine what actions the robot should take.
-If the "PICK_UP" action is chosen there must be a "object" key in the returned dictionary with the object from the list below as the value.
-Return only a single object from the list of objects provided.
+If "PICK_UP" and "MOVE_TO" are chosen a the action returned should be a list should be returned consiting of the "action" and "object, for example ["PICK_UP", {"object":{"body"}}].
 You should only choose "PICK_UP" if the person instructs and if there are any objects in the "objects' list.
 There cannot be more than onve object in the robots hand.
-If the "MOVE_TO" action is chosen there must be an "object" key or "direction" in the returned dictonary. 
+If the "MOVE_TO" action is chosen there must be an "object" in the returned list. 
 If "object" is used it must be from the list below as the value.
-If direction is used it must be a list of containing only "MOVE_RIGHT", "MOVE_LEFT", "MOVE_UP", "MOVE_DOWN", "MOVE_FORWARD", or "MOVE_BACKWARD".
 For "PICK_UP" and "MOVE_TO" if the human asks for the robot to either move to or pick up a specific part of an object add an additonal "OFFSET" key with a value of "LEFT", "RIGHT", "ABOVE", "BELOW", "FRONT", "BACK". 
 This direction should be relative to the position of the object in the image, if the horse is facing to the right the "OFFSET" direction for "pick the horse up by its head should be "RIGHT".
 

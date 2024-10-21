@@ -1,4 +1,5 @@
 Start working using the instruction given below.
+'actions' = {[ACTIONS]}
 ---
 The instruction is as follows:
 ---
