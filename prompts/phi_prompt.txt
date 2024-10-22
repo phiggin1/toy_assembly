@@ -13,3 +13,4 @@ The dictionary that you return should be formatted as python dictionary. Follow 
 5. Only use the actions listed in the list of actions.
 6. If the statement is not directed toward the robot or is not a request for the robot to perform an action the list should consist of "NO_ACTION" only.
 7. If the statement requires outside context such as referring to an object the list should be empty.
+8. Only return one instance of an action.

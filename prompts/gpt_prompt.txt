@@ -1,6 +1,6 @@
 Start working. 
 For a given statement determine what actions the robot should take.
-If "PICK_UP" and "MOVE_TO" are chosen a the action returned should be a list should be returned consiting of the "action" and "object, for example ["PICK_UP", {"object":{"body"}}].
+If "PICK_UP" and "MOVE_TO" are chosen a the action returned should be a list should be returned consiting of the "action" and "object, for example ["PICK_UP", {"object":{"object"}}].
 You should only choose "PICK_UP" if the person instructs and if there are any objects in the "objects' list.
 There cannot be more than onve object in the robots hand.
 If the "MOVE_TO" action is chosen there must be an "object" in the returned list. 

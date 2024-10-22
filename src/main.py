@@ -218,15 +218,14 @@ class AssemblyClient:
             '''
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
-            #text = input("command: ")
+            text = input("command: ")
             #text = "pick up the body"
             #text = "pick up the body by the head and move it over the blue legs"
-            text = "turn 90 degrees"
+            #text = "turn 90 degrees"
             transcription = Transcription()
             transcription.transcription = text
             
             self.text_cb(transcription)
-            exit()
 
     def shutdown_hook(self):
         if len(self.dataframe_csv) > 0:
@@ -394,7 +393,7 @@ class AssemblyClient:
                 else:
                     result = ("PICKUP", False)
             else:   
-                any_valid_commands = self.ee_move(action)
+                any_valid_commands = self.ee_move(actions)
                 result = (action, any_valid_commands)
 
             results.append(result)
@@ -479,8 +478,10 @@ class AssemblyClient:
         rospy.loginfo(f"ee move: {actions}")
 
         for action in actions:
+            #check for valid actions
             if ("PITCH_UP" in action or "PITCH_DOWN" in action or "ROLL_LEFT" in action or "ROLL_RIGHT" in action or "YAW_LEFT" in action or "YAW_RIGHT" in action or 
                 "MOVE_FORWARD" in action or "MOVE_BACKWARD" in action or "MOVE_RIGHT" in action or "MOVE_LEFT" in action or "MOVE_UP" in action or "MOVE_DOWN" in action):
+                #check for specific actions
                 if "PITCH_UP" in action:
                     rospy.loginfo("PITCH_UP")
                     pitch =-self.angular_speed

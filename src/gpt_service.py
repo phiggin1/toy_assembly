@@ -50,8 +50,6 @@ class LLMClient:
         with open(fp_state) as f:
             self.state = f.read()
 
-
-
         self.messages = [
             {
                 "role":"system", 
