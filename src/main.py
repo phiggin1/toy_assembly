@@ -215,16 +215,23 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            '''
             transcription = rospy.wait_for_message("/transcript", Transcription)
             '''
             text = input("command: ")
+            
+            image, objects, rles, bboxs, scores = self.get_detections(text)
+            print(objects)
+            cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+            merge_test = "_".join(text.split(" "))
+            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
+            cv2.imwrite(fname, cv_img)
+
             #text = "pick up the body"
             #text = "pick up the body by the head and move it over the blue legs"
             #text = "turn 90 degrees"
             transcription = Transcription()
             transcription.transcription = text
-            
+            '''
             self.text_cb(transcription)
 
     def shutdown_hook(self):
@@ -315,8 +322,8 @@ class AssemblyClient:
     
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
-        
         image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper.")
+        
         with self.mutex:
             req = LLMImageRequest()
             req.text = text

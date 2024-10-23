@@ -50,6 +50,9 @@ def load_image(cv_img):
 
     image_source = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
     image = np.asarray(image_source)
+    
+    cv2.imshow("a", image)
+
     image_transformed, _ = transform(image_source, None)
 
     return image, image_transformed
@@ -105,6 +108,9 @@ class SamEndPoint:
             
     def process_sam(self, msg):
         cv_img = np.asarray(msg["image"], dtype=np.uint8)
+
+        cv2.imshow("window_name", cv_img)
+        
         text = msg["text"]
         
         print(f"text prompt: {text}")
@@ -175,7 +181,6 @@ class SamEndPoint:
         """
         Visualize image with supervision useful API
         """
-        
         img = cv_img.copy()
         detections = sv.Detections(
             xyxy=input_boxes,  # (n, 4)

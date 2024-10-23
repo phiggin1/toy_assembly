@@ -125,7 +125,6 @@ class SamAdaClient:
             rate.sleep()
         
         self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
-        
         self.annote_pub = rospy.Publisher(output_image_topic, Image, queue_size=10)
 
         rospy.spin()
@@ -133,23 +132,21 @@ class SamAdaClient:
     def image_cb(self, rgb_ros_image, depth_ros_image):
         success = self.mutex.acquire(block=False, timeout=0.02)
         if success:
-            #print(f"rgb eoncoding: {rgb_ros_image.encoding}")
-            #print(f"depth eoncoding: {depth_ros_image.encoding}")
-
             self.rgb_encoding = rgb_ros_image.encoding
             self.depth_encoding = depth_ros_image.encoding
-
             self.rgb_image = self.cvbridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="bgr8") 
             self.depth_image = self.cvbridge.imgmsg_to_cv2(depth_ros_image)#, desired_encoding="passthrough") 
             if not self.have_images:
                 rospy.loginfo("HAVE IMAGES")
+                print(f"rgb eoncoding: {self.rgb_encoding}")
+                print(f"depth eoncoding: {self.depth_encoding }")
                 self.have_images = True
             self.mutex.release()
 
     def SAM(self, request):
         if self.debug: rospy.loginfo('SAM req recv')
         with self.mutex:
-            image = self.rgb_image #self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")     
+            image = self.rgb_image 
             text = request.text_prompt
 
             print(text)
@@ -188,19 +185,22 @@ class SamAdaClient:
             for detection in resp["annotations"]:
                 rospy.loginfo(f"{detection['class_name']}, {detection['score']}, {detection['bbox']}")
                 obj = Detection()
+
                 obj.class_name = detection['class_name']
-                if isinstance(detection['score'], float):
-                    obj.score = detection['score']
-                else:
-                    obj.score = detection['score'][0]
-                obj.rle_encoded_mask = json.dumps(detection['segmentation'])
-                
+
                 obj.u_min = int(detection['bbox'][0])
                 obj.v_min = int(detection['bbox'][1])
 
                 obj.u_max = int(detection['bbox'][2])
                 obj.v_max = int(detection['bbox'][3])
 
+                if isinstance(detection['score'], float):
+                    obj.score = detection['score']
+                else:
+                    obj.score = detection['score'][0]
+
+                obj.rle_encoded_mask = json.dumps(detection['segmentation'])
+                
                 response.object.append(obj)
 
             rospy.loginfo('reply')
