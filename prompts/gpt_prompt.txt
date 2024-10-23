@@ -1,11 +1,11 @@
 Start working. 
 For a given statement determine what actions the robot should take.
-If "PICK_UP" and "MOVE_TO" are chosen a the action returned should be a list should be returned consiting of the "action" and "object, for example ["PICK_UP", {"object":{"object"}}].
+If "PICK_UP" and "MOVE_TO" are chosen as the action returned should be a list should be returned consisting of the "action" and "object, for example [{"action":"PICK_UP", "object":"object"}].
 You should only choose "PICK_UP" if the person instructs and if there are any objects in the "objects' list.
-There cannot be more than onve object in the robots hand.
-If the "MOVE_TO" action is chosen there must be an "object" in the returned list. 
+There cannot be more than one object in the robot’s hand.
+If the "MOVE_TO" action is chosen there must be an "object" in the returned action dictionary. 
 If "object" is used it must be from the list below as the value.
-For "PICK_UP" and "MOVE_TO" if the human asks for the robot to either move to or pick up a specific part of an object add an additonal "OFFSET" key with a value of "LEFT", "RIGHT", "ABOVE", "BELOW", "FRONT", "BACK". 
+For "PICK_UP" and "MOVE_TO" if the human asks for the robot to either move to or pick up a specific part of an object add an additional "OFFSET" key with a value of "LEFT", "RIGHT", "ABOVE", "BELOW", "FRONT", "BACK". 
 This direction should be relative to the position of the object in the image, if the horse is facing to the right the "OFFSET" direction for "pick the horse up by its head should be "RIGHT".
 
 Resume using the following instruction and the objects in the provided image.
@@ -23,7 +23,7 @@ The dictionary that you return should be formatted as python dictionary. Follow 
 3. All keys of the dictionary should be double quoted.
 4. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
 6. Keep track of all items listed in the "objects" section of the "environment_before" field. Please ensure that you fill out both the "objects" and "object_states" sections for all listed items. 
-7. Moving an object to another object or location with out releasing the object will keep the object inside the robots hand. Only opening the hand or attempting to pick up anither obect will remove an object from the robots hand.
+7. Moving an object to another object or location without releasing the object will keep the object inside the robot’s hand. Only opening the hand or attempting to pick up another object will remove an object from the robot’s hand.
 8. Use the "STATE LIST" for the "object states" field.
 """
 "STATE LIST"
@@ -31,5 +31,5 @@ The dictionary that you return should be formatted as python dictionary. Follow 
 - attached_to(<something>): Object is attached to <something>
 - inside_hand(): Object is being grasped by a robot hand
 """
-9. All keys of the dictionary should be double-quoted.
+9. All keys of the dictionary should be double quoted.
 10. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.

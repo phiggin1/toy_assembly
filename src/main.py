@@ -361,11 +361,11 @@ class AssemblyClient:
         for action in actions:
             print(action)
             result = None
-            if "MOVE_TO" in action[0]:
+            if "MOVE_TO" in action["action"]:
                 if len(objects) > 0:
-                    if "object" in action[1]:
-                        print(action[1]["object"])
-                        target_object = action[1]["object"]
+                    if "object" in action:
+                        print(action["object"])
+                        target_object = action["object"]
                         target_position = self.get_position(target_object, objects, rles, bboxs, scores)
                         if target_position is not None:
                             print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x}, x:{target_position.point.y}, x:{target_position.point.z}")
@@ -378,11 +378,11 @@ class AssemblyClient:
                         result = ("MOVE_TO", False)
                 else:
                     result = ("MOVE_TO", False)
-            elif "PICKUP" in action[0] or "PICK_UP" in action[0]:
+            elif "PICKUP" in action["action"] or "PICK_UP" in action["action"]:
                 if len(objects) > 0:
-                    if "object" in action[1]:
-                        print(action[1]["object"])
-                        target_object = action[1]["object"]
+                    if "object" in action:
+                        print(action["object"])
+                        target_object = action["object"]
                         target_position = self.get_position(target_object, objects, rles, bboxs, scores)
                         if target_position is not None:
                             success = self.pickup(target_position)
@@ -392,9 +392,10 @@ class AssemblyClient:
                             result = ("PICKUP", False)
                 else:
                     result = ("PICKUP", False)
-            else:   
-                any_valid_commands = self.ee_move(actions)
-                result = (action, any_valid_commands)
+            else:
+                a = action["action"]
+                any_valid_commands = self.ee_move([a])
+                result = (a, any_valid_commands)
 
             results.append(result)
 
@@ -424,7 +425,7 @@ class AssemblyClient:
         if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
             any_valid_commands = True
             results = self.high_level(text)
-        elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROLL_LEFT" in action and "ROLL_RIGHT" in action):
+        elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROTATE_LEFT" in action and "ROTATE_RIGHT" in action):
             any_valid_commands = True
             results = self.high_level(text)
         else:   
@@ -479,7 +480,7 @@ class AssemblyClient:
 
         for action in actions:
             #check for valid actions
-            if ("PITCH_UP" in action or "PITCH_DOWN" in action or "ROLL_LEFT" in action or "ROLL_RIGHT" in action or "YAW_LEFT" in action or "YAW_RIGHT" in action or 
+            if ("PITCH_UP" in action or "PITCH_DOWN" in action or "ROTATE_LEFT" in action or "ROTATE_RIGHT" in action or "YAW_LEFT" in action or "YAW_RIGHT" in action or 
                 "MOVE_FORWARD" in action or "MOVE_BACKWARD" in action or "MOVE_RIGHT" in action or "MOVE_LEFT" in action or "MOVE_UP" in action or "MOVE_DOWN" in action):
                 #check for specific actions
                 if "PITCH_UP" in action:
@@ -493,13 +494,13 @@ class AssemblyClient:
                     move = True
                     any_valid_commands = True
 
-                if  "ROLL_LEFT" in action:
-                    rospy.loginfo("ROLL_LEFT")
+                if  "ROTATE_LEFT" in action:
+                    rospy.loginfo("ROTATE_LEFT")
                     roll =-self.angular_speed
                     move = True
                     any_valid_commands = True
-                elif "ROLL_RIGHT" in action:
-                    rospy.loginfo("ROLL_RIGHT")
+                elif "ROTATE_RIGHT" in action:
+                    rospy.loginfo("ROTATE_RIGHT")
                     roll = self.angular_speed
                     move = True
                     any_valid_commands = True

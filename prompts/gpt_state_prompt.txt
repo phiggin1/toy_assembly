@@ -19,5 +19,5 @@ The dictionary that you return should be formatted as python dictionary. Follow 
 - attached_to(<something>): Object is attached to <something>
 - inside_hand(): Object is being grasped by a robot hand
 """
-6. All keys of the dictionary should be double-quoted.
+6. All keys of the dictionary should be double quoted.
 7. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.    

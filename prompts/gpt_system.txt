@@ -8,10 +8,10 @@ The robot can perform the following actions:
 actions = {[ACTIONS]}
 ---
 For a given statement determine if the statement is directed to the robot, is not a request or is not action.
-If it is not return the action the robot should as a python dictionary.
+If it is not return the action, the robot should as a python dictionary.
 The dictionary has five keys.
 ---
-- dictionary["action"] : A list of the actions that the robot should take, taken from the actions list above.
+- dictionary["action"] : A list of the actions that the robot should take, taken from the actions list above it must be a list of python dictionaries, with an "action" key.
 - dictionary["environment_before"]: The state of the environment before the manipulation.
 - dictionary["environment_after"]: The state of the environment after the manipulation.
 - dictionary["instruction_summary"]: contains a brief summary of the given sentence.
