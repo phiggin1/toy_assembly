@@ -324,7 +324,7 @@ class AssemblyClient:
             if self.env is None:
                 self.env = self.init_env
             req.env = self.env
-            req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
+            req.image = self.cvbridge.cv2_to_imgmsg(image, encoding="bgr8")
 
             resp = self.llm_image_srv(req)
 
@@ -561,7 +561,7 @@ class AssemblyClient:
                         yaw = 0.0
                         pitch = 0.0
                     self.close()
-                if "OPEN_HAND" in action:
+                elif "OPEN_HAND" in action:
                     any_valid_commands = True
                     if move:
                         self.send_command(x,y,z, roll, pitch, yaw)
@@ -587,13 +587,6 @@ class AssemblyClient:
         linear_cmd.twist.linear.y = y
         linear_cmd.twist.linear.z = z
         
-        '''
-        linear_cmd.header.frame_id ="right_end_effector_link"
-        linear_cmd.twist.linear.x = z
-        linear_cmd.twist.linear.y = -y
-        linear_cmd.twist.linear.z = x
-        '''
-
         angular_cmd = TwistStamped()
         angular_cmd.header.frame_id ="right_end_effector_link"
         angular_cmd.twist.angular.x = pitch

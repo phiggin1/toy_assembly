@@ -168,10 +168,13 @@ class SamEndPoint:
             mask=masks.astype(bool),  # (n, h, w)
             class_id=class_ids
         )
-        box_annotator = sv.BoxAnnotator(thickness=1)
+        box_annotator = sv.BoxCornerAnnotator(thickness=1)
         annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
-        
-        label_annotator = sv.LabelAnnotator(text_scale=0.35)
+
+        '''
+         __init__(color=ColorPalette.DEFAULT, text_color=Color.WHITE, text_scale=0.5, text_thickness=1, text_padding=10, text_position=Position.TOP_LEFT, color_lookup=ColorLookup.CLASS)
+        '''
+        label_annotator = sv.LabelAnnotator(text_scale=0.15, text_thickness=1, text_padding=2)
         annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
         
         #mask_annotator = sv.MaskAnnotator()
