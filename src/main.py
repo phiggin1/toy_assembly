@@ -324,7 +324,7 @@ class AssemblyClient:
             if self.env is None:
                 self.env = self.init_env
             req.env = self.env
-            req.image = self.cvbridge.cv2_to_imgmsg(image, encoding="bgr8")
+            req.image = image#self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
 
             resp = self.llm_image_srv(req)
 

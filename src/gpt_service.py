@@ -142,7 +142,7 @@ class LLMClient:
         start_time = time.time_ns()
         
         self.messages.append(new_msg)
-
+        
         model = "gpt-4o-2024-05-13"
         #model = "gpt-4o-mini-2024-07-18"
         temperature = 0.0

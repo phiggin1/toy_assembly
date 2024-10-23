@@ -81,6 +81,7 @@ class AdaEndPoint:
             self.prompt = self.prompt.replace("[ACTIONS]", self.actions)
         print(self.prompt)
 
+        #initialize the chat log with the system message
         self.chat = [
             {'role': 'system', 'content': self.system},
         ] 
@@ -113,7 +114,7 @@ class AdaEndPoint:
             else:
                 resp = {}
 
-            print(resp)
+            print(f"response:\n'{resp}\n'")
 
             self.socket.send_json(resp)
             end_time = time.time()
@@ -124,7 +125,6 @@ class AdaEndPoint:
 
     def process_llm(self, data):
         text = data["text"]
-        prev = data["prev"]
         
         #TODO better filtering
         if len(text) < 3:
@@ -141,28 +141,22 @@ class AdaEndPoint:
             instruction = instruction.replace("[STATEMENT]", text)
         
         print(f"number of messages in chat:{len(self.chat)}")
-        '''
-        self.chat = [
-            {'role': 'system', 'content': self.system},
-            {'role': 'user', 'content': instruction}
-        ]
-        ''' 
-        
+
+       
+        #append the user request to to the chat log
         self.chat.append({'role': 'user', 'content': instruction})
-
-
 
         conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
 
         tokens = self.tokenizer.tokenize(conversations)
         num_tokens = len(tokens)
-        print(num_tokens)
+        print(f"num tokens: {num_tokens}")
         while num_tokens > 3000:
-          del self.chat[1:2]
-          conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
-          tokens = self.tokenizer.tokenize(conversations)
-          num_tokens = len(tokens)
-          print(num_tokens)
+            del self.chat[1:2]
+            conversations = self.tokenizer.apply_chat_template(self.chat, tokenize=False)
+            tokens = self.tokenizer.tokenize(conversations)
+            num_tokens = len(tokens)
+        print(f"num tokens: {num_tokens}")
         
         print(f"{time.time_ns()}: starting inference")
         start_time = time.time()
@@ -181,15 +175,21 @@ class AdaEndPoint:
         text = ''.join(text)
         print(text)
         
+        #append PHI's response to the chat log
         self.chat.append({'role': 'assistant', 'content': text})
 
         #try and keep the chat log size down
-        # phi seems to get odd when it gets close
-        # to the contxt limit
-        if len(self.chat) > 5:
+        # phi will reissue commands 
+        # if the appear frequentyly in reponses
+        print(f"number of messages in chat:{len(self.chat)}")
+        while len(self.chat) > 3:
             del self.chat[1:2]
-        
-        self.get_mem_usage(self.device)
+            print(f"number of messages in chat:{len(self.chat)}")
+
+        for i in range(len(self.chat)):
+            print(self.chat[i]["role"])
+
+        #self.get_mem_usage(self.device)
         
         response = {"type":"llm",
                     "text":text
