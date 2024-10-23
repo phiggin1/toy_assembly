@@ -153,10 +153,17 @@ class SamEndPoint:
         class_names = labels
         class_ids = np.array(list(range(len(class_names))))
         labels = [
+            f"{class_ids} {confidence:.2f}"
+            for class_ids, confidence
+            in zip(class_ids, confidences)
+        ]
+        '''
+        labels = [
             f"{class_name} {confidence:.2f}"
             for class_name, confidence
             in zip(class_names, confidences)
         ]
+        '''
 
         """
         Visualize image with supervision useful API
@@ -168,13 +175,13 @@ class SamEndPoint:
             mask=masks.astype(bool),  # (n, h, w)
             class_id=class_ids
         )
-        box_annotator = sv.BoxCornerAnnotator(thickness=1)
+        box_annotator = sv.BoxCornerAnnotator(thickness=1, corner_length=10)
         annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
 
         '''
          __init__(color=ColorPalette.DEFAULT, text_color=Color.WHITE, text_scale=0.5, text_thickness=1, text_padding=10, text_position=Position.TOP_LEFT, color_lookup=ColorLookup.CLASS)
         '''
-        label_annotator = sv.LabelAnnotator(text_scale=0.15, text_thickness=1, text_padding=2)
+        label_annotator = sv.LabelAnnotator(text_scale=0.25, text_thickness=1, text_padding=2)
         annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
         
         #mask_annotator = sv.MaskAnnotator()

@@ -66,7 +66,7 @@ def transform_point(ps, mat44, target_frame):
     return r
 
 
-class AdaClient:
+class SamAdaClient:
     def __init__(self):
         rospy.init_node('SamAdaClient')
 
@@ -211,5 +211,5 @@ class AdaClient:
 
 
 if __name__ == '__main__':
-    get_target = AdaClient()
+    sam = SamAdaClient()
 

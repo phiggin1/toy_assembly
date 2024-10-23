@@ -34,11 +34,11 @@ def extract_json(text):
     a = text.find('{')
     b = text.rfind('}')+1
 
-    print(a,b)
+    #print(a,b)
 
     text_json = text[a:b]
 
-    print(text_json)
+    #print(text_json)
 
     try:
         json_dict = json.loads(text_json)
@@ -317,13 +317,14 @@ class AssemblyClient:
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
         
-        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table.")
+        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper")
         with self.mutex:
             req = LLMImageRequest()
             req.text = text
             if self.env is None:
                 self.env = self.init_env
             req.env = self.env
+            req.objects = objects
             req.image = image#self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
 
             resp = self.llm_image_srv(req)
@@ -364,7 +365,6 @@ class AssemblyClient:
             if "MOVE_TO" in action["action"]:
                 if len(objects) > 0:
                     if "object" in action:
-                        print(action["object"])
                         target_object = action["object"]
                         target_position = self.get_position(target_object, objects, rles, bboxs, scores)
                         if target_position is not None:
@@ -381,7 +381,6 @@ class AssemblyClient:
             elif "PICKUP" in action["action"] or "PICK_UP" in action["action"]:
                 if len(objects) > 0:
                     if "object" in action:
-                        print(action["object"])
                         target_object = action["object"]
                         target_position = self.get_position(target_object, objects, rles, bboxs, scores)
                         if target_position is not None:
