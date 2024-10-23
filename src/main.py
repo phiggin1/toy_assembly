@@ -251,7 +251,7 @@ class AssemblyClient:
         self.df["results"] = [results]
 
         print(f"results: {results}")
-        print(f"env: {self.env}")
+        #print(f"env: {self.env}")
 
 
         '''
@@ -317,7 +317,7 @@ class AssemblyClient:
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
         
-        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper")
+        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper.")
         with self.mutex:
             req = LLMImageRequest()
             req.text = text

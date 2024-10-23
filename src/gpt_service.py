@@ -126,7 +126,7 @@ class LLMClient:
         if instruction.find('[INSTRUCTION]') != -1:
             instruction = instruction.replace('[INSTRUCTION]', text)
         if instruction.find('[OBJECTS]') != -1:
-            instruction = instruction.replace('[OBJECTS]', ", ".join(objects))
+            instruction = instruction.replace('[OBJECTS]', ",\n".join(objects))
         if instruction.find('[ENVIRONMENT]') != -1:
             instruction = instruction.replace('[ENVIRONMENT]', env)
 
@@ -177,7 +177,8 @@ class LLMClient:
 
         end_time = time.time_ns()
 
-        rospy.loginfo(f"GPT resp:\n {answer} \n latency: {(end_time-start_time)/(10**9)}")
+        #rospy.loginfo(f"GPT resp:\n {answer}}")
+        rospy.loginfo(f"GPT resp latency: {(end_time-start_time)/(10**9)}")
 
         return answer
     

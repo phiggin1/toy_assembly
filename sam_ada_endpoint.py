@@ -153,7 +153,7 @@ class SamEndPoint:
         class_names = labels
         class_ids = np.array(list(range(len(class_names))))
         labels = [
-            f"{class_id}_{class_name}"
+            f"{class_name}"
             for class_name, class_id 
             in zip(class_names, class_ids)
         ]        
@@ -213,7 +213,7 @@ class SamEndPoint:
                     "segmentation": mask_rle,
                     "score": score,
                 }
-                for class_name, box, mask_rle, score in zip(labels, input_boxes, mask_rles, scores)
+                for class_name, box, mask_rle, score in zip(class_names, input_boxes, mask_rles, scores)
             ],
             "box_format": "xyxy",
             "img_width": w,
