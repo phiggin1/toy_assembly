@@ -24,6 +24,17 @@
     <param name="prefix"  value="left" />  
   </node>
 
+  <!-- listen to an audio stream and break it up into utterences -->
+  <node name="audio_manager" pkg="toy_assembly" type="audio.py" output="screen" >
+    <param name="threshold"  value="0.1" />
+    <param name="silent_wait" value="2" />
+    <param name="max_duration"  value="30" />
+    <param name="debug"  value="True" />
+  </node>
+
+  <node name="phi" pkg="toy_assembly" type="phi_service.py" output="screen" />
+  <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
+  <node name="gpt_state" pkg="toy_assembly" type="gpt_state.py" output="screen" />
   <node name="sam_ada_services" pkg="toy_assembly" type="sam_ada_client.py" output="screen" >  
     <param name="~real"  value="true" />
   </node>

@@ -253,7 +253,6 @@ class AssemblyClient:
         print(f"results: {results}")
         #print(f"env: {self.env}")
 
-
         '''
         #check if env makes sense with what is seen
         if results is not None:

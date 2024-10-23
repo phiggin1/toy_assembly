@@ -17,25 +17,12 @@
        <node name="right_camera_depth_info_throttler" type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/camera_info 5  /right_camera/depth_registered/sw_registered/camera_infov" />
        <node name="right_camera_depth_throttler"      type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/image_rect   10 /right_camera/depth_registered/sw_registered/image_rect_throttled" />
 
-       <!-- listen to an audio stream and break it up into utterences -->
-       <node name="audio_manager" pkg="toy_assembly" type="audio.py" output="screen" >
-              <param name="threshold"  value="0.1" />
-              <param name="silent_wait" value="2" />
-              <param name="max_duration"  value="30" />
-              <param name="debug"  value="True" />
-       </node>
-       
        <!-- listen for utterances and get a transcription -->
        <node name="transcribe" pkg="toy_assembly" type="transcribe.py" output="screen" >
               <param name="debug"  value="True" /> 
        </node>
 
        <node name="whisper_ada_services" pkg="toy_assembly" type="whisper_ada_client.py" output="screen" />
-       <node name="phi" pkg="toy_assembly" type="phi_service.py" output="screen" />
-       <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
-       
-       <node name="gpt_state" pkg="toy_assembly" type="gpt_state.py" output="screen" />
-       
 
        <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  
               <param name="~prefix"  value="$(arg prefix)" />
