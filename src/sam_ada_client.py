@@ -186,7 +186,6 @@ class SamAdaClient:
 
             self.points = []
             for detection in resp["annotations"]:
-
                 rospy.loginfo(f"{detection['class_name']}, {detection['score']}, {detection['bbox']}")
                 obj = Detection()
                 obj.class_name = detection['class_name']
@@ -203,7 +202,6 @@ class SamAdaClient:
                 obj.v_max = int(detection['bbox'][3])
 
                 response.object.append(obj)
-
 
             rospy.loginfo('reply')
             return response
