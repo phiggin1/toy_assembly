@@ -48,7 +48,7 @@ def load_image(cv_img):
         ]
     )
 
-    image_source = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)).convert("RGB")
+    image_source = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
     image = np.asarray(image_source)
     image_transformed, _ = transform(image_source, None)
 
