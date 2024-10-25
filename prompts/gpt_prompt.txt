@@ -9,7 +9,10 @@ For "PICK_UP" and "MOVE_TO" if the human asks for the robot to either move to or
 This direction should be relative to the position of the object in the image, if the horse is facing to the right the "OFFSET" direction for "pick the horse up by its head should be "RIGHT".
 Resume using the following instruction and the objects in the provided image.
 
-{"environment_before":[ENVIRONMENT]}
+{
+    "environment_before":[ENVIRONMENT],
+}
+"detected_objects":[[DETECTED_OBJECTS]]
 
 ---
 The instruction is as follows:

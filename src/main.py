@@ -215,8 +215,8 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            transcription = rospy.wait_for_message("/transcript", Transcription)
-            '''
+            #transcription = rospy.wait_for_message("/transcript", Transcription)
+            
             text = input("command: ")
             
             image, objects, rles, bboxs, scores = self.get_detections(text)
@@ -225,14 +225,14 @@ class AssemblyClient:
             merge_test = "_".join(text.split(" "))
             fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
             cv2.imwrite(fname, cv_img)
-
+            '''
             #text = "pick up the body"
             #text = "pick up the body by the head and move it over the blue legs"
             #text = "turn 90 degrees"
             transcription = Transcription()
             transcription.transcription = text
             '''
-            self.text_cb(transcription)
+            #self.text_cb(transcription)
 
     def shutdown_hook(self):
         if len(self.dataframe_csv) > 0:
@@ -252,7 +252,8 @@ class AssemblyClient:
 
         transcript =  transcript.transcription
 
-        results = self.low_level(transcript)
+        results = self.high_level(transcript)
+        #results = self.low_level(transcript)
         print(results)
         self.prev = (transcript, results[0] if results is not None else None)
         self.df["results"] = [results]

@@ -23,7 +23,7 @@ Asset states and object states are represented using those state sets:
 - inside_hand(): Object is being grasped by a robot hand
 """
 <something> should be one of the assets or objects in the environment.
-An object cannot be on_something(<something>) if is inside_hand().
+An object cannot be on_something(<something>) if it is inside_hand().
 -------------------------------------------------------
 The texts above are part of the overall instruction. 
 Do not start working yet.
