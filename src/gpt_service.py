@@ -130,6 +130,9 @@ class LLMClient:
         if instruction.find('[ENVIRONMENT]') != -1:
             instruction = instruction.replace('[ENVIRONMENT]', env)
 
+        print(f"==== instr ====\n{instruction}\n==== instr ====")
+
+
         prompt_dict = {
             "role":"user", 
             "content": 
@@ -149,7 +152,7 @@ class LLMClient:
         model = "gpt-4o-2024-05-13"
         #model = "gpt-4o-mini-2024-07-18"
         temperature = 0.0
-        max_tokens = 500
+        max_tokens = 750
         
         results = self.client.chat.completions.create(model=model, messages=self.messages, temperature=temperature, max_tokens=max_tokens, stream=True)
         response = []

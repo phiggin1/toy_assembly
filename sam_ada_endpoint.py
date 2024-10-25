@@ -3,6 +3,7 @@ import cv2
 import json
 import torch
 import numpy as np
+import torchvision
 import supervision as sv
 import pycocotools.mask as mask_util
 from pathlib import Path
@@ -30,6 +31,7 @@ TEXT_THRESHOLD = 0.25
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 OUTPUT_DIR = Path("/home/phiggin1/cmat_ada/users/phiggin1/images/")
 DUMP_JSON_RESULTS = True
+NMS_THRESHOLD = 0.8
 
 # create output directory
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -127,6 +129,19 @@ class SamEndPoint:
             box_threshold=BOX_THRESHOLD,
             text_threshold=TEXT_THRESHOLD,
         )
+
+        # NMS post process
+        print(f"Before NMS: {len(boxes)} boxes")
+        nms_idx = torchvision.ops.nms(
+            torch.from_numpy(boxes), 
+            torch.from_numpy(confidences), 
+            NMS_THRESHOLD
+        ).numpy().tolist()
+        boxes = boxes[nms_idx]
+        confidences = confidences[nms_idx]
+        labels = labels[nms_idx]
+        print(f"After NMS: {len(detections.xyxy)} boxes")
+
 
         # process the box prompt for SAM 2
         h, w, _ = image_source.shape
