@@ -167,8 +167,8 @@ class SamEndPoint:
         '''
         #Label is a unique numericla ID
         labels = [
-            f"object_{class_ids}"
-            for class_ids 
+            f"object_{class_id}"
+            for class_id 
             in zip(class_ids)
         ]
         
