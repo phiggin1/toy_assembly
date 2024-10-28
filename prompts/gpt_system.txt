@@ -12,7 +12,6 @@ If it is not return the action, the robot should as a python dictionary.
 The dictionary has five keys.
 ---
 - dictionary["action"] : A list of the actions that the robot should take, taken from the actions list above it must be a list of python dictionaries, with an "action" key.
-- dictionary["detected_objects"] : A list of dictionaries, there should be an entry for each of the objects in the "environment_before":'objects'. Each dictionary should have two keys, "object" and "detected_object".
 - dictionary["environment_before"]: The state of the environment before the manipulation.
 - dictionary["environment_after"]: The state of the environment after the manipulation.
 - dictionary["instruction_summary"]: contains a brief summary of the given sentence.

@@ -128,13 +128,14 @@ class SamEndPoint:
             caption=text,
             box_threshold=BOX_THRESHOLD,
             text_threshold=TEXT_THRESHOLD,
+            remove_combined=True
         )
 
         # NMS post process
         print(f"Before NMS: {len(boxes)} boxes")
         nms_idx = torchvision.ops.nms(
-            torch.from_numpy(boxes), 
-            torch.from_numpy(confidences), 
+            torch.cat([boxes[:,2:], boxes[:,:2]], dim=1),
+            confidences, 
             NMS_THRESHOLD
         ).numpy().tolist()
         boxes = boxes[nms_idx]
@@ -172,7 +173,7 @@ class SamEndPoint:
         confidences = confidences.numpy().tolist()
         class_names = labels
         class_ids = np.array(list(range(len(class_names))))
-        '''
+        
         #Label is just class name
         labels = [
             f"{class_name}"
@@ -186,7 +187,7 @@ class SamEndPoint:
             for class_id 
             in zip(class_ids)
         ]
-        
+        '''
         """
         Visualize image with supervision useful API
         """

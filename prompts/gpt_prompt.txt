@@ -12,7 +12,6 @@ Resume using the following instruction and the objects in the provided image.
 {
     "environment_before":[ENVIRONMENT],
 }
-"detected_objects":[[DETECTED_OBJECTS]]
 
 ---
 The instruction is as follows:
