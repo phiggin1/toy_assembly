@@ -16,6 +16,7 @@ from PIL import Image
 import zmq
 import time
 import argparse
+from torch import Tensor
 
 """
 Hyper parameters
@@ -31,7 +32,7 @@ TEXT_THRESHOLD = 0.25
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 OUTPUT_DIR = Path("/home/phiggin1/cmat_ada/users/phiggin1/images/")
 DUMP_JSON_RESULTS = True
-NMS_THRESHOLD = 0.8
+NMS_THRESHOLD = 0.80
 
 # create output directory
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -56,6 +57,55 @@ def load_image(cv_img):
     image_transformed, _ = transform(image_source, None)
 
     return image, image_transformed
+
+
+def box_area(boxes: Tensor) -> Tensor:
+    """
+    Computes the area of a set of bounding boxes, which are specified by its
+    (x1, y1, x2, y2) coordinates.
+
+    Arguments:
+        boxes (Tensor[N, 4]): boxes for which the area will be computed. They
+            are expected to be in (x1, y1, x2, y2) format
+
+    Returns:
+        area (Tensor[N]): area for each box
+    """
+    return (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    
+def box_iou(boxes1: Tensor, boxes2: Tensor) -> Tensor:
+      """
+      Return intersection-over-union (Jaccard index) of boxes.
+  
+      Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
+  
+      Assumes x1>x2, y1>y2
+  
+      Arguments:
+          boxes1 (Tensor[N, 4])
+          boxes2 (Tensor[M, 4])
+  
+      Returns:
+          iou (Tensor[N, M]): the NxM matrix containing the pairwise IoU values for every element in boxes1 and boxes2
+      """
+      area1 = box_area(boxes1)
+      area2 = box_area(boxes2)
+  
+
+      #max of last two columns
+      left_top = torch.max(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+      #min of the first two columns
+      right_bottom = torch.min(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
+
+  
+      wh = (right_bottom - left_top).clamp(min=0)  # [N,M,2]
+
+      
+      inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
+  
+      iou = inter / (area1[:, None] + area2 - inter)
+      
+      return iou
 
 # environment settings
 # use bfloat16
@@ -110,6 +160,9 @@ class SamEndPoint:
             end_time = time.time()
             print(f"{time.time_ns()}: Message replied type: {msg_type}, took {end_time-start_time} second")
             
+            
+
+    
     def process_sam(self, msg):
         cv_img = np.asarray(msg["image"], dtype=np.uint8)        
         text = msg["text"]
@@ -130,18 +183,32 @@ class SamEndPoint:
             text_threshold=TEXT_THRESHOLD,
             remove_combined=True
         )
-
+        labels = np.asarray(labels)
+        
         # NMS post process
         print(f"Before NMS: {len(boxes)} boxes")
+        
+
+        #print(box_iou(boxes, boxes))
+            
+        # NMS post process
+        print(f"Before NMS: {len(boxes)} boxes")
+        #swapping the box elements
+        #nms expectes xyxy to be format with 0 <= x1 < x2 and 0 <= y1 < y2 (min then max).
+        #predict gives boxes in image space (ie  0 <= x2 < x1 and 0 <= y2 < y1) (max then min).
         nms_idx = torchvision.ops.nms(
-            torch.cat([boxes[:,2:], boxes[:,:2]], dim=1),
+            torch.cat([boxes[:,2:], boxes[:,:2]],dim=1), 
             confidences, 
             NMS_THRESHOLD
         ).numpy().tolist()
         boxes = boxes[nms_idx]
         confidences = confidences[nms_idx]
         labels = labels[nms_idx]
-        print(f"After NMS: {len(detections.xyxy)} boxes")
+        
+        print(nms_idx)
+        print(f"After NMS: {len(boxes)} boxes")
+        
+        
 
 
         # process the box prompt for SAM 2
