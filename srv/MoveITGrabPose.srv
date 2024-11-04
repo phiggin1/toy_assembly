@@ -1,3 +1,4 @@
-geometry_msgs/PoseStamped pose
+sensor_msgs/PointCloud2 cloud
+string offset 
 ---
 bool result
