@@ -3,6 +3,7 @@ import cv2
 import json
 import torch
 import numpy as np
+import torchvision
 import supervision as sv
 import pycocotools.mask as mask_util
 from pathlib import Path
@@ -15,6 +16,7 @@ from PIL import Image
 import zmq
 import time
 import argparse
+from torch import Tensor
 
 """
 Hyper parameters
@@ -30,6 +32,7 @@ TEXT_THRESHOLD = 0.25
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 OUTPUT_DIR = Path("/home/phiggin1/cmat_ada/users/phiggin1/images/")
 DUMP_JSON_RESULTS = True
+NMS_THRESHOLD = 0.80
 
 # create output directory
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -48,11 +51,61 @@ def load_image(cv_img):
         ]
     )
 
-    image_source = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB)).convert("RGB")
+    image_source = Image.fromarray(cv2.cvtColor(cv_img, cv2.COLOR_BGR2RGB))
+
     image = np.asarray(image_source)
     image_transformed, _ = transform(image_source, None)
 
     return image, image_transformed
+
+
+def box_area(boxes: Tensor) -> Tensor:
+    """
+    Computes the area of a set of bounding boxes, which are specified by its
+    (x1, y1, x2, y2) coordinates.
+
+    Arguments:
+        boxes (Tensor[N, 4]): boxes for which the area will be computed. They
+            are expected to be in (x1, y1, x2, y2) format
+
+    Returns:
+        area (Tensor[N]): area for each box
+    """
+    return (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    
+def box_iou(boxes1: Tensor, boxes2: Tensor) -> Tensor:
+      """
+      Return intersection-over-union (Jaccard index) of boxes.
+  
+      Both sets of boxes are expected to be in (x1, y1, x2, y2) format.
+  
+      Assumes x1>x2, y1>y2
+  
+      Arguments:
+          boxes1 (Tensor[N, 4])
+          boxes2 (Tensor[M, 4])
+  
+      Returns:
+          iou (Tensor[N, M]): the NxM matrix containing the pairwise IoU values for every element in boxes1 and boxes2
+      """
+      area1 = box_area(boxes1)
+      area2 = box_area(boxes2)
+  
+
+      #max of last two columns
+      left_top = torch.max(boxes1[:, None, 2:], boxes2[:, 2:])  # [N,M,2]
+      #min of the first two columns
+      right_bottom = torch.min(boxes1[:, None, :2], boxes2[:, :2])  # [N,M,2]
+
+  
+      wh = (right_bottom - left_top).clamp(min=0)  # [N,M,2]
+
+      
+      inter = wh[:, :, 0] * wh[:, :, 1]  # [N,M]
+  
+      iou = inter / (area1[:, None] + area2 - inter)
+      
+      return iou
 
 # environment settings
 # use bfloat16
@@ -64,7 +117,11 @@ class SamEndPoint:
         # build SAM2 image predictor
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
 
-        self.sam2_model = build_sam2(sam2_model_config, sam2_checkpoint, device=self.device)
+        self.sam2_model = build_sam2(
+            config_file=sam2_model_config, 
+            ckpt_path=sam2_checkpoint, 
+            device=self.device
+        )
         self.sam2_predictor = SAM2ImagePredictor(self.sam2_model)
 
         # build grounding dino model
@@ -103,8 +160,11 @@ class SamEndPoint:
             end_time = time.time()
             print(f"{time.time_ns()}: Message replied type: {msg_type}, took {end_time-start_time} second")
             
+            
+
+    
     def process_sam(self, msg):
-        cv_img = np.asarray(msg["image"], dtype=np.uint8)
+        cv_img = np.asarray(msg["image"], dtype=np.uint8)        
         text = msg["text"]
         
         print(f"text prompt: {text}")
@@ -121,7 +181,35 @@ class SamEndPoint:
             caption=text,
             box_threshold=BOX_THRESHOLD,
             text_threshold=TEXT_THRESHOLD,
+            remove_combined=True
         )
+        labels = np.asarray(labels)
+        
+        # NMS post process
+        print(f"Before NMS: {len(boxes)} boxes")
+        
+
+        #print(box_iou(boxes, boxes))
+            
+        # NMS post process
+        print(f"Before NMS: {len(boxes)} boxes")
+        #swapping the box elements
+        #nms expectes xyxy to be format with 0 <= x1 < x2 and 0 <= y1 < y2 (min then max).
+        #predict gives boxes in image space (ie  0 <= x2 < x1 and 0 <= y2 < y1) (max then min).
+        nms_idx = torchvision.ops.nms(
+            torch.cat([boxes[:,2:], boxes[:,:2]],dim=1), 
+            confidences, 
+            NMS_THRESHOLD
+        ).numpy().tolist()
+        boxes = boxes[nms_idx]
+        confidences = confidences[nms_idx]
+        labels = labels[nms_idx]
+        
+        print(nms_idx)
+        print(f"After NMS: {len(boxes)} boxes")
+        
+        
+
 
         # process the box prompt for SAM 2
         h, w, _ = image_source.shape
@@ -152,31 +240,36 @@ class SamEndPoint:
         confidences = confidences.numpy().tolist()
         class_names = labels
         class_ids = np.array(list(range(len(class_names))))
+        
+        #Label is just class name
         labels = [
-            f"{class_name} {confidence:.2f}"
-            for class_name, confidence
-            in zip(class_names, confidences)
+            f"{class_name}"
+            for class_name, class_id 
+            in zip(class_names, class_ids)
+        ]        
+        '''
+        #Label is a unique numericla ID
+        labels = [
+            f"object_{class_id}"
+            for class_id 
+            in zip(class_ids)
         ]
-
+        '''
         """
         Visualize image with supervision useful API
         """
-        
         img = cv_img.copy()
         detections = sv.Detections(
             xyxy=input_boxes,  # (n, 4)
             mask=masks.astype(bool),  # (n, h, w)
             class_id=class_ids
         )
-        box_annotator = sv.BoxAnnotator(thickness=1)
+        box_annotator = sv.BoxCornerAnnotator(thickness=1, corner_length=10)
         annotated_frame = box_annotator.annotate(scene=img.copy(), detections=detections)
-        
-        label_annotator = sv.LabelAnnotator(text_scale=0.35)
+
+        label_annotator = sv.LabelAnnotator(text_scale=0.25, text_thickness=1, text_padding=2)
         annotated_frame = label_annotator.annotate(scene=annotated_frame, detections=detections, labels=labels)
-        
-        #mask_annotator = sv.MaskAnnotator()
-        #annotated_frame = mask_annotator.annotate(scene=annotated_frame, detections=detections)
-        
+
         """
         Dump the results in standard format and save as json files
         """

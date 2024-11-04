@@ -50,8 +50,6 @@ class LLMClient:
         with open(fp_state) as f:
             self.state = f.read()
 
-
-
         self.messages = [
             {
                 "role":"system", 
@@ -116,18 +114,24 @@ class LLMClient:
         seperate out transcript from prev
         '''
 
-        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="rgb8")
-        is_success, buffer = cv2.imencode(".png", cv_img)
-        io_buf = io.BytesIO(buffer)        
+        cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="bgr8")
+        is_success, buffer = cv2.imencode(".jpeg", cv_img)
         encoded_image = base64.b64encode(buffer).decode("utf-8") 
+
+        fname = "/home/rivr/encoded_image.jpeg"
+        with open(fname, 'wb') as f:
+            f.write(buffer)
 
         instruction = deepcopy(self.prompt)
         if instruction.find('[INSTRUCTION]') != -1:
             instruction = instruction.replace('[INSTRUCTION]', text)
         if instruction.find('[OBJECTS]') != -1:
-            instruction = instruction.replace('[OBJECTS]', ", ".join(objects))
+            instruction = instruction.replace('[OBJECTS]', ",\n".join(objects))
         if instruction.find('[ENVIRONMENT]') != -1:
             instruction = instruction.replace('[ENVIRONMENT]', env)
+
+        print(f"==== instr ====\n{instruction}\n==== instr ====")
+
 
         prompt_dict = {
             "role":"user", 
@@ -144,11 +148,11 @@ class LLMClient:
         start_time = time.time_ns()
         
         self.messages.append(new_msg)
-
+        
         model = "gpt-4o-2024-05-13"
         #model = "gpt-4o-mini-2024-07-18"
         temperature = 0.0
-        max_tokens = 350
+        max_tokens = 750
         
         results = self.client.chat.completions.create(model=model, messages=self.messages, temperature=temperature, max_tokens=max_tokens, stream=True)
         response = []
@@ -176,7 +180,8 @@ class LLMClient:
 
         end_time = time.time_ns()
 
-        rospy.loginfo(f"GPT resp:\n {answer} \n latency: {(end_time-start_time)/(10**9)}")
+        #rospy.loginfo(f"GPT resp:\n {answer}}")
+        rospy.loginfo(f"GPT resp latency: {(end_time-start_time)/(10**9)}")
 
         return answer
     

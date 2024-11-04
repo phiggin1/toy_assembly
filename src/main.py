@@ -34,12 +34,19 @@ def extract_json(text):
     a = text.find('{')
     b = text.rfind('}')+1
 
+    #print(a,b)
+
     text_json = text[a:b]
+
+    #print(text_json)
 
     try:
         json_dict = json.loads(text_json)
         return json_dict
-    except:
+    except Exception as inst:
+        print(type(inst))    # the exception type
+        print(inst.args)     # arguments stored in .args
+        print(inst)
         return None
 
 def reject_outliers(data, m=20):
@@ -108,7 +115,7 @@ class AssemblyClient:
         self.num_msgs = 20
         self.rate = rospy.Rate(20)
         self.speed = 0.1
-        self.angular_speed = 1.0
+        self.angular_speed = 1.57
         
         self.prev = None
         self.debug = rospy.get_param("~debug", True)
@@ -208,14 +215,70 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
+            #transcription = rospy.wait_for_message("/transcript", Transcription)
+            
+                       
             '''
-            transcription = rospy.wait_for_message("/transcript", Transcription)
+            image, objects, rles, bboxs, scores = self.get_detections(text)
+            print(objects)
+            cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+            merge_test = "_".join(text.split(" "))
+            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
+            cv2.imwrite(fname, cv_img)
             '''
-            text = input("command: ")
+
+            #text = input("command: ")
+            text = "pick up the body and bring it to the blue legs, then rotate it 90 degrees and let go"
+            '''
+            #text = "pick up the body"
+            #text = "pick up the body by the head and move it over the blue legs"
+            #text = "turn 90 degrees"
+            '''
             transcription = Transcription()
             transcription.transcription = text
             
             self.text_cb(transcription)
+            return
+
+    def shutdown_hook(self):
+        if len(self.dataframe_csv) > 0:
+            pandas.concat(self.dataframe_csv).to_csv(self.log_file_path, index=False)
+
+    def text_cb(self, transcript):
+        if self.debug: rospy.loginfo("========================================================") 
+        self.df = pandas.DataFrame({
+            "timestamp": [transcript.audio_recieved],
+            "duration": [transcript.duration],
+            "transcript":[transcript.transcription]
+        })
+        rospy.loginfo("THINKING")
+        self.status_pub.publish("THINKING")
+        if self.debug: rospy.loginfo(f"audio transcript: {transcript}")
+        if self.debug: rospy.loginfo(f"prev command|action: {self.prev}")
+
+        transcript =  transcript.transcription
+
+        results = self.high_level(transcript)
+        #results = self.low_level(transcript)
+        print(results)
+        self.prev = (transcript, results[0] if results is not None else None)
+        self.df["results"] = [results]
+
+        print(f"results: {results}")
+        #print(f"env: {self.env}")
+
+        '''
+        #check if env makes sense with what is seen
+        if results is not None:
+            self.env = self.check_env(results[0], results[1], self.env)
+        '''
+
+        rospy.loginfo(results)
+        rospy.loginfo("WAITING")
+        self.status_pub.publish("WAITING")
+        if self.debug: rospy.loginfo("--------------------------------------------------------") 
+        self.dataframe_csv.append(self.df)
+
       
 
     def image_cb(self, rgb_ros_image, depth_ros_image):
@@ -263,59 +326,19 @@ class AssemblyClient:
                 act_env = json_dict["environment_actual"]
                 print(f"predicted env:{env} does not match actual env: {act_env}")
                 return json.dumps(json_dict["environment_actual"], indent=4)
-
     
-    def shutdown_hook(self):
-        if len(self.dataframe_csv) > 0:
-            pandas.concat(self.dataframe_csv).to_csv(self.log_file_path, index=False)
-
-    def text_cb(self, transcript):
-        if self.debug: rospy.loginfo("========================================================") 
-        self.df = pandas.DataFrame({
-            "timestamp": [transcript.audio_recieved],
-            "duration": [transcript.duration],
-            "transcript":[transcript.transcription]
-        })
-        rospy.loginfo("THINKING")
-        self.status_pub.publish("THINKING")
-        if self.debug: rospy.loginfo(f"audio transcript: {transcript}")
-        if self.debug: rospy.loginfo(f"prev command|action: {self.prev}")
-
-        transcript =  transcript.transcription
-
-        results = self.low_level(transcript)
-        
-        self.prev = (transcript, results[0] if results is not None else None)
-        self.df["results"] = [results]
-
-        print(f"results: {results}")
-        print(f"env: {self.env}")
-
-        if results is not None:
-            self.env = self.check_env(results[0], results[1], self.env)
-
-        '''
-        check if env makes sense with what is seen
-        '''
-
-        rospy.loginfo(results)
-        rospy.loginfo("WAITING")
-        self.status_pub.publish("WAITING")
-        if self.debug: rospy.loginfo("--------------------------------------------------------") 
-        self.dataframe_csv.append(self.df)
-
-
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
+        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper.")
         
-        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table.")
         with self.mutex:
             req = LLMImageRequest()
             req.text = text
             if self.env is None:
                 self.env = self.init_env
             req.env = self.env
-            req.image = self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
+            req.objects = objects
+            req.image = image#self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
 
             resp = self.llm_image_srv(req)
 
@@ -343,31 +366,19 @@ class AssemblyClient:
         action = None
         if "action" in json_dict:
             actions = json_dict["action"]
+            print(f"actions:{actions}")
         else:
+            print("no actions")
             return ("NO_ACTION", True)
         
         results = []
         for action in actions:
+            print(action)
             result = None
-            if "PICKUP" in action or "PICK_UP" in action:
+            if "MOVE_TO" in action["action"]:
                 if len(objects) > 0:
-                    if "object" in json_dict:
-                        print(json_dict["object"])
-                        target_object = json_dict["object"]
-                        target_position = self.get_position(target_object, objects, rles, bboxs, scores)
-                        if target_position is not None:
-                            success = self.pickup(target_position)
-                            self.env = json.dumps(json_dict["environment_after"], indent=4)
-                            result = ("PICKUP", success)
-                        else:
-                            result = ("PICKUP", False)
-                else:
-                    result = ("PICKUP", False)
-            elif "MOVE_TO" in action:
-                if len(objects) > 0:
-                    if "object" in json_dict:
-                        print(json_dict["object"])
-                        target_object = json_dict["object"]
+                    if "object" in action:
+                        target_object = action["object"]
                         target_position = self.get_position(target_object, objects, rles, bboxs, scores)
                         if target_position is not None:
                             print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x}, x:{target_position.point.y}, x:{target_position.point.z}")
@@ -380,9 +391,25 @@ class AssemblyClient:
                         result = ("MOVE_TO", False)
                 else:
                     result = ("MOVE_TO", False)
-            else:   
-                any_valid_commands = self.ee_move(action)
-                result = (action, any_valid_commands)
+            elif "PICKUP" in action["action"] or "PICK_UP" in action["action"]:
+                if len(objects) > 0:
+                    if "object" in action:
+                        target_object = action["object"]
+                        target_position = self.get_position(target_object, objects, rles, bboxs, scores)
+                        if target_position is not None:
+                            success = self.pickup(target_position)
+                            self.env = json.dumps(json_dict["environment_after"], indent=4)
+                            result = ("PICKUP", success)
+                        else:
+                            result = ("PICKUP", False)
+                else:
+                    result = ("PICKUP", False)
+            else:
+                a = action["action"]
+                any_valid_commands = self.ee_move([a])
+                result = (a, any_valid_commands)
+
+            results.append(result)
 
         return results
 
@@ -410,7 +437,7 @@ class AssemblyClient:
         if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
             any_valid_commands = True
             results = self.high_level(text)
-        elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROLL_LEFT" in action and "ROLL_RIGHT" in action):
+        elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROTATE_LEFT" in action and "ROTATE_RIGHT" in action):
             any_valid_commands = True
             results = self.high_level(text)
         else:   
@@ -423,6 +450,7 @@ class AssemblyClient:
         return results
 
     def parse_llm_response(self, text):
+        print(f"\n+++++++++++\n{text}\n+++++++++++\n")
         json_dict = extract_json(text)
         if json_dict is None:
             return None
@@ -463,8 +491,10 @@ class AssemblyClient:
         rospy.loginfo(f"ee move: {actions}")
 
         for action in actions:
-            if ("PITCH_UP" in action or "PITCH_DOWN" in action or "ROLL_LEFT" in action or "ROLL_RIGHT" in action or "YAW_LEFT" in action or "YAW_RIGHT" in action or 
+            #check for valid actions
+            if ("PITCH_UP" in action or "PITCH_DOWN" in action or "ROTATE_LEFT" in action or "ROTATE_RIGHT" in action or "YAW_LEFT" in action or "YAW_RIGHT" in action or 
                 "MOVE_FORWARD" in action or "MOVE_BACKWARD" in action or "MOVE_RIGHT" in action or "MOVE_LEFT" in action or "MOVE_UP" in action or "MOVE_DOWN" in action):
+                #check for specific actions
                 if "PITCH_UP" in action:
                     rospy.loginfo("PITCH_UP")
                     pitch =-self.angular_speed
@@ -476,13 +506,13 @@ class AssemblyClient:
                     move = True
                     any_valid_commands = True
 
-                if  "ROLL_LEFT" in action:
-                    rospy.loginfo("ROLL_LEFT")
+                if  "ROTATE_LEFT" in action:
+                    rospy.loginfo("ROTATE_LEFT")
                     roll =-self.angular_speed
                     move = True
                     any_valid_commands = True
-                elif "ROLL_RIGHT" in action:
-                    rospy.loginfo("ROLL_RIGHT")
+                elif "ROTATE_RIGHT" in action:
+                    rospy.loginfo("ROTATE_RIGHT")
                     roll = self.angular_speed
                     move = True
                     any_valid_commands = True
@@ -543,7 +573,7 @@ class AssemblyClient:
                         yaw = 0.0
                         pitch = 0.0
                     self.close()
-                if "OPEN_HAND" in action:
+                elif "OPEN_HAND" in action:
                     any_valid_commands = True
                     if move:
                         self.send_command(x,y,z, roll, pitch, yaw)
@@ -569,13 +599,6 @@ class AssemblyClient:
         linear_cmd.twist.linear.y = y
         linear_cmd.twist.linear.z = z
         
-        '''
-        linear_cmd.header.frame_id ="right_end_effector_link"
-        linear_cmd.twist.linear.x = z
-        linear_cmd.twist.linear.y = -y
-        linear_cmd.twist.linear.z = x
-        '''
-
         angular_cmd = TwistStamped()
         angular_cmd.header.frame_id ="right_end_effector_link"
         angular_cmd.twist.angular.x = pitch
@@ -601,7 +624,7 @@ class AssemblyClient:
 
         if (roll != 0.0 or pitch != 0.0 or yaw != 0.0):
             rospy.loginfo(f"rotate")
-            for i in range(self.num_msgs):
+            for i in range(self.num_msgs*2):
                 angular_cmd.header.stamp = rospy.Time.now()
                 self.cart_vel_pub.publish(angular_cmd)
                 self.rate.sleep()
@@ -732,9 +755,6 @@ class AssemblyClient:
     def get_position(self, target_object, objects, rles, bboxs, scores):
         print(f"target_object: {target_object}")
         print(f"objects: {objects}")
-        print(f"num rle: {len(rles)}")
-        print(f"num bboxs: {len(bboxs)}")
-        print(f"num scores: {len(scores)}")
         target_bbox = None
         target_rle = None
         max_score = -100
@@ -748,6 +768,8 @@ class AssemblyClient:
         if target_rle is None:
             return None
         
+        #get the mask from the compressed rle
+        # get the image coords of the bounding box
         mask = mask_util.decode([target_rle])
         u_min = int(target_bbox[0])
         v_min = int(target_bbox[1])
@@ -757,12 +779,17 @@ class AssemblyClient:
         translation,rotation = self.listener.lookupTransform('world', self.cam_info.header.frame_id, rospy.Time(0))
         mat44 = self.listener.fromTranslationRotation(translation, rotation)
 
-        min_x = 1000.0
-        min_y = 1000.0
-        min_z = 1000.0
-        max_x = -1000.0
-        max_y = -1000.0
-        max_z = -1000.0
+        #Some dumb logging to check rgb/depth alignment
+        img_color = self.rgb_image.copy()
+        cv2.imwrite("/home/rivr/color.png",img_color )
+        if self.depth_encoding == "16UC1":
+            img_depth = self.depth_image.copy()*1000
+            img_depth = img_depth.astype('uint16')
+        else:
+            img_depth = self.depth_image.copy()
+        cv2.imwrite("/home/rivr/depth.png",img_depth )
+        imgray = mask*255
+        cv2.imwrite("/home/rivr/mask.png",imgray )
 
         #get the camera center (cx,cy) and focal length (fx,fy)
         cx = self.cam_model.cx()
@@ -785,14 +812,22 @@ class AssemblyClient:
                         continue
                     distances.append((d, v, u))
 
+        #Filter out outliers
         if len(distances)>0:
-            distances = reject_outliers(np.asarray(distances), m=1)
+            distances = reject_outliers(np.asarray(distances), m=2)
             print(f"{class_name} num points: {len(distances)}")
         else:
             print(print(f"{class_name} no points found"))
 
+        min_x = 1000.0
+        min_y = 1000.0
+        min_z = 1000.0
+        max_x = -1000.0
+        max_y = -1000.0
+        max_z = -1000.0
         points = []
-
+        #transform all the points into the world frame
+        # and get the center
         for dist in distances:
             d = dist[0]
             v = dist[1]

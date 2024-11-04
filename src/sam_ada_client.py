@@ -66,7 +66,7 @@ def transform_point(ps, mat44, target_frame):
     return r
 
 
-class AdaClient:
+class SamAdaClient:
     def __init__(self):
         rospy.init_node('SamAdaClient')
 
@@ -125,7 +125,6 @@ class AdaClient:
             rate.sleep()
         
         self.sam_serv = rospy.Service('/get_sam_segmentation', SAM, self.SAM)
-        
         self.annote_pub = rospy.Publisher(output_image_topic, Image, queue_size=10)
 
         rospy.spin()
@@ -133,23 +132,21 @@ class AdaClient:
     def image_cb(self, rgb_ros_image, depth_ros_image):
         success = self.mutex.acquire(block=False, timeout=0.02)
         if success:
-            #print(f"rgb eoncoding: {rgb_ros_image.encoding}")
-            #print(f"depth eoncoding: {depth_ros_image.encoding}")
-
             self.rgb_encoding = rgb_ros_image.encoding
             self.depth_encoding = depth_ros_image.encoding
-
             self.rgb_image = self.cvbridge.imgmsg_to_cv2(rgb_ros_image, desired_encoding="bgr8") 
             self.depth_image = self.cvbridge.imgmsg_to_cv2(depth_ros_image)#, desired_encoding="passthrough") 
             if not self.have_images:
                 rospy.loginfo("HAVE IMAGES")
+                print(f"rgb eoncoding: {self.rgb_encoding}")
+                print(f"depth eoncoding: {self.depth_encoding }")
                 self.have_images = True
             self.mutex.release()
 
     def SAM(self, request):
         if self.debug: rospy.loginfo('SAM req recv')
         with self.mutex:
-            image = self.rgb_image #self.cvbridge.imgmsg_to_cv2(request.image, "bgr8")     
+            image = self.rgb_image 
             text = request.text_prompt
 
             print(text)
@@ -186,121 +183,31 @@ class AdaClient:
 
             self.points = []
             for detection in resp["annotations"]:
-
                 rospy.loginfo(f"{detection['class_name']}, {detection['score']}, {detection['bbox']}")
                 obj = Detection()
+
                 obj.class_name = detection['class_name']
-                if isinstance(detection['score'], float):
-                    obj.score = detection['score']
-                else:
-                    obj.score = detection['score'][0]
-                obj.rle_encoded_mask = json.dumps(detection['segmentation'])
-                
+
                 obj.u_min = int(detection['bbox'][0])
                 obj.v_min = int(detection['bbox'][1])
 
                 obj.u_max = int(detection['bbox'][2])
                 obj.v_max = int(detection['bbox'][3])
 
-                response.object.append(obj)
+                if isinstance(detection['score'], float):
+                    obj.score = detection['score']
+                else:
+                    obj.score = detection['score'][0]
 
+                obj.rle_encoded_mask = json.dumps(detection['segmentation'])
+                
+                response.object.append(obj)
 
             rospy.loginfo('reply')
             return response
 
-    def get_position(self, rle, bbox, class_name):
-        #mask = rle2mask(rle, (img_width, img_height)) 
-        mask = mask_util.decode([rle])
-        u_min = int(bbox[0])
-        v_min = int(bbox[1])
-        u_max = int(bbox[2])
-        v_max = int(bbox[3])
-
-        translation,rotation = self.listener.lookupTransform('world', self.cam_info.header.frame_id, rospy.Time(0))
-        mat44 = self.listener.fromTranslationRotation(translation, rotation)
-
-        min_x = 1000.0
-        min_y = 1000.0
-        min_z = 1000.0
-        max_x = -1000.0
-        max_y = -1000.0
-        max_z = -1000.0
-
-        #get the camera center (cx,cy) and focal length (fx,fy)
-        cx = self.cam_model.cx()
-        cy = self.cam_model.cy()
-        fx = self.cam_model.fx()
-        fy = self.cam_model.fy()
-
-        distances = []
-        for v in range(v_min, v_max, 2):
-            for u in range(u_min, u_max, 2):
-                if mask[v][u] > 0:
-                    d = (self.depth_image[v][u])
-                    #if depth is 16bit int the depth value is in mm
-                    # convert to m
-                    if self.depth_encoding == "16UC1":
-                        d = d/1000.0
-                    #toss out points that are too close or too far 
-                    # to simplify outlier rejection
-                    if d <= 0.02 or d > 1.5 or np.isnan(d):
-                        continue
-                    distances.append((d, v, u))
-
-        if len(distances)>0:
-            distances = reject_outliers(np.asarray(distances), m=1)
-            print(f"{class_name} num points: {len(distances)}")
-        else:
-            print(print(f"{class_name} no points found"))
-
-        for dist in distances:
-            d = dist[0]
-            v = dist[1]
-            u = dist[2]
-            ps = PointStamped()
-            ps.header.frame_id = self.cam_info.header.frame_id
-            ps.point.x = (u - cx)*d/fx
-            ps.point.y = (v - cy)*d/fy
-            ps.point.z = d
-            t_p = transform_point(ps, mat44, 'world')
-
-            if t_p.point.x > max_x:
-                max_x = t_p.point.x
-            if t_p.point.x < min_x:
-                min_x = t_p.point.x
-
-            if t_p.point.y > max_y:
-                max_y = t_p.point.y
-            if t_p.point.y < min_y:
-                min_y = t_p.point.y
-
-            if t_p.point.z > max_z:
-                max_z = t_p.point.z
-            if t_p.point.z < min_z:
-                min_z = t_p.point.z
-            
-            if class_name in self.colors:
-                b = self.colors[class_name][0]
-                g = self.colors[class_name][1]
-                r = self.colors[class_name][2]
-            else:
-                b = 255
-                g = 255
-                r = 255
-
-            self.points.append([t_p.point.x, t_p.point.y, t_p.point.z, r, g, b])
-
-        center = PointStamped()
-        center.header.frame_id = 'world'
-        center.point.x = (min_x + max_x)/2
-        center.point.y = (min_y + max_y)/2
-        center.point.z = (min_z + max_z)/2
-
-        print(f"center: x:{((min_x + max_x)/2):.2f}, y:{((min_y + max_y)/2):.2f}, z:{((min_z + max_z)/2):.2f}")        
-
-        return center
 
 
 if __name__ == '__main__':
-    get_target = AdaClient()
+    sam = SamAdaClient()
 
