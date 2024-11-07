@@ -111,7 +111,16 @@ class Right_arm:
         self.open_hand = rospy.Service('open_hand', Trigger, self.open_gipper)
         self.close_hand = rospy.Service('close_hand', Trigger, self.close_gipper)
 
-        #self.change_orientation(None)
+        self.get_orientation = rospy.Service('get_orientation', MoveITGrabPose, self.find_orientation)
+
+        self.obj_marker_pub = rospy.Publisher("obj_marker", Marker, queue_size=10)
+        self.obj_marker = Marker()
+        self.obj_marker.header.frame_id = 'world'
+        self.obj_marker.type = Marker.CUBE
+        self.obj_marker.color.r = 0.0
+        self.obj_marker.color.g = 1.0
+        self.obj_marker.color.b = 1.0
+        self.obj_marker.color.a = 1.0
 
         self.rotate_object = rospy.Service('rotate_object', OrientCamera, self.change_orientation)
         
@@ -593,6 +602,64 @@ class Right_arm:
             rospy.loginfo(f"possible collsion; {self.min_left.y - self.max_right.y}")
 
         return (self.min_left.y < self.max_right.y)
+    
+    def find_orientation(self, msg):
+        threshold = 0.6   #change val
+        width, height, depth = self.get_width(msg)
+        ratio = depth/width
+
+        if ratio > threshold:
+            object_orientation = 'orthogonal'
+            self.change_orientation('hand_pointing_down_cam_right')
+            return 'hand_pointing_down_cam_right'
+        else:
+            object_orientation = 'parallel'
+            self.change_orientation('hand_pointing_down_cam_front')
+            return 'hand_pointing_down_cam_front'
+        
+
+    def get_width(self, msg):    
+        points = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
+        
+        min_x = float('inf')
+        max_x = float('-inf')
+        min_y = float('inf')
+        max_y = float('-inf')
+        min_z = float('inf')
+        max_z = float('-inf')
+        
+        for point in points:
+            x = point[0]
+            y = point[1]
+            z = point[2] 
+            if x < min_x:
+                min_x = x
+            if x > max_x:
+                max_x = x
+            if y < min_y:
+                min_y = y
+            if y > max_y:
+                max_y = y
+            if z < min_z:
+                min_z = z
+            if z > max_z:
+                max_z = z
+        
+        width = max_x - min_x
+        height = max_y - min_y
+        depth = max_z - min_z
+
+        self.obj_marker.pose.position.x = (max_x + min_x) / 2
+        self.obj_marker.pose.position.y = (max_y + min_y) / 2
+        self.obj_marker.pose.position.z = (max_z + min_z) /2
+
+        self.obj_marker.scale.x = max_x - min_x
+        self.obj_marker.scale.y = max_y - min_y
+        self.obj_marker.scale.z = max_z - min_z
+
+        self.obj_marker_pub.publish(self.obj_marker)
+
+        return width, height, depth
 
 if __name__ == '__main__':
     right_robot = Right_arm()
