@@ -21,6 +21,7 @@ from toy_assembly.msg import Transcription, ObjectImage
 from toy_assembly.srv import LLMImage, LLMImageRequest
 from toy_assembly.srv import LLMText, LLMTextRequest
 from toy_assembly.srv import SAM, SAMRequest, SAMResponse
+from toy_assembly.srv import MoveITGrabPose, MoveITGrabPoseRequest, MoveITGrabPoseResponse
 from toy_assembly.srv import MoveITPose
 from std_msgs.msg import String
 from std_msgs.msg import Header
@@ -123,6 +124,10 @@ class AssemblyClient:
 
         rospy.loginfo(f"sim time active: {self.sim_time}")
         
+        grab_cloud_service_name = "/my_gen3_right/grab_object"
+        rospy.wait_for_service(grab_cloud_service_name)
+        self.grab_cloud_srv = rospy.ServiceProxy(grab_cloud_service_name, MoveITGrabPose)
+
         move_service_name = "/my_gen3_right/move_pose"
         rospy.wait_for_service(move_service_name)
         self.moveit_pose = rospy.ServiceProxy(move_service_name, MoveITPose)
@@ -215,9 +220,11 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            #transcription = rospy.wait_for_message("/transcript", Transcription)
-            
-                       
+            '''
+            transcription = rospy.wait_for_message("/transcript", Transcription)
+            self.text_cb(transcription)
+            '''
+
             '''
             image, objects, rles, bboxs, scores = self.get_detections(text)
             print(objects)
@@ -227,18 +234,20 @@ class AssemblyClient:
             cv2.imwrite(fname, cv_img)
             '''
 
-            #text = input("command: ")
-            text = "pick up the body and bring it to the blue legs, then rotate it 90 degrees and let go"
             '''
+            #text = "pick up the body and bring it to the blue legs, then rotate it 90 degrees and let go"
             #text = "pick up the body"
             #text = "pick up the body by the head and move it over the blue legs"
             #text = "turn 90 degrees"
             '''
+
+            
+            text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            
             self.text_cb(transcription)
-            return
+            
+
 
     def shutdown_hook(self):
         if len(self.dataframe_csv) > 0:
@@ -253,13 +262,14 @@ class AssemblyClient:
         })
         rospy.loginfo("THINKING")
         self.status_pub.publish("THINKING")
-        if self.debug: rospy.loginfo(f"audio transcript: {transcript}")
+        if self.debug: rospy.loginfo(f"audio transcript: '{transcript.transcription}'")
         if self.debug: rospy.loginfo(f"prev command|action: {self.prev}")
 
         transcript =  transcript.transcription
 
         results = self.high_level(transcript)
         #results = self.low_level(transcript)
+        
         print(results)
         self.prev = (transcript, results[0] if results is not None else None)
         self.df["results"] = [results]
@@ -329,7 +339,7 @@ class AssemblyClient:
     
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
-        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper.")
+        image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper. human hand.")
         
         with self.mutex:
             req = LLMImageRequest()
@@ -338,14 +348,14 @@ class AssemblyClient:
                 self.env = self.init_env
             req.env = self.env
             req.objects = objects
-            req.image = image#self.cvbridge.cv2_to_imgmsg(self.rgb_image, encoding="bgr8")
+            req.image = image
 
             resp = self.llm_image_srv(req)
 
             cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
             merge_test = "_".join(text.split(" "))
+            print(f"Saving: {image.header.stamp}{merge_test}")
             fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
-            print(fname)
             cv2.imwrite(fname, cv_img)
             merge_test = "_".join(text.split(" "))
             fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
@@ -358,7 +368,7 @@ class AssemblyClient:
         #Should do some error checking
         # in future
         json_dict = extract_json(resp.text)
-        rospy.loginfo(f"init json dict:\n{json_dict}")
+        #rospy.loginfo(f"init json dict:\n{json_dict}")
 
         if json_dict is None:
             return ("NO_ACTION", True)
@@ -366,27 +376,32 @@ class AssemblyClient:
         action = None
         if "action" in json_dict:
             actions = json_dict["action"]
-            print(f"actions:{actions}")
+            print(f"actions:\n-----\n{actions}")
+            print("-----")
         else:
             print("no actions")
             return ("NO_ACTION", True)
         
         results = []
-        for action in actions:
-            print(action)
+        for i, action in enumerate(actions):
+            print(f"action {i}: {action}")
             result = None
-            if "MOVE_TO" in action["action"]:
+            if isinstance(action, str):
+                result = ("NO_ACTION", True)
+            elif "MOVE_TO" in action["action"]:
                 if len(objects) > 0:
                     if "object" in action:
                         target_object = action["object"]
-                        target_position = self.get_position(target_object, objects, rles, bboxs, scores)
+                        if i > 0:
+                            image, objects, rles, bboxs, scores = self.get_detections(target_object)
+                        target_position, cloud = self.get_position(target_object, objects, rles, bboxs, scores)
                         if target_position is not None:
-                            print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x}, x:{target_position.point.y}, x:{target_position.point.z}")
+                            print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
                             success = self.move_to(target_position)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
                             result = ("MOVE_TO", success)
                         else:
-                            result = ("PICKUP", False)
+                            result = ("MOVE_TO", False)
                     else:
                         result = ("MOVE_TO", False)
                 else:
@@ -395,9 +410,12 @@ class AssemblyClient:
                 if len(objects) > 0:
                     if "object" in action:
                         target_object = action["object"]
-                        target_position = self.get_position(target_object, objects, rles, bboxs, scores)
+                        if i > 0:
+                            image, objects, rles, bboxs, scores = self.get_detections(target_object)
+                        target_position, cloud = self.get_position(target_object, objects, rles, bboxs, scores)
                         if target_position is not None:
-                            success = self.pickup(target_position)
+                            print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
+                            success = self.pickup(target_position, cloud)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
                             result = ("PICKUP", success)
                         else:
@@ -408,9 +426,7 @@ class AssemblyClient:
                 a = action["action"]
                 any_valid_commands = self.ee_move([a])
                 result = (a, any_valid_commands)
-
             results.append(result)
-
         return results
 
     def low_level(self, text):
@@ -461,7 +477,7 @@ class AssemblyClient:
 
         return action
 
-    def pickup(self, target_position):
+    def pickup(self, target_position, cloud):
         open_succes = self.open()
         rospy.loginfo(f"open_succes: {open_succes}")
         if not open_succes:
@@ -473,7 +489,7 @@ class AssemblyClient:
         if not init_grab_move_to_success:
             return init_grab_move_to_success
 
-        grab_success = self.grab(target_position)
+        grab_success = self.grab(target_position, cloud)
 
         return grab_success
 
@@ -659,8 +675,19 @@ class AssemblyClient:
         rospy.loginfo(f"move_to successful : {status}")
         return status
 
-    def grab(self, position):
-        rospy.loginfo(f"grab:{position.header.frame_id} {position.point.x:.3f}, {position.point.y:.3f}, {position.point.z:.3f}")
+    def grab(self, position, cloud, offset=None):
+        
+        rospy.loginfo(f"grab: {position.header.frame_id} {position.point.x:.3f}, {position.point.y:.3f}, {position.point.z:.3f}")
+        grab = MoveITGrabPoseRequest()
+        grab.cloud = cloud
+        if offset is not None:
+            grab.offset = offset
+        
+        resp = self.grab_cloud_srv(grab)
+
+        return resp.result
+    
+        '''
         final_pose = PoseStamped()
         final_pose.header = position.header
         final_pose.pose.position = deepcopy(position.point)
@@ -668,8 +695,8 @@ class AssemblyClient:
         final_pose.pose.orientation.w = 0
         final_pose.pose.position.z -= 0.03725
 
-        min_safe_height = 0.065
-        final_pose.pose.position.z = max(min_safe_height, final_pose.pose.position.z)
+        self.min_safe_height = 0.065
+        final_pose.pose.position.z = max(self.min_safe_height, final_pose.pose.position.z)
 
         open_success = self.open()
         rospy.loginfo(f"open successful : {open_success}")
@@ -686,7 +713,6 @@ class AssemblyClient:
         if not close_success:
             return close_success
         
-
         retreat_pose = PoseStamped()
         retreat_pose.header = position.header
         retreat_pose.pose.position = deepcopy(position.point)
@@ -696,8 +722,9 @@ class AssemblyClient:
         
         retreat_pose_success = self.right_arm_move_to_pose(retreat_pose)
         rospy.loginfo(f"retreat successful : {retreat_pose_success}")
-
+        
         return retreat_pose_success
+        '''
 
     def right_arm_move_to_pose(self, pose):
         self.debug_pose_pub.publish(pose)
@@ -819,12 +846,9 @@ class AssemblyClient:
         else:
             print(print(f"{class_name} no points found"))
 
-        min_x = 1000.0
-        min_y = 1000.0
-        min_z = 1000.0
-        max_x = -1000.0
-        max_y = -1000.0
-        max_z = -1000.0
+        x = 0
+        y = 0
+        z = 0
         points = []
         #transform all the points into the world frame
         # and get the center
@@ -839,20 +863,9 @@ class AssemblyClient:
             ps.point.z = d
             t_p = transform_point(ps, mat44, 'world')
 
-            if t_p.point.x > max_x:
-                max_x = t_p.point.x
-            if t_p.point.x < min_x:
-                min_x = t_p.point.x
-
-            if t_p.point.y > max_y:
-                max_y = t_p.point.y
-            if t_p.point.y < min_y:
-                min_y = t_p.point.y
-
-            if t_p.point.z > max_z:
-                max_z = t_p.point.z
-            if t_p.point.z < min_z:
-                min_z = t_p.point.z
+            x += t_p.point.x
+            y += t_p.point.y
+            z += t_p.point.z
             
             if class_name in self.colors:
                 b = self.colors[class_name][0]
@@ -865,17 +878,19 @@ class AssemblyClient:
 
             points.append([t_p.point.x, t_p.point.y, t_p.point.z, r, g, b])
 
-        self.test_cloud.publish(create_cloud(points, 'world'))
+        num_points = len(points)
+        cloud_msg = create_cloud(points, 'world')
+        self.test_cloud.publish(cloud_msg)
 
         center = PointStamped()
         center.header.frame_id = 'world'
-        center.point.x = (min_x + max_x)/2
-        center.point.y = (min_y + max_y)/2
-        center.point.z = (min_z + max_z)/2
+        center.point.x = x/num_points
+        center.point.y = y/num_points
+        center.point.z = z/num_points
 
-        print(f"center: x:{((min_x + max_x)/2):.2f}, y:{((min_y + max_y)/2):.2f}, z:{((min_z + max_z)/2):.2f}")        
+        print(f"center: x:{center.point.x:.2f}, y:{center.point.y:.2f}, z:{center.point.z:.2f} in {center.header.frame_id}")        
 
-        return center
+        return center, cloud_msg
     
 if __name__ == '__main__':
     llm = AssemblyClient()

@@ -19,53 +19,6 @@ from std_msgs.msg import Header
 import struct
 import json
 
-def reject_outliers(data, m=20):
-    d = np.abs(data[:,0] - np.median(data[:,0]))
-    mdev = np.median(d)
-    s = d / (mdev if mdev else 1.)
-
-    resp = data[s < m]
-
-    return resp
-
-def create_cloud(points, frame):
-    point_list = []
-    for p in points:
-        x = p[0]
-        y = p[1]
-        z = p[2]
-        pt = [x, y, z, 0]
-        r = p[3]
-        g = p[4]
-        b = p[5]
-        a = 255
-        rgb = struct.unpack('I', struct.pack('BBBB', b, g, r, a))[0]
-        pt[3] = rgb
-        point_list.append(pt)
-
-    fields = [
-        PointField('x', 0, PointField.FLOAT32, 1),
-        PointField('y', 4, PointField.FLOAT32, 1),
-        PointField('z', 8, PointField.FLOAT32, 1),
-        PointField('rgb', 16, PointField.UINT32, 1),
-    ]
-
-    header = Header()
-    header.stamp = rospy.Time.now()
-    header.frame_id = frame
-    pc2 = point_cloud2.create_cloud(header, fields, point_list)
-
-    return pc2
-
-def transform_point(ps, mat44, target_frame):
-    xyz = tuple(np.dot(mat44, np.array([ps.point.x, ps.point.y, ps.point.z, 1.0])))[:3]
-    r = PointStamped()
-    r.header.stamp = ps.header.stamp
-    r.header.frame_id = target_frame
-    r.point = Point(*xyz)
-    return r
-
-
 class SamAdaClient:
     def __init__(self):
         rospy.init_node('SamAdaClient')
@@ -146,7 +99,10 @@ class SamAdaClient:
     def SAM(self, request):
         if self.debug: rospy.loginfo('SAM req recv')
         with self.mutex:
-            image = self.rgb_image 
+            if len(request.image.data) < 10:
+                image = self.rgb_image
+            else:
+                image = self.cvbridge.imgmsg_to_cv2(request.image, desired_encoding="bgr8") 
             text = request.text_prompt
 
             print(text)

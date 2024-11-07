@@ -1,0 +1,18 @@
+Start working. 
+For a given statement determine what actions the robot should take.
+If the insturuction references a specific part of an object return a dictionray consisting of a "location" key.
+The value of this key should be a list of colors that match the location.
+
+---
+The instruction is as follows:
+---
+{"instruction": "[INSTRUCTION]"}
+---
+The dictionary that you return should be formatted as python dictionary. Follow these rules:
+1. Never leave ',' at the end of the list.
+2. All keys of the dictionary should be double quoted.
+3. Insert 
+at the beginning and the end of the dictionary to separate it from the rest of your response.
+4. All keys of the dictionary should be double quoted.
+5. Insert
+ at the beginning and the end of the dictionary to separate it from the rest of your response.

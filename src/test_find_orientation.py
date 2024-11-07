@@ -37,7 +37,11 @@ class Test_Find_Orientation:
                     'hand_pointing_forward_cam_up': [0.5, 0.5, 0.5, 0.5],
                     'hand_pointing_forward_cam_right' : [math.sqrt(2)/2, 0, math.sqrt(2)/2, 0]}
 
+<<<<<<< HEAD
         self.marker_pub = rospy.Publisher("obj_marker", Marker, queue_size=10)
+=======
+        self.obj_marker_pub = rospy.Publisher("obj_marker", Marker, queue_size=10)
+>>>>>>> 5d40a60e21463eb8df401d8ad8a2765bf70017a4
         self.obj_marker = Marker()
         self.obj_marker.header.frame_id = 'world'
         self.obj_marker.type = Marker.CUBE
@@ -66,6 +70,13 @@ class Test_Find_Orientation:
             return 'hand_pointing_down_cam_front'
         
 
+<<<<<<< HEAD
+=======
+        # if we wanted something more robust (for different shaped objects) could we throw in an ML model that will determine orientation
+        # Can add in additional language checks for if they want the camera oriented in a specific way?
+        # add a marker box for the point cloud to create a better estimate of width, depth, and height
+
+>>>>>>> 5d40a60e21463eb8df401d8ad8a2765bf70017a4
     def get_width(self, msg):    
         points = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
         
@@ -75,6 +86,10 @@ class Test_Find_Orientation:
         max_y = float('-inf')
         min_z = float('inf')
         max_z = float('-inf')
+<<<<<<< HEAD
+=======
+
+>>>>>>> 5d40a60e21463eb8df401d8ad8a2765bf70017a4
         
         for point in points:
             x = point[0]
@@ -96,6 +111,10 @@ class Test_Find_Orientation:
         width = max_x - min_x
         height = max_y - min_y
         depth = max_z - min_z
+<<<<<<< HEAD
+=======
+        #print(f'Width: {width}\nHeight: {height}\nDepth: {depth}')
+>>>>>>> 5d40a60e21463eb8df401d8ad8a2765bf70017a4
 
         self.obj_marker.pose.position.x = (max_x + min_x) / 2
         self.obj_marker.pose.position.y = (max_y + min_y) / 2
@@ -105,7 +124,11 @@ class Test_Find_Orientation:
         self.obj_marker.scale.y = max_y - min_y
         self.obj_marker.scale.z = max_z - min_z
 
+<<<<<<< HEAD
         self.marker_pub.publish(self.obj_marker)
+=======
+        self.obj_marker_pub.publish(self.obj_marker)
+>>>>>>> 5d40a60e21463eb8df401d8ad8a2765bf70017a4
 
         return width, height, depth
     """        
