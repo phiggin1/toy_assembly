@@ -7,6 +7,7 @@ import numpy as np
 
 def gen_plot(data, labels, title, size):
     print(f"{title}, {labels}, {size}")
+    #figsize is in inches
     plt.figure(figsize=size)
     fig, ax = plt.subplots()
     im = ax.imshow(data, cmap='cool')
@@ -31,7 +32,10 @@ def gen_plot(data, labels, title, size):
     '''
     fig.tight_layout()
     plt.show()
-    plt.savefig(os.path.join("/home/rivr/", f"ffidf_cosine_sim.png"), bbox_inches='tight')
+    fname = "_".join(title.split(' '))
+    path = os.path.join("/home/rivr/", f"{fname}.png")
+    print(f"saving to: {path}")
+    plt.savefig(path, bbox_inches='tight')
  
 
 text_files = [
@@ -56,12 +60,31 @@ tfidf_vectorizer = TfidfVectorizer(input='content', stop_words='english')
 tfidf_vector = tfidf_vectorizer.fit_transform(all_text)
 
 tfidf_df = pd.DataFrame(tfidf_vector.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
-
-print(tfidf_df)
+tfidf_df.to_csv("/home/rivr/text.csv", sep='\t')
 
 # Calculate cosine similarity
 cosine_sim = cosine_similarity(tfidf_df, tfidf_df)
 
 print(cosine_sim)
 
-gen_plot(data=cosine_sim, title="Comparison of Speech Across Conditions", size=(5,5), labels=["VR First","Real Seccond","Real First","VR Second"])
+#size is in inches
+gen_plot(data=cosine_sim, title="Comparison of Speech Across All Interactions", size=(3.5,3.5), labels=["VR First","Real Seccond","Real First","VR Second"])
+
+
+print('===============')
+
+condition_text =  [all_text[0] + all_text[1], all_text[2] + all_text[3]]
+
+tfidf_vectorizer = TfidfVectorizer(input='content', stop_words='english')
+tfidf_vector = tfidf_vectorizer.fit_transform(condition_text)
+
+tfidf_df = pd.DataFrame(tfidf_vector.toarray(), columns=tfidf_vectorizer.get_feature_names_out())
+tfidf_df.to_csv("/home/rivr/condition_text.csv", sep='\t')
+
+# Calculate cosine similarity
+cosine_sim = cosine_similarity(tfidf_df, tfidf_df)
+
+print(cosine_sim)
+
+#size is in inches
+gen_plot(data=cosine_sim, title="Comparison of Speech Across Task Order", size=(3.5,3.5), labels=["VR First","Real First"])

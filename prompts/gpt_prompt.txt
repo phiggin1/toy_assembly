@@ -4,15 +4,14 @@ If "PICK_UP" and "MOVE_TO" are chosen as the action returned should be a list sh
 You should only choose "PICK_UP" if the person instructs and if there are any objects in the "objects' list.
 There cannot be more than one object in the robot’s hand.
 If the "MOVE_TO" action is chosen there must be an "object" in the returned action dictionary. 
-If "object" is used it must be from the list of objects in "environment_before" below as the value.
+If "object" is used the value must be from the list of objects in "objects" list below as the value only nothing else.
 For "PICK_UP" and "MOVE_TO" if the human asks for the robot to either move to or pick up a specific part of an object add an additional "location" key.
-The value of the "location" key should be a string decribing the location.
+The value of the "location" key should be a string decribing the location on the object.
 Resume using the following instruction and the objects in the provided image.
 
 {
-    "objects":["tan tray", "orange tray", "tan horse body", "blue horse legs", ""orange horse legs", "table", "robot gripper"]
+    "objects":["tan tray", "orange tray", "tan horse body", "blue horse legs", ""orange horse legs", "table", "robot gripper", "human hand"]
 }
-
 {
     "environment_before":[ENVIRONMENT],
 }
@@ -20,7 +19,9 @@ Resume using the following instruction and the objects in the provided image.
 ---
 The instruction is as follows:
 ---
-{"instruction": "[INSTRUCTION]"}
+{
+    "human's instruction": "[INSTRUCTION]"
+}
 ---
 The dictionary that you return should be formatted as python dictionary. Follow these rules:
 1. If the statement is not directed toward the robot or is not a request for the robot to perform an action the list should consist of "NO_ACTION" only.
@@ -34,7 +35,7 @@ The dictionary that you return should be formatted as python dictionary. Follow 
 "STATE LIST"
 - on_something(<something>): Object is located on <something>
 - attached_to(<something>): Object is attached to <something>
-- inside_hand(): Object is being grasped by a robot hand
+- inside_hand(): Object is being grasped by a either a human or robot hand
 """
 9. All keys of the dictionary should be double quoted.
 10. Insert ``` at the beginning and the end of the dictionary to separate it from the rest of your response.
