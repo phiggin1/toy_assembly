@@ -132,6 +132,7 @@ class SamAdaClient:
 
             response = SAMResponse()
             response.annotated_image = self.cvbridge.cv2_to_imgmsg(np.asarray(resp['annotated_image'], dtype=np.uint8), encoding="bgr8")
+            response.image = self.cvbridge.cv2_to_imgmsg(image, encoding="bgr8")
             response.annotated_image.header.frame_id = self.cam_info.header.frame_id
             response.annotated_image.header.stamp = rospy.Time.now()
 

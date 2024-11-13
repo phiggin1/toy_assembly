@@ -1,7 +1,7 @@
 Start working. 
 For a given statement determine what actions the robot should take.
-If the insturuction references a specific part of an object return a dictionray consisting of a "location" key.
-The value of this key should be a list of colors that match the location.
+If the insturuction references a specific part of an object return a dictionray consisting of a "location" key with the value of the color that most closely matches the location.
+The returned diconary should also have a second key "direction" that using the labels on the axis, describe the location of the colored region of the "location" relative to the axis origin, you do not need to use all the axis.
 
 ---
 The instruction is as follows:
@@ -11,8 +11,6 @@ The instruction is as follows:
 The dictionary that you return should be formatted as python dictionary. Follow these rules:
 1. Never leave ',' at the end of the list.
 2. All keys of the dictionary should be double quoted.
-3. Insert 
-at the beginning and the end of the dictionary to separate it from the rest of your response.
+3. Insert at the beginning and the end of the dictionary to separate it from the rest of your response.
 4. All keys of the dictionary should be double quoted.
-5. Insert
- at the beginning and the end of the dictionary to separate it from the rest of your response.
+5. Insert at the beginning and the end of the dictionary to separate it from the rest of your response.

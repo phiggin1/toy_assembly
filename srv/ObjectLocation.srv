@@ -1,0 +1,7 @@
+sensor_msgs/Image rgb_image
+sensor_msgs/Image depth_image
+sensor_msgs/CameraInfo cam_info
+toy_assembly/Detection object
+string transcription
+---
+string[] directions

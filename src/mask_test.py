@@ -7,6 +7,8 @@ import cv2
 import json
 import numpy as np
 import rospy
+from copy import deepcopy
+from openai import OpenAI
 import message_filters
 from cv_bridge import CvBridge
 from multiprocessing import Lock
@@ -47,6 +49,20 @@ class AssemblyClient:
         self.debug = rospy.get_param("~debug", True)
         self.sim_time = rospy.get_param("/use_sim_time")#, False)
 
+
+
+        key_filename = rospy.get_param("~key_file", "/home/phiggin1/ai.key")
+        with open(key_filename, "rb") as key_file:
+            key = key_file.read().decode("utf-8")
+            
+        self.client = OpenAI(
+            api_key = key,
+        )
+
+        fp_actions = "/home/rivr/toy_ws/src/toy_assembly/prompts/actions.txt"
+        with open(fp_actions) as f:
+            self.actions = f.read()
+
         rospy.loginfo(f"sim time active: {self.sim_time}")
         if not self.sim_time:
             self.cam_link_name = f"left_camera_color_frame"
@@ -84,14 +100,13 @@ class AssemblyClient:
         while not self.have_images:
             rate.sleep()
 
-        font = cv2.FONT_HERSHEY_SIMPLEX
-        font_scale = 0.75
-        font_color = (255, 255, 255)
-        font_thickness = 1
-        line_thickness = 1
+        self.font = cv2.FONT_HERSHEY_SIMPLEX
+        self.font_scale = 0.75
+        self.font_color = (255, 255, 255)
+        self.font_thickness = 1
+        self.line_thickness = 1
+        self.alpha = 1.0
 
-        translation,rotation = self.listener.lookupTransform(self.cam_info.header.frame_id, 'world', rospy.Time(0))
-        mat44 = self.listener.fromTranslationRotation(translation, rotation)
         #image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper.")
         #image, objects, rles, bboxs, scores = self.get_detections("blue legs.")
         image, objects, rles, bboxs, scores = self.get_detections("horse head.")
@@ -142,11 +157,9 @@ class AssemblyClient:
                     cnt += 1
 
             rect_img = cv2.bitwise_and(rect_img, rect_img, mask=mask)
-            alpha = 1.0
-            beta = 1.0-alpha
-            masked_color = cv2.addWeighted(masked_color, beta, rect_img, alpha, 0.0)
+            beta = 1.0-self.alpha
+            masked_color = cv2.addWeighted(masked_color, beta, rect_img, self.alpha, 0.0)
 
-            
             im_gray = cv2.cvtColor(masked_color, cv2.COLOR_BGR2GRAY)
             x,y,w,h = cv2.boundingRect(im_gray)
             x_max = x + w
@@ -160,16 +173,7 @@ class AssemblyClient:
                 contours, hierarchy = cv2.findContours(imgray, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
                 cv2.drawContours(masked_color, contours, -1, (0,255,0), 3)
                 print(len(contours))
-            # Display the image in a window named 'Image'
-            cv2.imshow(o, masked_color)
-            # Wait for a key press indefinitely or for a specified amount of time in milliseconds
-            cv2.waitKey(0)
-            # Close all OpenCV windows
-            cv2.destroyAllWindows()
-            
-            filename = "/home/rivr/masked_seg_axis.png"
-            cv2.imwrite(filename, masked_color)
-            '''
+                
             #length of the axis lines to draw
             offset = 0.15
 
@@ -187,32 +191,45 @@ class AssemblyClient:
             below.point.z -= offset
         
             lines = [
-                [front, back,  "front", "back",  (255,0,0)],
-                [right, left,  "right", "left",  (0,255,0)],
-                [above, below, "above", "below", (0,0,255)],
+                [front, back,  "Front", "Back",  (255, 0,   0  )],
+                [right, left,  "Right", "left",  (0,   255, 0  )],
+                [above, below, "Above", "Below", (0,   0,   255)],
             ]
+
+            translation,rotation = self.listener.lookupTransform(self.cam_info.header.frame_id, 'world', rospy.Time(0))
+            mat44 = self.listener.fromTranslationRotation(translation, rotation)
+
             #draw the x,y,z axis lines
             for line in lines:
                 a_u,a_v = self.project_to_pixel(line[0], mat44, self.cam_info.header.frame_id)
                 b_u,b_v = self.project_to_pixel(line[1], mat44, self.cam_info.header.frame_id)
-                cv2.line(masked_color, (a_u, a_v), (b_u, b_v), line[4], line_thickness) 
+                cv2.line(masked_color, (a_u, a_v), (b_u, b_v), line[4], self.line_thickness) 
 
             #Add in the text labels for each axis
             for line in lines:
                 a_u,a_v = self.project_to_pixel(line[0], mat44, self.cam_info.header.frame_id)
-                size, baseline = cv2.getTextSize(line[2], font, font_scale, font_thickness)
+                size, baseline = cv2.getTextSize(line[2], self.font, self.font_scale, self.font_thickness)
                 a_u = max(min(a_u, masked_color.shape[1]-size[0]), 0)
                 a_v = max(min(a_v, masked_color.shape[0]-size[1]), 0)
-                cv2.putText(masked_color, line[2], (a_u, a_v), font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+                cv2.putText(masked_color, line[2], (a_u, a_v), self.font, self.font_scale, self.font_color, self.font_thickness, cv2.LINE_AA)
 
                 b_u,b_v = self.project_to_pixel(line[1], mat44, self.cam_info.header.frame_id)
-                size, baseline = cv2.getTextSize(line[3], font, font_scale, font_thickness)
+                size, baseline = cv2.getTextSize(line[3], self.font, self.font_scale, self.font_thickness)
                 b_u = max(min(b_u, masked_color.shape[1]-size[0]), 0)
                 b_v = max(min(b_v, masked_color.shape[0]-size[1]), 0)
-                cv2.putText(masked_color, line[3], (b_u, b_v), font, font_scale, font_color, font_thickness, cv2.LINE_AA)
+                cv2.putText(masked_color, line[3], (b_u, b_v), self.font, self.font_scale, self.font_color, self.font_thickness, cv2.LINE_AA)
+            
             '''
-
-
+            # Display the image in a window named 'Image'
+            cv2.imshow(o, masked_color)
+            # Wait for a key press indefinitely or for a specified amount of time in milliseconds
+            cv2.waitKey(0)
+            # Close all OpenCV windows
+            cv2.destroyAllWindows()
+            '''
+            
+            filename = "/home/rivr/masked_seg_axis.png"
+            #cv2.imwrite(filename, masked_color)
         return
 
     def project_to_pixel(self, pt, mat44, target_frame):
