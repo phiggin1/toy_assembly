@@ -62,7 +62,5 @@
     <arg name="min_cluster_size"   value="$(arg min_cluster_size)"/>
     <arg name="max_cluster_size"   value="$(arg max_cluster_size)"/>
   </include>
-
-
-
+  
 </launch>

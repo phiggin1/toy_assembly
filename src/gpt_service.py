@@ -118,9 +118,9 @@ class LLMClient:
         is_success, buffer = cv2.imencode(".jpeg", cv_img)
         encoded_image = base64.b64encode(buffer).decode("utf-8") 
 
-        fname = "/home/rivr/encoded_image.jpeg"
+        '''fname = "/home/rivr/encoded_image.jpeg"
         with open(fname, 'wb') as f:
-            f.write(buffer)
+            f.write(buffer)'''
 
         instruction = deepcopy(self.prompt)
         if instruction.find('[INSTRUCTION]') != -1:
