@@ -386,8 +386,6 @@ class AssemblyClient:
                         resp = self.get_position(target_object, objects, rles, bboxs, scores)
                         if resp is not None:
                             target_position = resp[0]
-                            cloud = resp[1]
-
                             print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
                             success = self.move_to(target_position)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
@@ -408,11 +406,9 @@ class AssemblyClient:
                         if resp is not None:
                             target_position = resp[0]
                             cloud = resp[1]
-
                             offset = None
                             if "location" in action:
                                 offset = self.get_location_offset(target_object, objects, rles, bboxs, scores, text)
-
                             print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
                             success = self.pickup(target_position, cloud, offset)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
@@ -676,7 +672,6 @@ class AssemblyClient:
         return status
 
     def grab(self, position, cloud, offset=None):
-        
         rospy.loginfo(f"grab: {position.header.frame_id} {position.point.x:.3f}, {position.point.y:.3f}, {position.point.z:.3f}")
         grab = MoveITGrabPoseRequest()
         grab.cloud = cloud
