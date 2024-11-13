@@ -37,7 +37,7 @@ class Test_Find_Orientation:
                     'hand_pointing_forward_cam_up': [0.5, 0.5, 0.5, 0.5],
                     'hand_pointing_forward_cam_right' : [math.sqrt(2)/2, 0, math.sqrt(2)/2, 0]}
 
-        self.marker_pub = rospy.Publisher("obj_marker", Marker, queue_size=10)
+        self.obj_marker_pub = rospy.Publisher("obj_marker", Marker, queue_size=10)
         self.obj_marker = Marker()
         self.obj_marker.header.frame_id = 'world'
         self.obj_marker.type = Marker.CUBE
@@ -111,7 +111,7 @@ class Test_Find_Orientation:
         self.obj_marker.scale.y = max_y - min_y
         self.obj_marker.scale.z = max_z - min_z
 
-        self.marker_pub.publish(self.obj_marker)
+        self.obj_marker_pub.publish(self.obj_marker)
 
         return width, height, depth
     """        
