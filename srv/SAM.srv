@@ -1,5 +1,6 @@
 sensor_msgs/Image image
 string text_prompt
 ---
+sensor_msgs/Image image
 sensor_msgs/Image annotated_image
 toy_assembly/Detection[] object

@@ -21,6 +21,7 @@ from toy_assembly.msg import Transcription, ObjectImage
 from toy_assembly.srv import LLMImage, LLMImageRequest
 from toy_assembly.srv import LLMText, LLMTextRequest
 from toy_assembly.srv import SAM, SAMRequest, SAMResponse
+from toy_assembly.srv import ObjectLocation, ObjectLocationRequest, ObjectLocationResponse
 from toy_assembly.srv import MoveITGrabPose, MoveITGrabPoseRequest, MoveITGrabPoseResponse
 from toy_assembly.srv import MoveITPose
 from std_msgs.msg import String
@@ -156,6 +157,11 @@ class AssemblyClient:
         rospy.wait_for_service(gpt_state_service_name)
         self.llm_state_srv = rospy.ServiceProxy(gpt_state_service_name, LLMImage)
 
+
+        gpt_part_location_service_name = "/gpt_part_location"
+        rospy.wait_for_service(gpt_part_location_service_name)
+        self.part_location = rospy.ServiceProxy(gpt_part_location_service_name, ObjectLocation)
+
         self.twist_topic  = "/my_gen3_right/workspace/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
         self.robot_speech_pub = rospy.Publisher('/text_to_speech', String, queue_size=10)
@@ -225,29 +231,11 @@ class AssemblyClient:
             self.text_cb(transcription)
             '''
 
-            '''
-            image, objects, rles, bboxs, scores = self.get_detections(text)
-            print(objects)
-            cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-            merge_test = "_".join(text.split(" "))
-            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
-            cv2.imwrite(fname, cv_img)
-            '''
-
-            '''
-            #text = "pick up the body and bring it to the blue legs, then rotate it 90 degrees and let go"
-            #text = "pick up the body"
-            #text = "pick up the body by the head and move it over the blue legs"
-            #text = "turn 90 degrees"
-            '''
-
-            
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
             self.text_cb(transcription)
             
-
 
     def shutdown_hook(self):
         if len(self.dataframe_csv) > 0:
@@ -392,10 +380,14 @@ class AssemblyClient:
                 if len(objects) > 0:
                     if "object" in action:
                         target_object = action["object"]
+                        #get updated position if this is not the first action
                         if i > 0:
                             image, objects, rles, bboxs, scores = self.get_detections(target_object)
-                        target_position, cloud = self.get_position(target_object, objects, rles, bboxs, scores)
-                        if target_position is not None:
+                        resp = self.get_position(target_object, objects, rles, bboxs, scores)
+                        if resp is not None:
+                            target_position = resp[0]
+                            cloud = resp[1]
+
                             print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
                             success = self.move_to(target_position)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
@@ -412,10 +404,17 @@ class AssemblyClient:
                         target_object = action["object"]
                         if i > 0:
                             image, objects, rles, bboxs, scores = self.get_detections(target_object)
-                        target_position, cloud = self.get_position(target_object, objects, rles, bboxs, scores)
-                        if target_position is not None:
+                        resp = self.get_position(target_object, objects, rles, bboxs, scores)
+                        if resp is not None:
+                            target_position = resp[0]
+                            cloud = resp[1]
+
+                            offset = None
+                            if "location" in action:
+                                offset = self.get_location_offset(target_object, objects, rles, bboxs, scores, text)
+
                             print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
-                            success = self.pickup(target_position, cloud)
+                            success = self.pickup(target_position, cloud, offset)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
                             result = ("PICKUP", success)
                         else:
@@ -453,6 +452,7 @@ class AssemblyClient:
         if "PICKUP" in action or  "PICK_UP" in action or"OTHER" in action or  "MOVE_TO" in action:
             any_valid_commands = True
             results = self.high_level(text)
+        #check for contradictory commands
         elif ("MOVE_UP" in action and "MOVE_DOWN" in action ) or ("MOVE_LEFT" in action and "MOVE_RIGHT" in action) or ("MOVE_FORWARD" in action and "MOVE_BACKWARD" in action) or ("PITCH_UP" in action and "PITCH_DOWN" in action ) or ("ROTATE_LEFT" in action and "ROTATE_RIGHT" in action):
             any_valid_commands = True
             results = self.high_level(text)
@@ -477,7 +477,7 @@ class AssemblyClient:
 
         return action
 
-    def pickup(self, target_position, cloud):
+    def pickup(self, target_position, cloud, offset):
         open_succes = self.open()
         rospy.loginfo(f"open_succes: {open_succes}")
         if not open_succes:
@@ -489,7 +489,7 @@ class AssemblyClient:
         if not init_grab_move_to_success:
             return init_grab_move_to_success
 
-        grab_success = self.grab(target_position, cloud)
+        grab_success = self.grab(target_position, cloud, offset)
 
         return grab_success
 
@@ -725,7 +725,6 @@ class AssemblyClient:
         
         return retreat_pose_success
         '''
-
     def right_arm_move_to_pose(self, pose):
         self.debug_pose_pub.publish(pose)
         rospy.loginfo(f"right_arm_move_to_pose: {pose.header.frame_id} {pose.pose.position.x:.3f}, {pose.pose.position.y:.3f}, {pose.pose.position.z:.3f}")
@@ -765,7 +764,7 @@ class AssemblyClient:
         resp = self.sam_srv(req)
 
         annotated_img = resp.annotated_image
-        
+        raw_img = resp.image
         objects = []
         rles = []
         bboxes = []
@@ -892,5 +891,41 @@ class AssemblyClient:
 
         return center, cloud_msg
     
+    def get_location_offset(self, target_object, objects, rles, bboxs, scores, text):
+        print(f"target_object: {target_object}")
+        print(f"objects: {objects}")
+        target_bbox = None
+        target_rle = None
+        max_score = -100
+        class_name = None
+        for i in range(len(objects)):
+            if target_object in objects[i]:
+                class_name = objects[i]
+                if scores[i]>max_score:
+                    target_bbox = bboxs[i]
+                    target_rle = json.loads(rles[i])
+        if target_rle is None:
+            return None
+        
+        req = ObjectLocationRequest()
+        req.rgb_image = self.cvbridge.cv2_to_imgmsg(self.rgb_image)
+        req.depth_image = self.cvbridge.cv2_to_imgmsg(self.depth_image)
+        req.cam_info = self.cam_info
+        req.object.class_name=target_object
+        req.object.rle_encoded_mask= json.dumps(target_rle)
+        req.object.u_min=target_bbox[0]
+        req.object.v_min=target_bbox[1]
+        req.object.u_max=target_bbox[2]
+        req.object.v_max=target_bbox[3]
+        req.transcription = text
+
+        resp = self.part_location(req)
+
+        print(f"main offset resp:\n{resp}\n-----")
+
+        return resp
+
+
+
 if __name__ == '__main__':
     llm = AssemblyClient()
