@@ -611,11 +611,11 @@ class Right_arm:
         if ratio > threshold:
             object_orientation = 'orthogonal'
             self.change_orientation('hand_pointing_down_cam_right')
-            return 'hand_pointing_down_cam_right'
+            return self.change_orientation('hand_pointing_down_cam_right')
         else:
             object_orientation = 'parallel'
             self.change_orientation('hand_pointing_down_cam_front')
-            return 'hand_pointing_down_cam_front'
+            return self.change_orientation('hand_pointing_down_cam_front')
         
 
     def get_width(self, msg):    
