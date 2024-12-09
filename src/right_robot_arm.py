@@ -8,6 +8,7 @@ import cv2
 from cv_bridge import CvBridge
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
+from geometry_msgs.msg import Quaternion
 from visualization_msgs.msg import Marker, MarkerArray
 
 from image_geometry import PinholeCameraModel
@@ -16,7 +17,6 @@ from toy_assembly.srv import SAM
 from toy_assembly.srv import CLIP
 from toy_assembly.srv import MoveITGrabPose, MoveITPose, MoveITPoseResponse
 from toy_assembly.srv import OrientCamera
-
 from std_srvs.srv import Trigger 
 
 import moveit_commander
@@ -305,18 +305,26 @@ class Right_arm:
         return resp
 
     def get_object(self, request):
-        object_pose = self.transform_obj_pos(request.pose)        
+        status = False
+        #object_pose = self.transform_obj_pos(request.pose)        
+        position, orientation, height = self.find_orientation(request)
+        print(f"obj height: {height}m")
+        #if the height of the object is under 2.5cm
+        # the object is lying flat on the table/tray
+        # or being held in a way to make grabbing 'impossible'
+        if height < 0.025:
+            return status
         #print(object_pose)
         pose_goal = Pose()
-        #print('timeout1')
-        pose_goal.position = object_pose.pose.position
-        quat = quaternion_from_euler(math.pi, 0.0, 0.0)
-        #print(quat)
-        pose_goal.orientation.x = quat[0]
-        pose_goal.orientation.y = quat[1]
-        pose_goal.orientation.z = quat[2]
-        pose_goal.orientation.w = quat[3]
-        #print(pose_goal.orientation)
+        pose_goal.position.x = position.x
+        pose_goal.position.y = position.y
+        pose_goal.position.z = position.z + 0.1
+        pose_goal.orientation.x = orientation.x
+        pose_goal.orientation.y = orientation.y
+        pose_goal.orientation.z = orientation.z
+        pose_goal.orientation.w = orientation.w
+
+        print(f"stand off: {pose_goal}")
 
         #print('timeout 2')
         self.arm_move_group.set_pose_target(pose_goal)
@@ -326,33 +334,35 @@ class Right_arm:
         self.arm_move_group.go(pose_goal, wait=True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
-
+        
         #print(object_pose)
         pose_goal2 = Pose()
+        pose_goal2.position.x = position.x
+        pose_goal2.position.y = position.y
+        pose_goal2.position.z = position.z
+        pose_goal2.orientation.x = orientation.x
+        pose_goal2.orientation.y = orientation.y
+        pose_goal2.orientation.z = orientation.z
+        pose_goal2.orientation.w = orientation.w
         #print('timeout1')
-        pose_goal2.position = object_pose.pose.position
-        quat = quaternion_from_euler(math.pi, 0.0, 0.0)
-        #print(quat)
-        pose_goal2.orientation.x = quat[0]
-        pose_goal2.orientation.y = quat[1]
-        pose_goal2.orientation.z = quat[2]
-        pose_goal2.orientation.w = quat[3]
-        #print(pose_goal2.orientation)
+
+        print(f"end pose: {pose_goal2}")
+
         
-        status = False
         status = self.arm_move_group.go(pose_goal2, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
+        
 
         """
         publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
         """
 
         # close fingers
-        self.close_gipper()
+        self.close_gipper(Trigger())
 
         self.arm_move_group.set_max_velocity_scaling_factor(0.750)
-        self.arm_move_group.go(self.start_pose, wait=True) 
+        self.arm_move_group.go(pose_goal, wait=True) 
         self.arm_move_group.stop()
 
         self.grabbed_object = status
@@ -448,36 +458,19 @@ class Right_arm:
             return False    
 
     def change_orientation(self, request):
-        print("change_orientation")
+        print(f"change_orientation to {request}")
         pose_goal = Pose()    
         pose_goal.position = self.arm_move_group.get_current_pose()
         orientationList = []
 
         # take request string and get corresponding orientation values
-        if request.text in self.gripper_orientation.keys():
-            orientationList = self.gripper_orientation.get(request.text)
+        if request in self.gripper_orientation.keys():
+            orientationList = self.gripper_orientation.get(request)
         else:
             print('Invalid orientation request')
             orientationList = self.arm_move_group.get_current_pose().orientation
 
-        # set pose goal position to current position
-        current_pose = self.arm_move_group.get_current_pose().pose
-        pose_goal = current_pose
-                 
-        # set pose goal orientation to selected orientation
-        pose_goal.orientation.x = orientationList[0]
-        pose_goal.orientation.y = orientationList[1]
-        pose_goal.orientation.z = orientationList[2]
-        pose_goal.orientation.w = orientationList[3]
-            
-        self.arm_move_group.set_pose_target(pose_goal)
-
-        # move the arm according to the orientation goal and 
-        status = False
-        status = self.arm_move_group.go(pose_goal, wait = True)
-        self.arm_move_group.stop()
-        self.arm_move_group.clear_pose_targets()
-        return status
+        return orientationList
 
     def get_marker(self, arm):
         points = []
@@ -605,21 +598,31 @@ class Right_arm:
     
     def find_orientation(self, msg):
         threshold = 0.6   #change val
-        width, height, depth = self.get_width(msg)
-        ratio = depth/width
+        position, width, height, depth = self.get_width(msg)
+        ratio = width/depth
+        print(f"ratio: {ratio}")
 
         if ratio > threshold:
             object_orientation = 'orthogonal'
-            self.change_orientation('hand_pointing_down_cam_right')
-            return self.change_orientation('hand_pointing_down_cam_right')
+            orientationList = self.change_orientation('hand_pointing_down_cam_right')
+            orientation = Quaternion()
+            orientation.x = orientationList[0]
+            orientation.y = orientationList[1]
+            orientation.z = orientationList[2]
+            orientation.w = orientationList[3]
+            return position, orientation, height#self.change_orientation('hand_pointing_down_cam_right')
         else:
             object_orientation = 'parallel'
-            self.change_orientation('hand_pointing_down_cam_front')
-            return self.change_orientation('hand_pointing_down_cam_front')
+            orientationList = self.change_orientation('hand_pointing_down_cam_front')
+            orientation = Quaternion()
+            orientation.x = orientationList[0]
+            orientation.y = orientationList[1]
+            orientation.z = orientationList[2]
+            orientation.w = orientationList[3]
+            return position, orientation, height#self.change_orientation('hand_pointing_down_cam_front')
         
-
-    def get_width(self, msg):    
-        points = pc2.read_points(msg, field_names=("x", "y", "z"), skip_nans=True)
+    def get_width(self, msg):  
+        #points = pc2.read_points(msg.cloud, field_names=("x", "y", "z"), skip_nans=True)
         
         min_x = float('inf')
         max_x = float('-inf')
@@ -628,7 +631,7 @@ class Right_arm:
         min_z = float('inf')
         max_z = float('-inf')
         
-        for point in points:
+        for point in pc2.read_points(msg.cloud, field_names=("x", "y", "z"), skip_nans=True):
             x = point[0]
             y = point[1]
             z = point[2] 
@@ -645,21 +648,21 @@ class Right_arm:
             if z > max_z:
                 max_z = z
         
-        width = max_x - min_x
-        height = max_y - min_y
-        depth = max_z - min_z
+        depth = max_x - min_x
+        width = max_y - min_y
+        height = max_z - min_z
 
         self.obj_marker.pose.position.x = (max_x + min_x) / 2
         self.obj_marker.pose.position.y = (max_y + min_y) / 2
-        self.obj_marker.pose.position.z = (max_z + min_z) /2
+        self.obj_marker.pose.position.z = (max_z + min_z) / 2
 
-        self.obj_marker.scale.x = max_x - min_x
-        self.obj_marker.scale.y = max_y - min_y
-        self.obj_marker.scale.z = max_z - min_z
+        self.obj_marker.scale.x = depth
+        self.obj_marker.scale.y = width
+        self.obj_marker.scale.z = height
 
         self.obj_marker_pub.publish(self.obj_marker)
 
-        return width, height, depth
+        return self.obj_marker.pose.position, width, height, depth
 
 if __name__ == '__main__':
     right_robot = Right_arm()

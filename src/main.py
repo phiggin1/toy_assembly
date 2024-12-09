@@ -230,10 +230,10 @@ class AssemblyClient:
             transcription = rospy.wait_for_message("/transcript", Transcription)
             self.text_cb(transcription)
             '''
-
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
+            
             self.text_cb(transcription)
             
 
@@ -255,8 +255,8 @@ class AssemblyClient:
 
         transcript =  transcript.transcription
 
-        results = self.high_level(transcript)
-        #results = self.low_level(transcript)
+        #results = self.high_level(transcript)
+        results = self.low_level(transcript)
         
         print(results)
         self.prev = (transcript, results[0] if results is not None else None)
@@ -720,6 +720,7 @@ class AssemblyClient:
         
         return retreat_pose_success
         '''
+
     def right_arm_move_to_pose(self, pose):
         self.debug_pose_pub.publish(pose)
         rospy.loginfo(f"right_arm_move_to_pose: {pose.header.frame_id} {pose.pose.position.x:.3f}, {pose.pose.position.y:.3f}, {pose.pose.position.z:.3f}")
