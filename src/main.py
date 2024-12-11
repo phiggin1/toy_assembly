@@ -233,15 +233,15 @@ class AssemblyClient:
 
         rospy.on_shutdown(self.shutdown_hook)
         while not rospy.is_shutdown():
-            '''
+            
             transcription = rospy.wait_for_message("/transcript", Transcription)
             self.text_cb(transcription)
             '''
             text = input("command: ")
             transcription = Transcription()
             transcription.transcription = text
-            
             self.text_cb(transcription)
+            '''
             
 
     def shutdown_hook(self):
@@ -265,11 +265,10 @@ class AssemblyClient:
         #results = self.high_level(transcript)
         results = self.low_level(transcript)
         
-        print(results)
         self.prev = (transcript, results[0] if results is not None else None)
         self.df["results"] = [results]
 
-        print(f"results: {results}")
+        rospy.loginfo(f"results: {results}")
         #print(f"env: {self.env}")
 
         '''
@@ -278,7 +277,6 @@ class AssemblyClient:
             self.env = self.check_env(results[0], results[1], self.env)
         '''
 
-        rospy.loginfo(results)
         rospy.loginfo("WAITING")
         self.status_pub.publish("WAITING")
         if self.debug: rospy.loginfo("--------------------------------------------------------") 
@@ -360,16 +358,7 @@ class AssemblyClient:
             req.image = image
 
             resp = self.llm_image_srv(req)
-            '''
-            cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-            merge_test = "_".join(text.split(" "))
-            print(f"Saving: {image.header.stamp}{merge_test}")
-            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}_annotated.png"
-            cv2.imwrite(fname, cv_img)
-            merge_test = "_".join(text.split(" "))
-            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
-            cv2.imwrite(fname, self.rgb_image)
-            '''
+
         fname = self.log_images(text, image.header.stamp, image, self.rgb_image)
         self.df["image_path"] = [fname]
         self.df["objects"] = [objects]
@@ -479,8 +468,11 @@ class AssemblyClient:
             any_valid_commands = True
             results = self.high_level(text)
         else:   
+            rospy.loginfo(f"calling ee_move with actions: {action}")
             any_valid_commands = self.ee_move(action)
             results = (action, any_valid_commands)
+
+        print(f"any_valid_commands:{any_valid_commands}")
 
         if not any_valid_commands:
             results = self.high_level(text)
@@ -527,6 +519,8 @@ class AssemblyClient:
         pitch = 0.0
 
         rospy.loginfo(f"ee move: {actions}")
+        if type(actions) is not list: 
+            actions = [actions]
 
         for action in actions:
             #check for valid actions
@@ -602,6 +596,8 @@ class AssemblyClient:
                 if "CLOSE_HAND" in action:
                     any_valid_commands = True
                     if move:
+                        rospy.loginfo(f" CLOSE_HAND sending command: {x}, {y}, {z}, {roll}, {pitch}, {yaw}")
+
                         self.send_command(x,y,z, roll, pitch, yaw)
                         move = False
                         x = 0.0
@@ -614,6 +610,7 @@ class AssemblyClient:
                 elif "OPEN_HAND" in action:
                     any_valid_commands = True
                     if move:
+                        rospy.loginfo(f" OPEN_HAND sending command: {x}, {y}, {z}, {roll}, {pitch}, {yaw}")
                         self.send_command(x,y,z, roll, pitch, yaw)
                         move = False
                         x = 0.0
@@ -624,8 +621,10 @@ class AssemblyClient:
                         pitch = 0.0
                     self.open()  
         if move:
+            rospy.loginfo(f"sending command: {x}, {y}, {z}, {roll}, {pitch}, {yaw}")
             self.send_command(x,y,z, roll, pitch, yaw)
             move = False
+            any_valid_commands = True
 
         return any_valid_commands 
 
@@ -643,7 +642,7 @@ class AssemblyClient:
         angular_cmd.twist.angular.y = yaw
         angular_cmd.twist.angular.z = roll
 
-        rospy.loginfo(f"\ntranslate x: {x}, y: {y}, z:{z} \nrotate: roll: {roll}, pitch: {pitch}, yaw: {yaw}")
+        rospy.loginfo(f"send_command translate x: {x}, y: {y}, z:{z} rotate: roll: {roll}, pitch: {pitch}, yaw: {yaw}")
 
         #splitting up rotation from translation for now
         # try and add in transform from ee frame to base
@@ -657,8 +656,8 @@ class AssemblyClient:
                 linear_cmd.header.stamp = rospy.Time.now()
                 self.cart_vel_pub.publish(linear_cmd)
                 self.rate.sleep()
-
-        self.send_zero_twist_cmd()
+                #rospy.loginfo(f"translate {i}")
+            self.send_zero_twist_cmd()
 
         if (roll != 0.0 or pitch != 0.0 or yaw != 0.0):
             rospy.loginfo(f"rotate")
@@ -666,8 +665,8 @@ class AssemblyClient:
                 angular_cmd.header.stamp = rospy.Time.now()
                 self.cart_vel_pub.publish(angular_cmd)
                 self.rate.sleep()
-
-        self.send_zero_twist_cmd()
+                #rospy.loginfo(f"rotate {i}")
+            self.send_zero_twist_cmd()
 
     def send_zero_twist_cmd(self):
         zero_cmd = TwistStamped()
@@ -904,16 +903,18 @@ class AssemblyClient:
         num_points = len(points)
         cloud_msg = create_cloud(points, 'world')
         self.test_cloud.publish(cloud_msg)
+        if num_points > 0:
+            center = PointStamped()
+            center.header.frame_id = 'world'
+            center.point.x = x/num_points
+            center.point.y = y/num_points
+            center.point.z = z/num_points
 
-        center = PointStamped()
-        center.header.frame_id = 'world'
-        center.point.x = x/num_points
-        center.point.y = y/num_points
-        center.point.z = z/num_points
+            print(f"center: x:{center.point.x:.2f}, y:{center.point.y:.2f}, z:{center.point.z:.2f} in {center.header.frame_id}")        
 
-        print(f"center: x:{center.point.x:.2f}, y:{center.point.y:.2f}, z:{center.point.z:.2f} in {center.header.frame_id}")        
-
-        return center, cloud_msg
+            return center, cloud_msg
+        else:
+            return None
     
     def get_location_offset(self, target_object, objects, rles, bboxs, scores, text):
         print(f"target_object: {target_object}")

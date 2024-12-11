@@ -174,7 +174,7 @@ class Right_arm:
             l_z = 0.3*l_z
             l_x = 0.3*l_x
             l_y = 0.3*l_y
-            rospy.loginfo(f"nearing table slowing down low, {l_z}, {ee_position.z}")
+            rospy.loginfo(f"nearing table slowing down, {l_z}, {ee_position.z}")
         elif ee_position.z < 0.3 and l_z < 0:
             l_z = 0.6*l_z
             l_x = 0.6*l_x
@@ -285,10 +285,13 @@ class Right_arm:
         print(pose_goal)
 
         status = False
+        self.arm_move_group.set_max_velocity_scaling_factor(0.750)
         self.arm_move_group.set_pose_target(pose_goal)
         status = self.arm_move_group.go(pose_goal, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
+
+        status = True
 
         resp = MoveITPoseResponse()
         resp.result = status
@@ -364,13 +367,17 @@ class Right_arm:
         self.arm_move_group.set_pose_target(pose_goal)
 
         #print('timeout3')
+        self.arm_move_group.set_max_velocity_scaling_factor(0.750)
         success = self.arm_move_group.go(pose_goal, wait=True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
+        
+        '''
         print(self.arm_move_group.get_current_pose().pose)
         if not success:
             return success
-        
+        '''
+
         #print(object_pose)
         pose_goal2 = Pose()
         pose_goal2.position.x = object_pose.pose.position.x + offset_x
@@ -387,11 +394,15 @@ class Right_arm:
 
         print(f"end pose: {pose_goal2}")
 
+        self.arm_move_group.set_max_velocity_scaling_factor(0.750)
         success = self.arm_move_group.go(pose_goal2, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
+        
+        '''
         if not success:
             return success
+        '''
 
         """
         publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
@@ -423,6 +434,17 @@ class Right_arm:
         self.gripper_move_group.set_max_velocity_scaling_factor(0.1)
         status = self.gripper_move_group.go(self.hand_closed, wait=True) 
         self.gripper_move_group.stop()
+
+        '''
+        theta  = np.linspace(self.finger_open, self.finger_closed, 10)
+        close_rate = rospy.Rate(20)
+        for val in theta:
+            state = [val,val,val,val,val, val]
+            status =self.gripper_move_group.go(state, wait=True)  
+            self.gripper_move_group.stop()
+            close_rate.sleep()
+        '''
+
         self.gripper_move_group.set_max_velocity_scaling_factor(1.0)
 
         resp = Trigger._response_class()

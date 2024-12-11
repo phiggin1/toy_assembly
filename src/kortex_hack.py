@@ -16,7 +16,7 @@ class KortexHack:
         self.arm = rospy.get_param("~prefix", default="right")
         rospy.loginfo(self.arm)
 
-        self.servo_sub = rospy.Subscriber('/my_gen3_'+self.arm+'/servo/delta_twist_cmds', TwistStamped, self.delta_twist_cmds__to_cart_cb)
+        self.servo_sub = rospy.Subscriber('/my_gen3_'+self.arm+'/servo/delta_twist_cmds', TwistStamped, self.delta_twist_cmds_to_cart_cb)
         self.cart_vel_pub = rospy.Publisher('/my_gen3_'+self.arm+'/in/cartesian_velocity', TwistCommand, queue_size=10)
 
         #self.servo_sub = rospy.Subscriber('/my_gen3_'+self.arm+'/'+self.arm+'_gen3_joint_trajectory_controller/command', JointTrajectory, self.joint_command_cb)
@@ -46,7 +46,7 @@ class KortexHack:
         self.joint_vel_pub.publish(joint_speeds)
 
 
-    def delta_twist_cmds__to_cart_cb(self, delta_twist):
+    def delta_twist_cmds_to_cart_cb(self, delta_twist):
         twist = TwistCommand()
         twist.reference_frame = 1 #2 tool frame (see https://github.com/Kinovarobotics/ros_kortex/blob/bf71d8ecdec874a88d02b1a2481784ae2a7fdba4/kortex_driver/protos/Common.proto#L207)
         twist.duration = 0
