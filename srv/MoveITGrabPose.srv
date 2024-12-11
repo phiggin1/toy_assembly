@@ -1,4 +1,4 @@
 sensor_msgs/PointCloud2 cloud
-string offset 
+string[] offsets
 ---
 bool result

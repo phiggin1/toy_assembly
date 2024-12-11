@@ -21,6 +21,7 @@ from toy_assembly.srv import SAM, SAMRequest, SAMResponse
 from toy_assembly.srv import ObjectLocation, ObjectLocationRequest, ObjectLocationResponse
 from sensor_msgs.msg import Image, CameraInfo
 from geometry_msgs.msg import Point, PointStamped
+from visualization_msgs.msg import Marker, MarkerArray
 
 def reject_outliers(data, m=20):
     d = np.abs(data[:,0] - np.median(data[:,0]))
@@ -66,6 +67,7 @@ class PartOffset:
         self.debug = rospy.get_param("~debug", True)
         self.sim_time = rospy.get_param("/use_sim_time")#, False)
 
+        self.obj_marker_pub = rospy.Publisher("part_location_marker", Marker, queue_size=10)
 
         self.font = cv2.FONT_HERSHEY_SIMPLEX
         self.font_scale = 0.75
@@ -104,9 +106,6 @@ class PartOffset:
         sam_service_name = "/get_sam_segmentation"
         rospy.wait_for_service(sam_service_name)
         self.sam_srv = rospy.ServiceProxy(sam_service_name, SAM)
-
-
-
         self.llm_serv = rospy.Service("/gpt_part_location", ObjectLocation, self.call_gpt)
 
         rospy.spin()
@@ -123,10 +122,10 @@ class PartOffset:
         bbox = [req.object.u_min, req.object.v_min, req.object.u_max, req.object.v_max]
         transcript = req.transcription
 
-        print(cv_image.shape)
-        print(cv_image.dtype)
-        print(depth_image.shape)
-        print(depth_image.dtype)
+        print(f"cv image shape: {cv_image.shape}")
+        print(f"cv image dtype: {cv_image.dtype}")
+        print(f"cv depth_image shape: {depth_image.shape}")
+        print(f"cv depth_image dtype: {depth_image.dtype}")
 
         labeled_image = self.get_labeled_image(cv_image, depth_image, rle, bbox)
         new_msg = self.get_prompt(transcript, labeled_image)
@@ -191,8 +190,8 @@ class PartOffset:
 
         end_time = time.time_ns()
 
-        rospy.loginfo(f"GPT resp:\n {answer}\n")
-        rospy.loginfo(f"GPT resp latency: {(end_time-start_time)/(10**9)}")
+        rospy.loginfo(f"GPT loc resp:\n {answer}\n")
+        rospy.loginfo(f"GPT loc resp latency: {(end_time-start_time)/(10**9)}")
 
         return answer
     
@@ -338,13 +337,14 @@ class PartOffset:
                     d = (depth_image[v][u])
                     #if depth is 16bit int the depth value is in mm
                     # convert to m
-                    if isinstance(d, np.uint16):
-                        d = d/1000.0
-                    #toss out points that are too close or too far 
-                    # to simplify outlier rejection
-                    if d <= 0.1 or d > 1.5 or np.isnan(d):
-                        continue
-                    distances.append((d, v, u))
+                    if not np.isnan(d):
+                        if isinstance(d, np.uint16):
+                            d = d/1000.0
+                        #toss out points that are too close or too far 
+                        # to simplify outlier rejection
+                        if d <= 0.1 or d > 1.5 or np.isnan(d):
+                            continue
+                        distances.append((d, v, u))
 
         #Filter out outliers
         if len(distances)>0:
@@ -355,6 +355,12 @@ class PartOffset:
         x = 0
         y = 0
         z = 0
+        min_x = float('inf')
+        max_x = float('-inf')
+        min_y = float('inf')
+        max_y = float('-inf')
+        min_z = float('inf')
+        max_z = float('-inf')
         for dist in distances:
             d = dist[0]
             v = dist[1]
@@ -368,12 +374,59 @@ class PartOffset:
             x += t_p.point.x
             y += t_p.point.y
             z += t_p.point.z
+
+            if t_p.point.x < min_x:
+                min_x = x
+            elif t_p.point.x > max_x:
+                max_x = x
+
+            if t_p.point.y < min_y:
+                min_y = y
+            elif t_p.point.y > max_y:
+                max_y = y
+
+            if t_p.point.z < min_z:
+                min_z = z
+            elif t_p.point.z > max_z:
+                max_z = z
         
+        depth = max_x - min_x
+        width = max_y - min_y
+        height = max_z - min_z
+
+        print(f"gpt part loc\n depth:{depth} width:{width} height:{height}")
+        print(f"gpt part loc\n x:{(max_x + min_x) / 2} y:{(max_y + min_y) / 2} z:{(max_z + min_z) / 2}")
+        '''
+        center = PointStamped()
+        center.header.frame_id = 'world'
+        center.point.x = (max_x + min_x) / 2
+        center.point.y = (max_y + min_y) / 2
+        center.point.z = (max_z + min_z) / 2
+
+        self.obj_marker = Marker()
+        self.obj_marker.header.frame_id = 'world'
+        self.obj_marker.type = Marker.CUBE
+        self.obj_marker.color.r = 1.0
+        self.obj_marker.color.g = 1.0
+        self.obj_marker.color.b = 0.0
+        self.obj_marker.color.a = 1.0
+        self.obj_marker.pose.position = center.point
+        self.obj_marker.scale.x = depth
+        self.obj_marker.scale.y = width
+        self.obj_marker.scale.z = height
+
+        self.obj_marker_pub.publish(self.obj_marker)
+
+        '''
         center = PointStamped()
         center.header.frame_id = 'world'
         center.point.x = x/len(distances)
         center.point.y = y/len(distances)
         center.point.z = z/len(distances)
+        
+
+        print(f"gpt part centroid loc\n depth:{depth} width:{width} height:{height}")
+        print(f"gpt part centroid loc\n x:{center.point.x} y:{center.point.y} z:{center.point.z}")
 
         return center, mask
     

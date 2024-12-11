@@ -17,17 +17,17 @@
        <node name="right_camera_depth_info_throttler" type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/camera_info 5  /right_camera/depth_registered/sw_registered/camera_infov" />
        <node name="right_camera_depth_throttler"      type="throttle" pkg="topic_tools" args="messages /right_camera/depth_registered/sw_registered/image_rect   10 /right_camera/depth_registered/sw_registered/image_rect_throttled" />
 
-       <!-- listen for utterances and get a transcription 
+       <!-- listen for utterances and get a transcription -->
        <node name="transcribe" pkg="toy_assembly" type="transcribe.py" output="screen" >
               <param name="debug"  value="True" /> 
        </node>
        <node name="whisper_ada_services" pkg="toy_assembly" type="whisper_ada_client.py" output="screen" />
-       -->
+       
        
        <node name="main" pkg="toy_assembly" type="main.py" output="screen" >  
               <param name="~prefix"  value="$(arg prefix)" />
        </node>
-<!--
+<!---->
        <node pkg="rosbag" type="record" name="toy_record"
               args="record 
               -o $(arg prefix)
@@ -63,7 +63,7 @@
               /transcript
               /buttons"
        />
--->
+
 </launch>
 
 

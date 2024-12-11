@@ -8,9 +8,9 @@ import cv2
 from cv_bridge import CvBridge
 from std_msgs.msg import String
 from sensor_msgs.msg import Image, CameraInfo, PointCloud2
-from geometry_msgs.msg import Quaternion
+from geometry_msgs.msg import Quaternion, Point
 from visualization_msgs.msg import Marker, MarkerArray
-
+from copy import deepcopy
 from image_geometry import PinholeCameraModel
 import sensor_msgs.point_cloud2 as pc2
 from toy_assembly.srv import SAM
@@ -142,7 +142,6 @@ class Right_arm:
         
     def twist_cb(self, twist):
         #rospy.loginfo(twist)
-
         self.get_self_bbox(self.get_marker(self.arm))
 
         #have the bounding boxes for both arms
@@ -150,8 +149,6 @@ class Right_arm:
         #print(f"left: {self.min_left.x:,.4f}, {self.max_left.x:,.4f}, {self.min_left.y:,.4f}, {self.max_left.y:,.4f}, {self.min_left.z:,.4f}, {self.max_left.z:,.4f}")
         ee_position = self.arm_move_group.get_current_pose().pose.position
         
-
-
         l_x = twist.twist.linear.x
         l_y = twist.twist.linear.y
         l_z = twist.twist.linear.z
@@ -175,17 +172,14 @@ class Right_arm:
             l_z = 0.0
         elif ee_position.z < 0.15 and l_z < 0:
             l_z = 0.3*l_z
-
             l_x = 0.3*l_x
             l_y = 0.3*l_y
             rospy.loginfo(f"nearing table slowing down low, {l_z}, {ee_position.z}")
         elif ee_position.z < 0.3 and l_z < 0:
             l_z = 0.6*l_z
-
             l_x = 0.6*l_x
             l_y = 0.6*l_y
             rospy.loginfo(f"getting low slowing down, {l_z}, {ee_position.z}")
-
 
         #rospy.loginfo(f"after ee pos.z: {ee_position.z} l_z:{l_z}")
 
@@ -209,7 +203,6 @@ class Right_arm:
 
         self.twist_pub.publish(new_twist)
 
-
     def init_position(self):
         moveit_commander.roscpp_initialize(sys.argv)
         #rospy.init_node("move_to_start", anonymous=True)
@@ -218,7 +211,6 @@ class Right_arm:
         self.arm_group_name = "arm"
         self.arm_move_group = moveit_commander.MoveGroupCommander(self.arm_group_name)
         
-
         self.planning_frame = self.arm_move_group.get_planning_frame()
         print(f"planning frame:{self.planning_frame}")
 
@@ -288,7 +280,7 @@ class Right_arm:
 
         pose_goal = Pose()
         pose_goal.position = object_pose.pose.position
-        pose_goal.orientation = object_pose.pose.orientation
+        pose_goal.orientation = self.arm_move_group.get_current_pose().pose.orientation#object_pose.pose.orientation
 
         print(pose_goal)
 
@@ -305,54 +297,101 @@ class Right_arm:
         return resp
 
     def get_object(self, request):
+        rospy.loginfo("--- === get object === ---")
         status = False
-        #object_pose = self.transform_obj_pos(request.pose)        
-        position, orientation, height = self.find_orientation(request)
+        position, orientation, width, height, depth = self.find_orientation(request)
+        offsets = request.offsets
+        offset_x = 0.0
+        offset_y = 0.0
+        offset_z = 0.0
+        print(f"obj width: {width}m")
+        print(f"obj depth: {depth}m")
         print(f"obj height: {height}m")
+        print(f"offset dir: {offsets}")
+        for offset in offsets:
+            if offset == "front":
+                offset_x =  (depth/4)
+            elif offset == "back":
+                offset_x = -(depth/4)
+            elif offset == "left":
+                offset_y =  (width/4)
+            elif offset == "right":
+                offset_y = -(width/4)
+            elif offset == "above":
+                offset_z =  (height/4)
+            elif offset == "below":
+                offset_z = -(height/4)
+        
+        print(f"offset_x: {offset_x}m")
+        print(f"offset_y: {offset_y}m")
+        print(f"offset_z: {offset_z}m")
+
+        init_pose = PoseStamped()
+        init_pose.header.frame_id = "world"
+        init_pose.pose.position.x = position.x
+        init_pose.pose.position.y = position.y 
+        init_pose.pose.position.z = position.z 
+        init_pose.pose.orientation.x = orientation.x
+        init_pose.pose.orientation.y = orientation.y
+        init_pose.pose.orientation.z = orientation.z
+        init_pose.pose.orientation.w = orientation.w
+        print(f"init_pose: {init_pose}")
+        object_pose = self.transform_obj_pos(init_pose)        
         #if the height of the object is under 2.5cm
         # the object is lying flat on the table/tray
         # or being held in a way to make grabbing 'impossible'
-        if height < 0.025:
-            return status
-        #print(object_pose)
+        #if height < 0.025:
+        #    return status
+        print(object_pose)
+        print(f"object_pose:\n {object_pose}\n- - - - - - - - - -")
+
         pose_goal = Pose()
-        pose_goal.position.x = position.x
-        pose_goal.position.y = position.y
-        pose_goal.position.z = position.z + 0.1
-        pose_goal.orientation.x = orientation.x
-        pose_goal.orientation.y = orientation.y
-        pose_goal.orientation.z = orientation.z
-        pose_goal.orientation.w = orientation.w
+        pose_goal.position.x = object_pose.pose.position.x + offset_x
+        pose_goal.position.y = object_pose.pose.position.y + offset_y
+        pose_goal.position.z = object_pose.pose.position.z + offset_z + 0.125
+        pose_goal.orientation.x = object_pose.pose.orientation.x
+        pose_goal.orientation.y = object_pose.pose.orientation.y
+        pose_goal.orientation.z = object_pose.pose.orientation.z
+        pose_goal.orientation.w = object_pose.pose.orientation.w
 
-        print(f"stand off: {pose_goal}")
+        self.min_safe_height = 0.065
+        pose_goal.position.z = max(self.min_safe_height, pose_goal.position.z)
 
+        print(f"stand off: {pose_goal}\n===")
+
+        print(self.arm_move_group.get_current_pose().pose)
         #print('timeout 2')
         self.arm_move_group.set_pose_target(pose_goal)
 
         #print('timeout3')
-        print(pose_goal)
-        self.arm_move_group.go(pose_goal, wait=True)
+        success = self.arm_move_group.go(pose_goal, wait=True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
+        print(self.arm_move_group.get_current_pose().pose)
+        if not success:
+            return success
         
         #print(object_pose)
         pose_goal2 = Pose()
-        pose_goal2.position.x = position.x
-        pose_goal2.position.y = position.y
-        pose_goal2.position.z = position.z
-        pose_goal2.orientation.x = orientation.x
-        pose_goal2.orientation.y = orientation.y
-        pose_goal2.orientation.z = orientation.z
-        pose_goal2.orientation.w = orientation.w
+        pose_goal2.position.x = object_pose.pose.position.x + offset_x
+        pose_goal2.position.y = object_pose.pose.position.y + offset_y
+        pose_goal2.position.z = object_pose.pose.position.z + offset_z
+        pose_goal2.orientation.x = object_pose.pose.orientation.x
+        pose_goal2.orientation.y = object_pose.pose.orientation.y
+        pose_goal2.orientation.z = object_pose.pose.orientation.z
+        pose_goal2.orientation.w = object_pose.pose.orientation.w
         #print('timeout1')
+
+        self.min_safe_height = 0.065
+        pose_goal2.position.z = max(self.min_safe_height, pose_goal2.position.z)
 
         print(f"end pose: {pose_goal2}")
 
-        
-        status = self.arm_move_group.go(pose_goal2, wait = True)
+        success = self.arm_move_group.go(pose_goal2, wait = True)
         self.arm_move_group.stop()
         self.arm_move_group.clear_pose_targets()
-        
+        if not success:
+            return success
 
         """
         publishing "grabbed" vs. "released" will do as follows in unity with the nearest object
@@ -362,10 +401,11 @@ class Right_arm:
         self.close_gipper(Trigger())
 
         self.arm_move_group.set_max_velocity_scaling_factor(0.750)
-        self.arm_move_group.go(pose_goal, wait=True) 
+        status = self.arm_move_group.go(pose_goal, wait=True) 
         self.arm_move_group.stop()
 
         self.grabbed_object = status
+
         return status
         
     def close_gipper(self, req):
@@ -610,7 +650,7 @@ class Right_arm:
             orientation.y = orientationList[1]
             orientation.z = orientationList[2]
             orientation.w = orientationList[3]
-            return position, orientation, height#self.change_orientation('hand_pointing_down_cam_right')
+            return position, orientation, width, height, depth#self.change_orientation('hand_pointing_down_cam_right')
         else:
             object_orientation = 'parallel'
             orientationList = self.change_orientation('hand_pointing_down_cam_front')
@@ -619,18 +659,21 @@ class Right_arm:
             orientation.y = orientationList[1]
             orientation.z = orientationList[2]
             orientation.w = orientationList[3]
-            return position, orientation, height#self.change_orientation('hand_pointing_down_cam_front')
+            return position, orientation, width, height, depth#self.change_orientation('hand_pointing_down_cam_front')
         
     def get_width(self, msg):  
         #points = pc2.read_points(msg.cloud, field_names=("x", "y", "z"), skip_nans=True)
-        
+        print(msg.cloud.header.frame_id)
         min_x = float('inf')
         max_x = float('-inf')
         min_y = float('inf')
         max_y = float('-inf')
         min_z = float('inf')
         max_z = float('-inf')
-        
+        center_x = 0
+        center_y = 0
+        center_z = 0
+        num_points = 0
         for point in pc2.read_points(msg.cloud, field_names=("x", "y", "z"), skip_nans=True):
             x = point[0]
             y = point[1]
@@ -647,7 +690,11 @@ class Right_arm:
                 min_z = z
             if z > max_z:
                 max_z = z
-        
+            center_x += x
+            center_y += y
+            center_z += z
+            num_points += 1
+
         depth = max_x - min_x
         width = max_y - min_y
         height = max_z - min_z
@@ -661,8 +708,13 @@ class Right_arm:
         self.obj_marker.scale.z = height
 
         self.obj_marker_pub.publish(self.obj_marker)
+        center = Point()
+        center.x = center_x/num_points
+        center.y = center_y/num_points
+        center.z = center_z/num_points
+        print(f"object center:\n{center}")
 
-        return self.obj_marker.pose.position, width, height, depth
+        return center, width, height, depth
 
 if __name__ == '__main__':
     right_robot = Right_arm()

@@ -130,7 +130,7 @@ class LLMClient:
         if instruction.find('[ENVIRONMENT]') != -1:
             instruction = instruction.replace('[ENVIRONMENT]', env)
 
-        print(f"==== instr ====\n{instruction}\n==== instr ====")
+        #print(f"==== instr ====\n{instruction}\n==== instr ====")
 
 
         prompt_dict = {

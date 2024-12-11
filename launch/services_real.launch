@@ -35,6 +35,7 @@
   <node name="phi" pkg="toy_assembly" type="phi_service.py" output="screen" />
   <node name="gpt" pkg="toy_assembly" type="gpt_service.py" output="screen" />
   <node name="gpt_state" pkg="toy_assembly" type="gpt_state.py" output="screen" />
+  <node name="gpt_location_offset" pkg="toy_assembly" type="gpt_part_location.py" output="screen" />
   <node name="sam_ada_services" pkg="toy_assembly" type="sam_ada_client.py" output="screen" >  
     <param name="~real"  value="true" />
   </node>

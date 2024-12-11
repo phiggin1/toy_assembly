@@ -105,19 +105,21 @@ class AssemblyClient:
         self.listener = tf.TransformListener()
         self.mutex = Lock()
 
-        self.prefix =  rospy.get_param("~prefix", "test")
+        self.prefix =  str(rospy.get_param("~prefix", "test"))
         path = "/home/rivr/toy_logs"
-        os.makedirs(path, exist_ok=True)
+        os.makedirs(os.path.join(path, self.prefix), exist_ok=True)
+        os.makedirs(os.path.join(path, self.prefix, 'images'), exist_ok=True)
         start_time = time.strftime("%Y_%m_%d_%H_%M")
-        self.log_file_path = os.path.join(path, f"{self.prefix}_{start_time}.csv")
+        name = f"{self.prefix}_{start_time}.csv"
+        self.log_file_path = os.path.join(path, self.prefix, name)
         rospy.loginfo(self.log_file_path)
         
         self.dataframe_csv = []
 
-        self.num_msgs = 20
+        self.num_msgs = 20 
         self.rate = rospy.Rate(20)
         self.speed = 0.1
-        self.angular_speed = 1.57
+        self.angular_speed = 1.0
         
         self.prev = None
         self.debug = rospy.get_param("~debug", True)
@@ -128,6 +130,7 @@ class AssemblyClient:
         grab_cloud_service_name = "/my_gen3_right/grab_object"
         rospy.wait_for_service(grab_cloud_service_name)
         self.grab_cloud_srv = rospy.ServiceProxy(grab_cloud_service_name, MoveITGrabPose)
+        print(grab_cloud_service_name)
 
         move_service_name = "/my_gen3_right/move_pose"
         rospy.wait_for_service(move_service_name)
@@ -144,23 +147,27 @@ class AssemblyClient:
         gpt_service_name = "/gpt_servcice"
         rospy.wait_for_service(gpt_service_name)
         self.llm_image_srv = rospy.ServiceProxy(gpt_service_name, LLMImage)
-        
+        print(gpt_service_name)
+
         phi_service_name = "/phi_servcice"
         rospy.wait_for_service(phi_service_name)
         self.llm_text_srv = rospy.ServiceProxy(phi_service_name, LLMText)
-        
+        print(phi_service_name)
+
         sam_service_name = "/get_sam_segmentation"
         rospy.wait_for_service(sam_service_name)
         self.sam_srv = rospy.ServiceProxy(sam_service_name, SAM)
+        print(sam_service_name)
 
-        gpt_state_service_name = "/gpt_state_servcice"
-        rospy.wait_for_service(gpt_state_service_name)
-        self.llm_state_srv = rospy.ServiceProxy(gpt_state_service_name, LLMImage)
-
+        #gpt_state_service_name = "/gpt_state_servcice"
+        #rospy.wait_for_service(gpt_state_service_name)
+        #self.llm_state_srv = rospy.ServiceProxy(gpt_state_service_name, LLMImage)
 
         gpt_part_location_service_name = "/gpt_part_location"
         rospy.wait_for_service(gpt_part_location_service_name)
         self.part_location = rospy.ServiceProxy(gpt_part_location_service_name, ObjectLocation)
+        print(gpt_part_location_service_name)
+
 
         self.twist_topic  = "/my_gen3_right/workspace/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
@@ -309,10 +316,10 @@ class AssemblyClient:
             resp = self.llm_state_srv(req)
 
             cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
-            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}_annotated.png"
+            fname = os.path.join('/home', 'rivr', 'toy_logs', self.prefix, 'images', f"{image.header.stamp}_annotated.png")
             print(fname)
             cv2.imwrite(fname, cv_img)
-            fname = f"/home/rivr/toy_logs/images/{image.header.stamp}.png"
+            fname = os.path.join('/home', 'rivr', 'toy_logs', self.prefix, 'images', f"{image.header.stamp}.png")
             cv2.imwrite(fname, self.rgb_image)
 
             json_dict = extract_json(resp.text)
@@ -325,6 +332,20 @@ class AssemblyClient:
                 print(f"predicted env:{env} does not match actual env: {act_env}")
                 return json.dumps(json_dict["environment_actual"], indent=4)
     
+    def log_images(self, text, stamp, annoated, rgb):
+        cv_img = self.cvbridge.imgmsg_to_cv2(annoated, desired_encoding="passthrough")
+        merge_test = "_".join(text.split(" "))
+        print(f"Saving: {stamp}{merge_test}")
+        fname = os.path.join('/home','rivr', 'toy_logs', self.prefix, 'images', f"{stamp}{merge_test}_annotated.png")#f"/home/rivr/toy_logs/images/{stamp}{merge_test}_annotated.png"
+        
+        cv2.imwrite(fname, cv_img)
+        merge_test = "_".join(text.split(" "))
+        fname = os.path.join('/home','rivr', 'toy_logs', self.prefix, 'images', f"{stamp}{merge_test}.png")#f"/home/rivr/toy_logs/images/{stamp}{merge_test}.png"
+
+        cv2.imwrite(fname, rgb)
+
+        return fname
+
     def high_level(self, text):
         rospy.loginfo("waiting for objects")
         image, objects, rles, bboxs, scores = self.get_detections("tan tray. orange tray. tan horse body. blue horse legs. orange horse legs. table. robot gripper. human hand.")
@@ -339,7 +360,7 @@ class AssemblyClient:
             req.image = image
 
             resp = self.llm_image_srv(req)
-
+            '''
             cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
             merge_test = "_".join(text.split(" "))
             print(f"Saving: {image.header.stamp}{merge_test}")
@@ -348,7 +369,8 @@ class AssemblyClient:
             merge_test = "_".join(text.split(" "))
             fname = f"/home/rivr/toy_logs/images/{image.header.stamp}{merge_test}.png"
             cv2.imwrite(fname, self.rgb_image)
-
+            '''
+        fname = self.log_images(text, image.header.stamp, image, self.rgb_image)
         self.df["image_path"] = [fname]
         self.df["objects"] = [objects]
         self.df["gpt_response"] = [str(resp.text).replace('\n','')]
@@ -381,8 +403,9 @@ class AssemblyClient:
                     if "object" in action:
                         target_object = action["object"]
                         #get updated position if this is not the first action
-                        if i > 0:
+                        '''if i > 0:
                             image, objects, rles, bboxs, scores = self.get_detections(target_object)
+                            self.log_images(text, image.header.stamp, image, self.rgb_image)'''
                         resp = self.get_position(target_object, objects, rles, bboxs, scores)
                         if resp is not None:
                             target_position = resp[0]
@@ -400,15 +423,18 @@ class AssemblyClient:
                 if len(objects) > 0:
                     if "object" in action:
                         target_object = action["object"]
-                        if i > 0:
+                        '''if i > 0:
                             image, objects, rles, bboxs, scores = self.get_detections(target_object)
+                            self.log_images(text, image.header.stamp, image, self.rgb_image)'''
                         resp = self.get_position(target_object, objects, rles, bboxs, scores)
                         if resp is not None:
                             target_position = resp[0]
                             cloud = resp[1]
                             offset = None
                             if "location" in action:
-                                offset = self.get_location_offset(target_object, objects, rles, bboxs, scores, text)
+                                resp = self.get_location_offset(target_object, objects, rles, bboxs, scores, text)
+                                offset = resp.directions
+                                print(f"offset: {offset}")
                             print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
                             success = self.pickup(target_position, cloud, offset)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
@@ -473,7 +499,7 @@ class AssemblyClient:
 
         return action
 
-    def pickup(self, target_position, cloud, offset):
+    def pickup(self, target_position, cloud, offset=None):
         open_succes = self.open()
         rospy.loginfo(f"open_succes: {open_succes}")
         if not open_succes:
@@ -673,10 +699,11 @@ class AssemblyClient:
 
     def grab(self, position, cloud, offset=None):
         rospy.loginfo(f"grab: {position.header.frame_id} {position.point.x:.3f}, {position.point.y:.3f}, {position.point.z:.3f}")
+        print(cloud.header.frame_id)
         grab = MoveITGrabPoseRequest()
         grab.cloud = cloud
         if offset is not None:
-            grab.offset = offset
+            grab.offsets = offset
         
         resp = self.grab_cloud_srv(grab)
 
@@ -858,20 +885,21 @@ class AssemblyClient:
             ps.point.z = d
             t_p = transform_point(ps, mat44, 'world')
 
-            x += t_p.point.x
-            y += t_p.point.y
-            z += t_p.point.z
-            
-            if class_name in self.colors:
-                b = self.colors[class_name][0]
-                g = self.colors[class_name][1]
-                r = self.colors[class_name][2]
-            else:
-                b = 255
-                g = 255
-                r = 255
+            if t_p.point.z > 0.025:
+                x += t_p.point.x
+                y += t_p.point.y
+                z += t_p.point.z
+                
+                if class_name in self.colors:
+                    b = self.colors[class_name][0]
+                    g = self.colors[class_name][1]
+                    r = self.colors[class_name][2]
+                else:
+                    b = 255
+                    g = 255
+                    r = 255
 
-            points.append([t_p.point.x, t_p.point.y, t_p.point.z, r, g, b])
+                points.append([t_p.point.x, t_p.point.y, t_p.point.z, r, g, b])
 
         num_points = len(points)
         cloud_msg = create_cloud(points, 'world')
@@ -918,6 +946,8 @@ class AssemblyClient:
         resp = self.part_location(req)
 
         print(f"main offset resp:\n{resp}\n-----")
+
+        
 
         return resp
 
