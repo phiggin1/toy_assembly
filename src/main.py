@@ -36,11 +36,7 @@ def extract_json(text):
     a = text.find('{')
     b = text.rfind('}')+1
 
-    #print(a,b)
-
     text_json = text[a:b]
-
-    #print(text_json)
 
     try:
         json_dict = json.loads(text_json)
@@ -130,7 +126,6 @@ class AssemblyClient:
         grab_cloud_service_name = "/my_gen3_right/grab_object"
         rospy.wait_for_service(grab_cloud_service_name)
         self.grab_cloud_srv = rospy.ServiceProxy(grab_cloud_service_name, MoveITGrabPose)
-        print(grab_cloud_service_name)
 
         move_service_name = "/my_gen3_right/move_pose"
         rospy.wait_for_service(move_service_name)
@@ -147,17 +142,14 @@ class AssemblyClient:
         gpt_service_name = "/gpt_servcice"
         rospy.wait_for_service(gpt_service_name)
         self.llm_image_srv = rospy.ServiceProxy(gpt_service_name, LLMImage)
-        print(gpt_service_name)
 
         phi_service_name = "/phi_servcice"
         rospy.wait_for_service(phi_service_name)
         self.llm_text_srv = rospy.ServiceProxy(phi_service_name, LLMText)
-        print(phi_service_name)
 
         sam_service_name = "/get_sam_segmentation"
         rospy.wait_for_service(sam_service_name)
         self.sam_srv = rospy.ServiceProxy(sam_service_name, SAM)
-        print(sam_service_name)
 
         #gpt_state_service_name = "/gpt_state_servcice"
         #rospy.wait_for_service(gpt_state_service_name)
@@ -166,8 +158,6 @@ class AssemblyClient:
         gpt_part_location_service_name = "/gpt_part_location"
         rospy.wait_for_service(gpt_part_location_service_name)
         self.part_location = rospy.ServiceProxy(gpt_part_location_service_name, ObjectLocation)
-        print(gpt_part_location_service_name)
-
 
         self.twist_topic  = "/my_gen3_right/workspace/delta_twist_cmds"
         self.cart_vel_pub = rospy.Publisher(self.twist_topic, TwistStamped, queue_size=10)
@@ -315,7 +305,7 @@ class AssemblyClient:
 
             cv_img = self.cvbridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
             fname = os.path.join('/home', 'rivr', 'toy_logs', self.prefix, 'images', f"{image.header.stamp}_annotated.png")
-            print(fname)
+            rospy.loginfo(fname)
             cv2.imwrite(fname, cv_img)
             fname = os.path.join('/home', 'rivr', 'toy_logs', self.prefix, 'images', f"{image.header.stamp}.png")
             cv2.imwrite(fname, self.rgb_image)
@@ -333,7 +323,7 @@ class AssemblyClient:
     def log_images(self, text, stamp, annoated, rgb):
         cv_img = self.cvbridge.imgmsg_to_cv2(annoated, desired_encoding="passthrough")
         merge_test = "_".join(text.split(" "))
-        print(f"Saving: {stamp}{merge_test}")
+        rospy.loginfo(f"Saving: {stamp}{merge_test}")
         fname = os.path.join('/home','rivr', 'toy_logs', self.prefix, 'images', f"{stamp}{merge_test}_annotated.png")#f"/home/rivr/toy_logs/images/{stamp}{merge_test}_annotated.png"
         
         cv2.imwrite(fname, cv_img)
@@ -375,15 +365,14 @@ class AssemblyClient:
         action = None
         if "action" in json_dict:
             actions = json_dict["action"]
-            print(f"actions:\n-----\n{actions}")
-            print("-----")
+            rospy.loginfo(f"actions:\n-----\n{actions}\n-----")
         else:
-            print("no actions")
+            rospy.loginfo("no actions")
             return ("NO_ACTION", True)
         
         results = []
         for i, action in enumerate(actions):
-            print(f"action {i}: {action}")
+            rospy.loginfo(f"action {i}: {action}")
             result = None
             if isinstance(action, str):
                 result = ("NO_ACTION", True)
@@ -398,7 +387,7 @@ class AssemblyClient:
                         resp = self.get_position(target_object, objects, rles, bboxs, scores)
                         if resp is not None:
                             target_position = resp[0]
-                            print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
+                            rospy.loginfo(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
                             success = self.move_to(target_position)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
                             result = ("MOVE_TO", success)
@@ -423,8 +412,8 @@ class AssemblyClient:
                             if "location" in action:
                                 resp = self.get_location_offset(target_object, objects, rles, bboxs, scores, text)
                                 offset = resp.directions
-                                print(f"offset: {offset}")
-                            print(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
+                                rospy.loginfo(f"offset: {offset}")
+                            rospy.loginfo(f"{target_object}, {target_position.header.frame_id}, x:{target_position.point.x:.2f}, y:{target_position.point.y:.2f}, z:{target_position.point.z:.2f}")
                             success = self.pickup(target_position, cloud, offset)
                             self.env = json.dumps(json_dict["environment_after"], indent=4)
                             result = ("PICKUP", success)
@@ -472,7 +461,7 @@ class AssemblyClient:
             any_valid_commands = self.ee_move(action)
             results = (action, any_valid_commands)
 
-        print(f"any_valid_commands:{any_valid_commands}")
+        rospy.loginfo(f"any_valid_commands:{any_valid_commands}")
 
         if not any_valid_commands:
             results = self.high_level(text)
@@ -480,7 +469,7 @@ class AssemblyClient:
         return results
 
     def parse_llm_response(self, text):
-        print(f"\n+++++++++++\n{text}\n+++++++++++\n")
+        rospy.loginfo(f"\n+++++++++++\n{text}\n+++++++++++\n")
         json_dict = extract_json(text)
         if json_dict is None:
             return None
@@ -698,7 +687,7 @@ class AssemblyClient:
 
     def grab(self, position, cloud, offset=None):
         rospy.loginfo(f"grab: {position.header.frame_id} {position.point.x:.3f}, {position.point.y:.3f}, {position.point.z:.3f}")
-        print(cloud.header.frame_id)
+        rospy.loginfo(cloud.header.frame_id)
         grab = MoveITGrabPoseRequest()
         grab.cloud = cloud
         if offset is not None:
@@ -801,8 +790,8 @@ class AssemblyClient:
         return (annotated_img, objects, rles, bboxes, scores)
     
     def get_position(self, target_object, objects, rles, bboxs, scores):
-        print(f"target_object: {target_object}")
-        print(f"objects: {objects}")
+        rospy.loginfo(f"target_object: {target_object}")
+        rospy.loginfo(f"objects: {objects}")
         target_bbox = None
         target_rle = None
         max_score = -100
@@ -863,9 +852,9 @@ class AssemblyClient:
         #Filter out outliers
         if len(distances)>0:
             distances = reject_outliers(np.asarray(distances), m=2)
-            print(f"{class_name} num points: {len(distances)}")
+            rospy.loginfo(f"{class_name} num points: {len(distances)}")
         else:
-            print(print(f"{class_name} no points found"))
+            rospy.loginfo(f"{class_name} no points found")
 
         x = 0
         y = 0
@@ -910,15 +899,15 @@ class AssemblyClient:
             center.point.y = y/num_points
             center.point.z = z/num_points
 
-            print(f"center: x:{center.point.x:.2f}, y:{center.point.y:.2f}, z:{center.point.z:.2f} in {center.header.frame_id}")        
+            rospy.loginfo(f"center: x:{center.point.x:.2f}, y:{center.point.y:.2f}, z:{center.point.z:.2f} in {center.header.frame_id}")        
 
             return center, cloud_msg
         else:
             return None
     
     def get_location_offset(self, target_object, objects, rles, bboxs, scores, text):
-        print(f"target_object: {target_object}")
-        print(f"objects: {objects}")
+        rospy.loginfo(f"target_object: {target_object}")
+        rospy.loginfo(f"objects: {objects}")
         target_bbox = None
         target_rle = None
         max_score = -100
@@ -946,7 +935,7 @@ class AssemblyClient:
 
         resp = self.part_location(req)
 
-        print(f"main offset resp:\n{resp}\n-----")
+        rospy.loginfo(f"main offset resp:\n{resp}\n-----")
 
         
 
